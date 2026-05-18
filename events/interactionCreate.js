@@ -844,7 +844,7 @@ module.exports = {
           const productId = selectedValue === "coupon_product_all" ? "" : selectedValue.replace("coupon_product_", "");
 
           const modal = new ModalBuilder()
-            .setCustomId("create_coupon_modal")
+            .setCustomId(`create_coupon_modal:${productId || "all"}`)
             .setTitle("Criar Cupom");
 
           const codeInput = new TextInputBuilder()
@@ -888,7 +888,6 @@ module.exports = {
           const fourthRow = new ActionRowBuilder().addComponents(maxUsesInput);
           const fifthRow = new ActionRowBuilder().addComponents(minAmountInput);
 
-          modal.setCustomId(`create_coupon_modal:${productId || "all"}`);
           modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
           return interaction.showModal(modal);
         }
