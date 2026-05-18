@@ -1,5 +1,5 @@
 {
-  "name": "byte-support",
+  "name": "bznx-store",
   "version": "1.0.0",
   "description": "Bot Discord profissional para vendas e suporte automatizado",
   "main": "index.js",
@@ -12,12 +12,15 @@
   },
   "dependencies": {
     "@discordjs/voice": "^0.17.0",
+    "axios": "^1.16.0",
     "discord.js": "^14.15.3",
     "dotenv": "^16.4.5",
+    "express": "^4.18.3",
     "libsodium-wrappers": "^0.8.2",
+    "mercadopago": "^2.0.15",
     "node-cron": "^3.0.3",
     "opusscript": "^0.0.8",
     "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^6.0.1"
   }
 }

@@ -32,7 +32,7 @@ function buildLogEmbed(config, level, message, options = {}) {
 }
 
 async function logToChannel(channel, config, level, message, options = {}) {
-  if (!channel) return;
+  if (!channel || !channel.send) return;
   const embed = buildLogEmbed(config, level, message, options);
   await channel.send({ embeds: [embed] });
 }

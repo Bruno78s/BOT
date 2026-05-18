@@ -29,6 +29,32 @@ function validateConfig(config) {
   if (!config.payment.pix || !config.payment.bank || !config.payment.beneficiary) {
     throw new Error("config.json invalido: payment incompleto");
   }
+
+  if (!config.verification || !config.verification.welcomeChannelId || !config.verification.channelId || !config.verification.unverifiedRoleId || !config.verification.verifiedRoleId) {
+    throw new Error("config.json invalido: verification incompleto");
+  }
+
+  if (!config.notifications || !config.notifications.botSalesChannelId || !config.notifications.voiceChannelId) {
+    throw new Error("config.json invalido: notifications incompleto");
+  }
+
+  if (!config.statsChannelId) {
+    throw new Error("config.json invalido: statsChannelId obrigatorio");
+  }
+
+  if (!config.salesCategoryId || !config.ticketCategoryId) {
+    throw new Error("config.json invalido: salesCategoryId e ticketCategoryId obrigatorios");
+  }
+
+  if (!config.logChannels || Object.keys(config.logChannels).length === 0) {
+    throw new Error("config.json invalido: logChannels obrigatorio");
+  }
+
+  for (const product of config.products) {
+    if (!product.id || !product.name || !product.category || !product.tier || !product.channelId || product.price === undefined || product.stock === undefined) {
+      throw new Error(`config.json invalido: produto incompleto (id: ${product.id || 'desconhecido'})`);
+    }
+  }
 }
 
 module.exports = {

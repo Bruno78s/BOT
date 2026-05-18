@@ -1,7 +1,9 @@
 node_modules/
 .env
 /database/db.sqlite
+/database/db.sqlite-*
 /database/db.js
 /database/db.shm
 /database/db.wal
 /database/backups/
+/database/*.backup-*

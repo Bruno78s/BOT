@@ -3,6 +3,7 @@ const path = require("path");
 const { Client, Collection, GatewayIntentBits, Partials, REST, Routes } = require("discord.js");
 const dotenv = require("dotenv");
 const { loadConfig } = require("./utils/config");
+const { startWebhookServer } = require("./utils/webhookServer");
 
 dotenv.config();
 
@@ -10,7 +11,7 @@ const config = loadConfig();
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
-const guildId = "1141449366893252690";
+const guildId = "1426968118684811448";
 
 if (!token || !clientId) {
   throw new Error("Variaveis DISCORD_TOKEN e CLIENT_ID sao obrigatorias.");
@@ -19,14 +20,19 @@ if (!token || !clientId) {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildInvites,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.MessageContent
   ],
   partials: [Partials.Channel]
 });
 
 client.commands = new Collection();
+client.once("clientReady", () => {
+  startWebhookServer(client, config);
+});
 
 const commandsPath = path.join(__dirname, "commands");
 const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith(".js"));
@@ -56,7 +62,7 @@ for (const file of eventFiles) {
 
 async function registerCommands() {
   const rest = new REST({ version: "10" }).setToken(token);
-  await rest.put(Routes.applicationCommands(clientId), { body: commandsData });
+  await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commandsData });
 }
 
 registerCommands()

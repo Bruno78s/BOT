@@ -1,5 +1,8 @@
-﻿const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { infoEmbed } = require("./embeds");
+﻿
+const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const { AttachmentBuilder } = require("discord.js");
+const path = require("path");
+const { buildSupportEmbed } = require("./salesFlow");
 
 async function ensureTicketPanel(client, config) {
   const channelId = config.ticketPanelChannelId;
@@ -8,57 +11,79 @@ async function ensureTicketPanel(client, config) {
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
-  const recent = await channel.messages.fetch({ limit: 20 }).catch(() => null);
+  const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
   let existingMessage = null;
   if (recent) {
-    existingMessage = recent.find(
+    const botMessages = recent.filter((msg) => msg.author?.id === client.user.id);
+    existingMessage = botMessages.find(
       (msg) =>
-        msg.author?.id === client.user.id &&
-        msg.embeds?.[0]?.title?.includes("Central de Atendimento")
+        msg.embeds?.[0]?.footer?.text?.includes("ticket") ||
+        msg.embeds?.[0]?.title?.includes("Central de Atendimento") ||
+        msg.embeds?.[0]?.title?.includes("Central de Suporte")
     );
+
+    const duplicates = botMessages.filter((msg) => msg.id !== existingMessage?.id);
+    for (const duplicate of duplicates.values()) {
+      const title = duplicate.embeds?.[0]?.title || "";
+      const footer = duplicate.embeds?.[0]?.footer?.text || "";
+      if (title.includes("Central de Atendimento") || title.includes("Central de Suporte") || footer.includes("ticket")) {
+        await duplicate.delete().catch(() => null);
+      }
+    }
   }
 
-  const embed = infoEmbed(
-    config,
-    "Byte Support | Central de Atendimento",
-    [
-      "Atendimento rápido e sem complicação.",
-      "",
-      "<a:az_seta:1342855775021961217> *Vendas Delux* - **Nossa otimização mais completa e avançada.**",
-      "<a:az_seta:1342855775021961217> *Vendas Edge* - **Recomendada para usuários que querem desempenho sem alterações profundas.**",
-      "<a:az_seta:1342855775021961217> *Suporte* - **Diagnóstico e resolução de problemas**",
-      "",
-      "Clique abaixo e o ticket será criado."
-    ].join("\n")
-  );
-  embed
-    .setThumbnail("https://media.discordapp.net/attachments/1469055845902979288/1472679352737988836/Latency.png?ex=69937306&is=69922186&hm=4bcda46468ae5ec48d2af7f85457495f9fe41564aef8b8fb0686ded084cd4891&=&format=webp&quality=lossless&width=256&height=256")
-    .setFooter({ text: "Byte Atendimento" });
+  const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
+  const bannerPath = path.join(__dirname, "..", "public", "banner-bznx.png");
+
+  const logoAttachment = new AttachmentBuilder(logoPath, { name: "logo.png" });
+  const bannerAttachment = new AttachmentBuilder(bannerPath, { name: "banner.png" });
+
+  const embed = buildSupportEmbed(config)
+    .setThumbnail("attachment://logo.png")
+    .setImage("attachment://banner.png")
+    .setFooter({ 
+      text: "Bzn X • Ticket", 
+      iconURL: "attachment://logo.png"
+    })
+    .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("ticket_open_sales_delux")
-      .setLabel("Vendas Delux")
-      .setEmoji("1411565345696911430")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("ticket_open_sales_edge")
-      .setLabel("Vendas Edge")
-      .setEmoji("1465906040574050387")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("ticket_open_support")
-      .setLabel("Suporte")
-      .setEmoji("1472985090207518831")
-      .setStyle(ButtonStyle.Secondary)
+    new StringSelectMenuBuilder()
+      .setCustomId("support_ticket_select")
+      .setPlaceholder("Selecione o motivo do atendimento")
+      .addOptions([
+        {
+          label: "Suporte",
+          description: "Dúvidas gerais e ajuda técnica",
+          value: "support"
+        },
+        {
+          label: "Receber Produto",
+          description: "Solicitar a entrega de uma compra aprovada",
+          value: "delivery"
+        },
+        {
+          label: "Problema com Serviço",
+          description: "Relatar falhas em um serviço comprado",
+          value: "service_issue"
+        }
+      ])
   );
 
   if (existingMessage) {
-    await existingMessage.edit({ embeds: [embed], components: [row] });
+    await existingMessage.edit({ 
+      embeds: [embed], 
+      components: [row],
+      files: [logoAttachment, bannerAttachment]
+    });
     return;
   }
 
-  await channel.send({ embeds: [embed], components: [row] });
+  await channel.send({ 
+    embeds: [embed], 
+    components: [row],
+    files: [logoAttachment, bannerAttachment]
+  });
 }
 
 module.exports = {

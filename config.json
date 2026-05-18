@@ -1,5 +1,5 @@
 {
-  "botName": "Byte Support",
+  "botName": "BznX Store",
   "colors": {
     "primary": "#1e88e5",
     "success": "#2e7d32",
@@ -11,9 +11,69 @@
     "maxOpenTicketsPerGuild": 25,
     "logRetentionDays": 30
   },
+  "verification": {
+    "welcomeChannelId": "1469735008162807818",
+    "channelId": "1483134596274196490",
+    "unverifiedRoleId": "1483134116915318977",
+    "verifiedRoleId": "1469734837802893598"
+  },
+  "notifications": {
+    "botSalesChannelId": "1469735299008565319",
+    "siteSalesChannelId": "1469735299008565319",
+    "voiceChannelId": "1469735459553808477"
+  },
+  "statsChannelId": "1503149748813824016",
+  "salesCategoryId": "1469734922431500412",
+  "ticketCategoryId": "1503150259004768346",
+  "ticketPanelChannelId": "1469735025170845737",
+  "deliveryChannels": {
+    "bots": "1469735034285195325",
+    "sites": "1469735037183463465"
+  },
+  "feedbackChannelId": "1469735032091312323",
+  "inviteChannelId": "1505706829022498846",
+  "productPanelChannels": {
+    "ticket": "1469735040354353296",
+    "vendas": "1469735048495239272",
+    "moderacao": "1482975772632420424",
+    "divulgacao": "1482976520887865364",
+    "clone": "1482976207527215364",
+    "verificacao": "1482976319510937651",
+    "site": "1482977055657299978"
+  },
+  "logChannels": {
+    "comprovante": "1469735330511851732",
+    "pedidos": "1469735333662032013",
+    "ticket": "1469735337604415612",
+    "sistema": "1469735341165514794",
+    "compra": "1469735344701444137",
+    "desnecessario": "1469735347540721748",
+    "msg": "1469735351223324904",
+    "logs-seguranca": "1469735354956251177",
+    "pronts": "1469735358357962925",
+    "feedback-ticket": "1469735361914601492",
+    "logs-mensagem": "1469735365026906132",
+    "logs-ticket": "1469735368873082981"
+  },
   "keywords": {
-    "sales": ["comprar", "preço", "valor", "orçamento", "otimização", "delux", "edge"],
-    "support": ["ajuda", "suporte", "erro", "problema", "travando", "bug"],
+    "sales": [
+      "comprar",
+      "preço",
+      "valor",
+      "orçamento",
+      "bot",
+      "site",
+      "premium",
+      "basic"
+    ],
+    "support": [
+      "ajuda",
+      "suporte",
+      "erro",
+      "problema",
+      "travando",
+      "bug"
+    ],
     "faq": {
       "pix": "Aceitamos PIX. Envie o pagamento para brunoquirin3@gmail.com (Nubank).",
       "prazo": "O prazo médio de atendimento é de até 24 horas úteis.",
@@ -22,27 +82,209 @@
   },
   "products": [
     {
-      "id": "delux",
-      "name": "Otimização Delux",
-      "priceOriginal": "**R$ ~~19,99~~**",
-      "pricePromo": "**R$ 10,99**"
+      "id": "ticket-premium",
+      "name": "Ticket Premium",
+      "category": "bots",
+      "group": "ticket",
+      "tier": "premium",
+      "channelId": "1469735040354353296",
+      "price": 9.99,
+      "stock": 15,
+      "description": "Sistema de tickets premium com categorias, avaliação e logs."
     },
     {
-      "id": "edge",
-      "name": "Otimização Edge",
-      "priceOriginal": "**R$ ~~10,50~~**",
-      "pricePromo": "**R$ 5,00**"
+      "id": "ticket-basic",
+      "name": "Ticket Basic",
+      "category": "bots",
+      "group": "ticket",
+      "tier": "basic",
+      "channelId": "1469735040354353296",
+      "price": 4,
+      "stock": 30,
+      "description": "Sistema de tickets essencial para atendimento."
+    },
+    {
+      "id": "vendas-premium",
+      "name": "Vendas Premium",
+      "category": "bots",
+      "group": "vendas",
+      "tier": "premium",
+      "channelId": "1469735048495239272",
+      "price": 9,
+      "stock": 10,
+      "description": "Sistema de vendas automatizadas com embeds e fluxo por ticket."
+    },
+    {
+      "id": "vendas-basic",
+      "name": "Vendas Basic",
+      "category": "bots",
+      "group": "vendas",
+      "tier": "basic",
+      "channelId": "1469735048495239272",
+      "price": 9,
+      "stock": 10,
+      "description": "Sistema básico de vendas para Discord."
+    },
+    {
+      "id": "moderacao-premium",
+      "name": "Moderação Premium",
+      "category": "bots",
+      "group": "moderacao",
+      "tier": "premium",
+      "channelId": "1482975772632420424",
+      "price": 8,
+      "stock": 15,
+      "description": "Bot de moderação avançada com logs e automações."
+    },
+    {
+      "id": "moderacao-basic",
+      "name": "Moderação Basic",
+      "category": "bots",
+      "group": "moderacao",
+      "tier": "basic",
+      "channelId": "1482975772632420424",
+      "price": 4,
+      "stock": 15,
+      "description": "Comandos essenciais de moderação."
+    },
+    {
+      "id": "clone-premium",
+      "name": "Clone Premium",
+      "category": "bots",
+      "group": "clone",
+      "tier": "premium",
+      "channelId": "1482976207527215364",
+      "price": 4,
+      "stock": 5,
+      "description": "Serviço premium para clone/configuração de estruturas."
+    },
+    {
+      "id": "clone-basic",
+      "name": "Clone Basic",
+      "category": "bots",
+      "group": "clone",
+      "tier": "basic",
+      "channelId": "1482976207527215364",
+      "price": 2,
+      "stock": 100,
+      "description": "Clone básico de estrutura Discord."
+    },
+    {
+      "id": "verificacao-premium",
+      "name": "Verificação Premium",
+      "category": "bots",
+      "group": "verificacao",
+      "tier": "premium",
+      "channelId": "1482976319510937651",
+      "price": 8,
+      "stock": 100,
+      "description": "Sistema de verificação completo com proteção anti-spam."
+    },
+    {
+      "id": "verificacao-basic",
+      "name": "Verificação Basic",
+      "category": "bots",
+      "group": "verificacao",
+      "tier": "basic",
+      "channelId": "1482976319510937651",
+      "price": 4,
+      "stock": 100,
+      "description": "Verificação simples por botão/comando."
+    },
+    {
+      "id": "divulgacao-premium",
+      "name": "Divulgação Premium",
+      "category": "bots",
+      "group": "divulgacao",
+      "tier": "premium",
+      "channelId": "1482976520887865364",
+      "price": 9,
+      "stock": 30,
+      "description": "Automação premium de divulgação."
+    },
+    {
+      "id": "divulgacao-basic",
+      "name": "Divulgação Basic",
+      "category": "bots",
+      "group": "divulgacao",
+      "tier": "basic",
+      "channelId": "1482976520887865364",
+      "price": 4,
+      "stock": 150,
+      "description": "Divulgação básica automatizada."
+    },
+    {
+      "id": "filas-freefire-premium",
+      "name": "Filas Free Fire Premium",
+      "category": "bots",
+      "group": "filas-freefire",
+      "tier": "premium",
+      "channelId": "1505704550424776714",
+      "price": 0,
+      "stock": 0,
+      "description": "Bot de filas para Free Fire com criação de salas x1, 2v2, 3v3 e outros formatos."
+    },
+    {
+      "id": "filas-freefire-platinum",
+      "name": "Filas Free Fire Platinum",
+      "category": "bots",
+      "group": "filas-freefire",
+      "tier": "platinum",
+      "channelId": "1505704550424776714",
+      "price": 0,
+      "stock": 0,
+      "description": "Bot de filas para Free Fire com criação de salas x1, 2v2, 3v3 e recursos avançados."
+    },
+    {
+      "id": "filas-freefire-premium-plus",
+      "name": "Filas Free Fire Premium+",
+      "category": "bots",
+      "group": "filas-freefire",
+      "tier": "premium-plus",
+      "channelId": "1505704550424776714",
+      "price": 0,
+      "stock": 0,
+      "description": "Bot de filas para Free Fire com criação de salas x1, 2v2, 3v3 e automações Premium+."
+    },
+    {
+      "id": "filas-freefire-diamond",
+      "name": "Filas Free Fire Diamond",
+      "category": "bots",
+      "group": "filas-freefire",
+      "tier": "diamond",
+      "channelId": "1505704550424776714",
+      "price": 0,
+      "stock": 0,
+      "description": "Bot de filas para Free Fire com criação de salas x1, 2v2, 3v3 e pacote Diamond completo."
+    },
+    {
+      "id": "site-premium",
+      "name": "Site Premium",
+      "category": "sites",
+      "group": "site",
+      "tier": "premium",
+      "channelId": "1482977055657299978",
+      "price": 19,
+      "stock": 5,
+      "description": "Site premium responsivo com layout profissional."
+    },
+    {
+      "id": "site-basic",
+      "name": "Site Basic",
+      "category": "sites",
+      "group": "site",
+      "tier": "basic",
+      "channelId": "1482977055657299978",
+      "price": 14,
+      "stock": 10,
+      "description": "Site básico responsivo para presença digital."
     }
   ],
   "payment": {
-    "pix": "**brunoquirin3@gmail.com**",
-
+    "pix": "d912cf9d-7788-4c26-a70c-2df48b122441",
     "bank": "**Nubank**",
-
     "beneficiary": "**Bruno Quirino**",
-    
-    "qrCode": ""
+    "qrCode": "00020126580014BR.GOV.BCB.PIX0136d912cf9d-7788-4c26-a70c-2df48b1224415204000053039865802BR5924Bruno Quirino de Almeida6009SAO PAULO62140510nrYHeYuBMg6304A23F"
   },
-  "voiceChannelId": "1472674114266468543",
-  "ticketPanelChannelId": "1233474945686704208"
+  "voiceChannelId": "1469735459553808477"
 }

@@ -1,11 +1,12 @@
 const { detectIntent, detectFaq, detectProduct } = require("../utils/keywords");
-const { createTicket } = require("../utils/tickets");
+const { createTicket, listTicketByChannel } = require("../utils/tickets");
 const { getSettings } = require("../utils/settings");
 const { infoEmbed, warningEmbed } = require("../utils/embeds");
 const { logToDb, logToChannel } = require("../utils/logger");
+const { findAutoResponse, initializeAutoResponses } = require("../utils/autoResponses");
 
 function isTicketChannel(channel) {
-  return channel.name?.startsWith("vendas-") || channel.name?.startsWith("suporte-");
+  return channel.name?.startsWith("🛒・") || channel.name?.startsWith("📩・") || channel.name?.startsWith("📦・");
 }
 
 module.exports = {
@@ -16,12 +17,22 @@ module.exports = {
     const settings = await getSettings(message.guild.id);
     if (!settings) return;
 
-    if (isTicketChannel(message.channel)) return;
+    await initializeAutoResponses(message.guild.id);
+
+    if (isTicketChannel(message.channel)) {
+      const autoResponse = await findAutoResponse(message.guild.id, message.content);
+      if (autoResponse) {
+        await message.reply({
+          embeds: [infoEmbed(config, `🤖 Resposta Automática (${autoResponse.category})`, autoResponse.response).setFooter({ text: "Bzn X • Auto-resposta" })]
+        });
+      }
+      return;
+    }
 
     const faq = detectFaq(message.content, config);
     if (faq) {
       await message.reply({
-        embeds: [infoEmbed(config, "📚 FAQ", faq).setFooter({ text: "Byte Support • Resposta rapida" })]
+        embeds: [infoEmbed(config, "📚 FAQ", faq).setFooter({ text: "BznX Store • Resposta rapida" })]
       });
       return;
     }
@@ -53,7 +64,7 @@ module.exports = {
             config,
             "✅ Ticket criado",
             `Canal criado: ${result.channel}\nEm breve nossa equipe responde aqui.`
-          ).setFooter({ text: "Byte Support" })
+          ).setFooter({ text: "BznX Store" })
         ]
       });
 
@@ -72,7 +83,7 @@ module.exports = {
         { name: "Produto", value: productId || "Nao informado", inline: true },
         { name: "Status", value: "Aberto", inline: true }
       ],
-      footer: "Byte Support • Logs"
+      footer: "BznX Store • Logs"
     });
   }
 };
