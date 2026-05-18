@@ -76,7 +76,7 @@ function buildProductAdminView(config, description = "Selecione um produto para 
       .addOptions(menuOptions.slice(0, 25))
   );
 
-  return { embed, components: [row] };
+  return { embed, components: [row, buildMainMenuBackRow()] };
 }
 
 function buildProductBackRow() {
@@ -84,6 +84,15 @@ function buildProductBackRow() {
     new ButtonBuilder()
       .setCustomId("admin_products_back")
       .setLabel("Voltar para produtos")
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
+
+function buildMainMenuBackRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("admin_main_back")
+      .setLabel("Voltar ao Menu Principal")
       .setStyle(ButtonStyle.Secondary)
   );
 }
@@ -613,14 +622,14 @@ module.exports = {
         
         if (selectedValue === "admin_payments") {
           const payments = await all("SELECT * FROM payments WHERE guild_id = ? ORDER BY created_at DESC LIMIT 25", [interaction.guild.id]);
-          
+
           if (!payments || payments.length === 0) {
             const embed = new EmbedBuilder()
               .setColor(config.colors.primary)
               .setTitle(`${config.botName} | Pagamentos`)
               .setDescription("Nenhum pagamento encontrado.");
-            
-            return interaction.update({ embeds: [embed], components: [] });
+
+            return interaction.update({ embeds: [embed], components: [buildMainMenuBackRow()] });
           }
 
           const paymentOptions = payments.slice(0, 25).map(p => ({
@@ -641,26 +650,26 @@ module.exports = {
             .setTitle(`${config.botName} | Pagamentos Recentes`)
             .setDescription(`Total de pagamentos: ${payments.length}`);
 
-          return interaction.update({ embeds: [embed], components: [row] });
+          return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
         }
         
         if (selectedValue === "admin_coupons") {
           const coupons = await listCoupons(interaction.guild.id);
-          
+
           if (!coupons || coupons.length === 0) {
             const embed = new EmbedBuilder()
               .setColor(config.colors.primary)
               .setTitle(`${config.botName} | Cupons`)
               .setDescription("Nenhum cupom cadastrado.");
-            
+
             const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder()
                 .setCustomId("add_coupon")
                 .setLabel("Criar Cupom")
                 .setStyle(ButtonStyle.Success)
             );
-            
-            return interaction.update({ embeds: [embed], components: [row] });
+
+            return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
           }
 
           const couponOptions = coupons.slice(0, 25).map(c => ({
@@ -687,7 +696,7 @@ module.exports = {
             .setTitle(`${config.botName} | Cupons`)
             .setDescription(`Total de cupons: ${coupons.length}`);
 
-          return interaction.update({ embeds: [embed], components: [row] });
+          return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
         }
 
         if (selectedValue === "admin_invites") {
@@ -712,7 +721,7 @@ module.exports = {
               .setStyle(ButtonStyle.Primary)
           );
 
-          return interaction.update({ embeds: [embed], components: [row] });
+          return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
         }
         
         if (selectedValue === "admin_settings") {
@@ -744,7 +753,7 @@ module.exports = {
               .setStyle(ButtonStyle.Danger)
           );
 
-          return interaction.update({ embeds: [embed], components: [row, restartRow] });
+          return interaction.update({ embeds: [embed], components: [row, restartRow, buildMainMenuBackRow()] });
         }
       }
 
@@ -1052,6 +1061,28 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
     }
 
     if (interaction.isButton()) {
+      if (interaction.customId === "admin_main_back") {
+        const adminMenuRow = new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId("admin_menu")
+            .setPlaceholder("Selecione uma opção")
+            .addOptions([
+              { label: "Produtos", description: "Gerenciar produtos", value: "admin_products" },
+              { label: "Pagamentos", description: "Ver pagamentos recentes", value: "admin_payments" },
+              { label: "Cupons", description: "Gerenciar cupons de desconto", value: "admin_coupons" },
+              { label: "Invites", description: "Ranking e ferramentas de invites", value: "admin_invites" },
+              { label: "Configurações", description: "Configurar canais e pagamento", value: "admin_settings" }
+            ])
+        );
+
+        const embed = new EmbedBuilder()
+          .setColor(config.colors.primary)
+          .setTitle(`${config.botName} | Painel Admin`)
+          .setDescription("Selecione uma opção abaixo para gerenciar o servidor.");
+
+        return interaction.update({ embeds: [embed], components: [adminMenuRow] });
+      }
+
       if (interaction.customId === "admin_products_back") {
         const { embed, components } = buildProductAdminView(config, "Selecione um produto para gerenciar ou cadastre um novo item.");
         return interaction.update({ embeds: [embed], components });
