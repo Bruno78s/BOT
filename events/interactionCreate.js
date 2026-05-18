@@ -716,9 +716,17 @@ module.exports = {
 
           const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
+              .setCustomId("admin_invites_view_user")
+              .setLabel("Ver Invites de Usuário")
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId("admin_invites_detailed")
+              .setLabel("Informações Completas")
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
               .setCustomId("admin_invites_set")
-              .setLabel("Definir/Resetar Invites")
-              .setStyle(ButtonStyle.Primary)
+              .setLabel("Definir/Resetar")
+              .setStyle(ButtonStyle.Secondary)
           );
 
           return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
@@ -755,6 +763,50 @@ module.exports = {
 
           return interaction.update({ embeds: [embed], components: [row, restartRow, buildMainMenuBackRow()] });
         }
+      }
+
+      if (interaction.customId === "invite_user_select") {
+        const selectedValue = interaction.values[0];
+        const userId = selectedValue.replace("invite_user_", "");
+
+        const stats = await getInviteStats(interaction.guild.id, userId);
+        const joins = await all("SELECT * FROM invite_joins WHERE guild_id = ? AND inviter_id = ? ORDER BY joined_at DESC", [interaction.guild.id, userId]);
+
+        const member = interaction.guild.members.cache.get(userId);
+        const user = member?.user;
+
+        const embed = new EmbedBuilder()
+          .setColor(config.colors.primary)
+          .setTitle(`${config.botName} | Invites de ${user?.tag || userId}`)
+          .setDescription([
+            `> **Usuário:** ${user ? `<@${userId}>` : userId}`,
+            `> **Total:** ${stats.total || 0}`,
+            `> **Disponíveis:** ${getRedeemableInvites(stats)}`,
+            `> **Resgatados/Resetados:** ${stats.redeemed || 0}`,
+            `> **Fake:** ${stats.fake || 0}`,
+            `> **Saiu:** ${stats.left || 0}`,
+            `> **Entrou válido:** ${stats.current || 0}`,
+            "",
+            `> **Últimas entradas (${joins.length} total):**`
+          ].join("\n"));
+
+        const recentJoins = joins.slice(0, 10).map((join, index) => {
+          const joinedUser = interaction.guild.members.cache.get(join.user_id)?.user;
+          const joinedDate = new Date(join.joined_at).toLocaleString('pt-BR');
+          const leftDate = join.left_at ? new Date(join.left_at).toLocaleString('pt-BR') : 'Ainda no servidor';
+          return `${index + 1}. ${joinedUser?.tag || join.user_id} - ${join.is_fake ? '🚫 Fake' : '✅ Válido'} - Entrou: ${joinedDate} - Saiu: ${leftDate}`;
+        }).join("\n");
+
+        embed.addFields({ name: "Histórico Recente", value: recentJoins || "Nenhuma entrada registrada" });
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("admin_invites")
+            .setLabel("Voltar")
+            .setStyle(ButtonStyle.Secondary)
+        );
+
+        return interaction.update({ embeds: [embed], components: [row] });
       }
 
       if (interaction.customId === "coupon_menu" || interaction.customId === "coupon_product_select") {
@@ -1087,6 +1139,39 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
         return interaction.update({ embeds: [embed], components });
       }
 
+      if (interaction.customId === "admin_invites") {
+        const leaderboard = await getInviteLeaderboard(interaction.guild.id, 10);
+        const ranking = leaderboard.length
+          ? leaderboard.map((row, index) => `${index + 1}. <@${row.user_id}> • Disponíveis: **${getRedeemableInvites(row)}** • Total: **${row.total || 0}** • Fake: **${row.fake || 0}** • Saiu: **${row.left || 0}**`).join("\n")
+          : "Nenhum convite registrado ainda.";
+
+        const embed = new EmbedBuilder()
+          .setColor(config.colors.primary)
+          .setTitle(`${config.botName} | Invites`)
+          .setDescription([
+            "> Ranking de convites válidos e ferramentas de reset.",
+            "",
+            ranking
+          ].join("\n"));
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("admin_invites_view_user")
+            .setLabel("Ver Invites de Usuário")
+            .setStyle(ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId("admin_invites_detailed")
+            .setLabel("Informações Completas")
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId("admin_invites_set")
+            .setLabel("Definir/Resetar")
+            .setStyle(ButtonStyle.Secondary)
+        );
+
+        return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
+      }
+
       if (interaction.customId === "start_config") {
         const modal = new ModalBuilder()
           .setCustomId("initial_config_modal")
@@ -1174,6 +1259,82 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
         );
 
         return interaction.showModal(modal);
+      }
+
+      if (interaction.customId === "admin_invites_view_user") {
+        const leaderboard = await getInviteLeaderboard(interaction.guild.id, 25);
+
+        if (!leaderboard || leaderboard.length === 0) {
+          return interaction.reply({
+            embeds: [dangerEmbed(config, "Nenhum invite", "Nenhum convite registrado ainda.")],
+            ephemeral: true
+          });
+        }
+
+        const userOptions = leaderboard.map(row => ({
+          label: `${interaction.guild.members.cache.get(row.user_id)?.user?.tag || row.user_id}`,
+          description: `Total: ${row.total || 0} | Disponíveis: ${getRedeemableInvites(row)}`,
+          value: `invite_user_${row.user_id}`
+        }));
+
+        const row = new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId("invite_user_select")
+            .setPlaceholder("Selecione um usuário...")
+            .addOptions(userOptions)
+        );
+
+        const embed = new EmbedBuilder()
+          .setColor(config.colors.primary)
+          .setTitle(`${config.botName} | Selecionar Usuário`)
+          .setDescription("Selecione um usuário para ver seus invites.");
+
+        return interaction.update({ embeds: [embed], components: [row] });
+      }
+
+      if (interaction.customId === "admin_invites_detailed") {
+        const allJoins = await all("SELECT * FROM invite_joins WHERE guild_id = ? ORDER BY joined_at DESC", [interaction.guild.id]);
+
+        if (!allJoins || allJoins.length === 0) {
+          return interaction.reply({
+            embeds: [dangerEmbed(config, "Nenhum dado", "Nenhum convite registrado ainda.")],
+            ephemeral: true
+          });
+        }
+
+        const content = allJoins.map(join => {
+          const user = interaction.guild.members.cache.get(join.user_id)?.user;
+          const inviter = interaction.guild.members.cache.get(join.inviter_id)?.user;
+          const joinedDate = new Date(join.joined_at).toLocaleString('pt-BR');
+          const leftDate = join.left_at ? new Date(join.left_at).toLocaleString('pt-BR') : 'Ainda no servidor';
+
+          return [
+            `Usuário: ${user?.tag || join.user_id} (${join.user_id})`,
+            `Convidado por: ${inviter?.tag || join.inviter_id || 'Desconhecido'} (${join.inviter_id || 'N/A'})`,
+            `Código do invite: ${join.invite_code || 'N/A'}`,
+            `Conta fake: ${join.is_fake ? 'Sim' : 'Não'}`,
+            `Entrou em: ${joinedDate}`,
+            `Saiu em: ${leftDate}`,
+            ''
+          ].join('\n');
+        }).join('\n');
+
+        const chunks = content.match(/[\s\S]{1,1900}/g) || [];
+
+        await interaction.reply({
+          embeds: [new EmbedBuilder()
+            .setColor(config.colors.primary)
+            .setTitle(`${config.botName} | Informações Completas de Invites`)
+            .setDescription(`Total de registros: ${allJoins.length}`)
+          ],
+          ephemeral: true
+        });
+
+        for (const chunk of chunks) {
+          await interaction.followUp({ content: chunk, ephemeral: true });
+        }
+
+        return;
       }
 
       if (interaction.customId === "admin_invites_set") {
