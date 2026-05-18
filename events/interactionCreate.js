@@ -237,10 +237,8 @@ module.exports = {
         configData.products.push(newProduct);
         fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 
-        const { embed, components } = buildProductAdminView(config, `Produto ${name} adicionado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças.`);
         await interaction.reply({
-          embeds: [embed],
-          components,
+          embeds: [successEmbed(config, "Produto adicionado", `Produto ${name} adicionado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças. Clique em Voltar para editar outro produto.`)],
           ephemeral: true
         });
         return;
@@ -316,10 +314,8 @@ module.exports = {
 
         fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 
-        const { embed, components } = buildProductAdminView(config, `Produto atualizado com sucesso! Preço: ${formatPrice(price)}, Estoque: ${stock}. O bot precisa ser reiniciado para aplicar as mudanças.`);
         await interaction.reply({
-          embeds: [embed],
-          components,
+          embeds: [successEmbed(config, "Produto atualizado", `Preço: ${formatPrice(price)}, Estoque: ${stock}. Clique em Voltar para editar outro produto.`)],
           ephemeral: true
         });
         return;
@@ -1390,10 +1386,8 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
         configData.products.splice(productIndex, 1);
         fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 
-        const { embed, components } = buildProductAdminView(config, `Produto ${product.name} deletado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças.`);
         await interaction.reply({
-          embeds: [embed],
-          components,
+          embeds: [successEmbed(config, "Produto deletado", `Produto ${product.name} deletado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças. Clique em Voltar para editar outro produto.`)],
           ephemeral: true
         });
         return;
