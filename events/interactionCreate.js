@@ -45,6 +45,49 @@ function parsePriceInput(value) {
   return Number(String(value).trim().replace(/\./g, "").replace(",", "."));
 }
 
+function getCurrentProducts(config) {
+  return readConfigFile().products || config.products || [];
+}
+
+function buildProductAdminView(config, description = "Selecione um produto para gerenciar ou cadastre um novo item.") {
+  const products = getCurrentProducts(config);
+  const menuOptions = products.map((product) => ({
+    label: product.name.slice(0, 100),
+    description: `Preço: ${formatPrice(product.price)} | Estoque: ${product.stock > 0 ? product.stock : "Esgotado"}`.slice(0, 100),
+    value: `edit_product_${product.id}`
+  }));
+
+  menuOptions.push({
+    label: "Adicionar Novo Produto",
+    description: "Criar um novo produto",
+    value: "add_new_product"
+  });
+
+  const embed = new EmbedBuilder()
+    .setColor(config.colors.primary)
+    .setTitle(`${config.botName} | Produtos`)
+    .setDescription(description)
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId("product_menu")
+      .setPlaceholder("Selecione um produto")
+      .addOptions(menuOptions.slice(0, 25))
+  );
+
+  return { embed, components: [row] };
+}
+
+function buildProductBackRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("admin_products_back")
+      .setLabel("Voltar para produtos")
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
+
 function buildTermsSnapshot(user, product) {
   return [
     `Usuário: ${user.tag || user.username || user.id} (${user.id})`,
@@ -194,8 +237,10 @@ module.exports = {
         configData.products.push(newProduct);
         fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 
+        const { embed, components } = buildProductAdminView(config, `Produto ${name} adicionado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças.`);
         await interaction.reply({
-          content: `Produto ${name} adicionado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças.`,
+          embeds: [embed],
+          components,
           ephemeral: true
         });
         return;
@@ -268,11 +313,13 @@ module.exports = {
 
         configData.products[productIndex].price = price;
         configData.products[productIndex].stock = stock;
-        
+
         fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 
+        const { embed, components } = buildProductAdminView(config, `Produto atualizado com sucesso! Preço: ${formatPrice(price)}, Estoque: ${stock}. O bot precisa ser reiniciado para aplicar as mudanças.`);
         await interaction.reply({
-          content: `Produto atualizado com sucesso! Preço: R$ ${price.toFixed(2)}, Estoque: ${stock}. O bot precisa ser reiniciado para aplicar as mudanças.`,
+          embeds: [embed],
+          components,
           ephemeral: true
         });
         return;
@@ -564,26 +611,8 @@ module.exports = {
         const selectedValue = interaction.values[0];
         
         if (selectedValue === "admin_products") {
-          const menuOptions = config.products.map(p => ({
-            label: p.name,
-            description: `Preço: R$ ${p.price.toFixed(2)} | Estoque: ${p.stock}`,
-            value: `edit_product_${p.id}`
-          }));
-          
-          menuOptions.push({
-            label: "Adicionar Novo Produto",
-            description: "Criar um novo produto",
-            value: "add_new_product"
-          });
-
-          const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-              .setCustomId("product_menu")
-              .setPlaceholder("Selecione um produto...")
-              .addOptions(menuOptions.slice(0, 25))
-          );
-
-          return interaction.update({ components: [row] });
+          const { embed, components } = buildProductAdminView(config);
+          return interaction.update({ embeds: [embed], components });
         }
         
         if (selectedValue === "admin_payments") {
@@ -1007,7 +1036,11 @@ module.exports = {
             new ButtonBuilder()
               .setCustomId(`delete_product_${productId}`)
               .setLabel("Deletar Produto")
-              .setStyle(ButtonStyle.Danger)
+              .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+              .setCustomId("admin_products_back")
+              .setLabel("Voltar")
+              .setStyle(ButtonStyle.Secondary)
           );
 
           return interaction.update({
@@ -1023,6 +1056,11 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
     }
 
     if (interaction.isButton()) {
+      if (interaction.customId === "admin_products_back") {
+        const { embed, components } = buildProductAdminView(config, "Selecione um produto para gerenciar ou cadastre um novo item.");
+        return interaction.update({ embeds: [embed], components });
+      }
+
       if (interaction.customId === "start_config") {
         const modal = new ModalBuilder()
           .setCustomId("initial_config_modal")
@@ -1352,8 +1390,10 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
         configData.products.splice(productIndex, 1);
         fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 
+        const { embed, components } = buildProductAdminView(config, `Produto ${product.name} deletado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças.`);
         await interaction.reply({
-          content: `Produto ${product.name} deletado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças.`,
+          embeds: [embed],
+          components,
           ephemeral: true
         });
         return;

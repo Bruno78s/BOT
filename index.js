@@ -62,6 +62,9 @@ for (const file of eventFiles) {
 
 async function registerCommands() {
   const rest = new REST({ version: "10" }).setToken(token);
+  console.log("Limpando comandos antigos...");
+  await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
+  console.log("Registrando comandos atuais...");
   await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commandsData });
 }
 
