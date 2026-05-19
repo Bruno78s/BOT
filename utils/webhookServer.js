@@ -6,8 +6,12 @@ const { formatPrice } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
 
 async function confirmApprovedPayment(client, config, paymentData, localPayment) {
+  console.log("[WEBHOOK] confirmApprovedPayment chamado para canal:", localPayment.channel_id);
   const channel = await client.channels.fetch(localPayment.channel_id).catch(() => null);
-  if (!channel?.send) return;
+  if (!channel?.send) {
+    console.log("[WEBHOOK] Erro: canal não encontrado ou não pode enviar mensagens");
+    return;
+  }
 
   const product = config.products.find((item) => item.id === localPayment.product_id);
   const orderId = localPayment.id;
@@ -53,12 +57,14 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       .setStyle(ButtonStyle.Danger)
   );
 
+  console.log("[WEBHOOK] Enviando mensagem de pagamento aprovado para canal:", channel.id);
   await channel.send({
     embeds: [
       summaryEmbed
     ],
     components: [row]
   });
+  console.log("[WEBHOOK] Mensagem enviada com sucesso");
 
   if (deliveryChannel?.send) {
     await deliveryChannel.send({
