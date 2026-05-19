@@ -1720,7 +1720,7 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
         const confirmRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId("ticket_confirm_purchase")
-            .setLabel("Confirmar Compra")
+            .setLabel("Fazer Pagamento")
             .setStyle(ButtonStyle.Success),
           new ButtonBuilder()
             .setCustomId("ticket_cancel_purchase")
