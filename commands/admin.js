@@ -1,9 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require("discord.js");
 const { EmbedBuilder } = require("discord.js");
-const { AttachmentBuilder } = require("discord.js");
-const path = require("path");
 const { getSettings, upsertSettings } = require("../utils/settings");
-const fs = require("fs");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -12,9 +9,6 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction, config) {
     const settings = await getSettings(interaction.guild.id);
-    
-    const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
-    const logoAttachment = new AttachmentBuilder(logoPath, { name: "logo.png" });
 
     if (!settings) {
       const embed = new EmbedBuilder()
@@ -25,10 +19,8 @@ module.exports = {
           "",
           "Clique no botão abaixo para iniciar a configuração."
         ].join("\n"))
-        .setThumbnail("attachment://logo.png")
         .setFooter({ 
-          text: "Bzn X • Configuração", 
-          iconURL: "attachment://logo.png"
+          text: "Bzn X • Configuração"
         })
         .setTimestamp();
 
@@ -42,7 +34,6 @@ module.exports = {
       return interaction.reply({ 
         embeds: [embed],
         components: [row],
-        files: [logoAttachment],
         ephemeral: true
       });
     }
@@ -59,10 +50,8 @@ module.exports = {
         "**Invites:** Ranking e reset de convites",
         "**Configurações:** Atualizar canais e IDs"
       ].join("\n"))
-      .setThumbnail("attachment://logo.png")
       .setFooter({ 
-        text: "Bzn X • Admin", 
-        iconURL: "attachment://logo.png"
+        text: "Bzn X • Admin"
       })
       .setTimestamp()
       .addFields([
@@ -109,7 +98,6 @@ module.exports = {
     await interaction.reply({ 
       embeds: [embed],
       components: [row],
-      files: [logoAttachment],
       ephemeral: true
     });
   }
