@@ -117,7 +117,7 @@ async function sendPurchaseAuditLog(interaction, config, ticket, product) {
   const logChannel = await interaction.client.channels.fetch(logChannelId).catch(() => null);
   if (!logChannel?.isTextBased()) return;
 
-  const acceptedAt = ticket.terms_accepted_at ? new Date(ticket.terms_accepted_at).toLocaleString("pt-BR") : "Não registrado";
+  const acceptedAt = ticket.terms_accepted_at ? new Date(ticket.terms_accepted_at).toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"}) : "Não registrado";
   const content = [
     "BznX Store - Registro de Compra",
     "",
@@ -130,7 +130,7 @@ async function sendPurchaseAuditLog(interaction, config, ticket, product) {
     "",
     ticket.terms_snapshot || "Termos não registrados no ticket.",
     "",
-    `Finalizado em: ${new Date().toLocaleString("pt-BR")}`
+    `Finalizado em: ${new Date().toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"})}`
   ].join("\n");
 
   const file = new AttachmentBuilder(Buffer.from(content, "utf8"), {
@@ -792,8 +792,8 @@ module.exports = {
 
         const recentJoins = joins.slice(0, 10).map((join, index) => {
           const joinedUser = interaction.guild.members.cache.get(join.user_id)?.user;
-          const joinedDate = new Date(join.joined_at).toLocaleString('pt-BR');
-          const leftDate = join.left_at ? new Date(join.left_at).toLocaleString('pt-BR') : 'Ainda no servidor';
+          const joinedDate = new Date(join.joined_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'});
+          const leftDate = join.left_at ? new Date(join.left_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'}) : 'Ainda no servidor';
           return `${index + 1}. ${joinedUser?.tag || join.user_id} - ${join.is_fake ? '🚫 Fake' : '✅ Válido'} - Entrou: ${joinedDate} - Saiu: ${leftDate}`;
         }).join("\n");
 
@@ -967,7 +967,7 @@ module.exports = {
             `> **Status:** ${statusEmoji} ${payment.status}`,
             `> **Pagamento ID:** ${payment.provider_payment_id || payment.preference_id || "N/A"}`,
             `> **Canal:** <#${payment.channel_id}>`,
-            `> **Data:** ${new Date(payment.created_at).toLocaleString('pt-BR')}`
+            `> **Data:** ${new Date(payment.created_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'})}`
           ].join("\n"));
 
         const row = new ActionRowBuilder().addComponents(
@@ -1305,8 +1305,8 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
         const content = allJoins.map(join => {
           const user = interaction.guild.members.cache.get(join.user_id)?.user;
           const inviter = interaction.guild.members.cache.get(join.inviter_id)?.user;
-          const joinedDate = new Date(join.joined_at).toLocaleString('pt-BR');
-          const leftDate = join.left_at ? new Date(join.left_at).toLocaleString('pt-BR') : 'Ainda no servidor';
+          const joinedDate = new Date(join.joined_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'});
+          const leftDate = join.left_at ? new Date(join.left_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'}) : 'Ainda no servidor';
 
           return [
             `Usuário: ${user?.tag || join.user_id} (${join.user_id})`,
@@ -1726,7 +1726,7 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
                 `**Plano:** ${product.tier === "premium-plus" ? "Premium+" : String(product.tier).replace(/(^|-)(\w)/g, (_, separator, letter) => `${separator ? " " : ""}${letter.toUpperCase()}`)}`,
                 `**Valor:** ${formatPrice(product.price)}`,
                 "",
-                `Termos aceitos em **${new Date(acceptedAt).toLocaleString("pt-BR")}**.`
+                `Termos aceitos em **${new Date(acceptedAt).toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"})}**.`
               ].join("\n"))
           ],
           components: []
@@ -1989,7 +1989,7 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
           `Produto: ${product?.name || payment.product_id}`,
           `Valor: ${formatPrice(payment.amount)}`,
           `Pagamento: ${payment.provider_payment_id || payment.preference_id || "N/A"}`,
-          `Data: ${new Date(payment.created_at).toLocaleString('pt-BR')}`
+          `Data: ${new Date(payment.created_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'})}`
         ].join("\n");
 
         return interaction.reply({
