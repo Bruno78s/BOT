@@ -10,34 +10,6 @@ module.exports = {
   async execute(interaction, config) {
     const settings = await getSettings(interaction.guild.id);
 
-    if (!settings) {
-      const embed = new EmbedBuilder()
-        .setColor(config.colors.primary)
-        .setTitle(`${config.botName} | Configuração Inicial`)
-        .setDescription([
-          "O bot ainda não está configurado neste servidor.",
-          "",
-          "Clique no botão abaixo para iniciar a configuração."
-        ].join("\n"))
-        .setFooter({ 
-          text: "Bzn X • Configuração"
-        })
-        .setTimestamp();
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("start_config")
-          .setLabel("Iniciar Configuração")
-          .setStyle(ButtonStyle.Success)
-      );
-
-      return interaction.reply({ 
-        embeds: [embed],
-        components: [row],
-        ephemeral: true
-      });
-    }
-
     const embed = new EmbedBuilder()
       .setColor(config.colors.primary)
       .setTitle(`${config.botName} | Painel Administrativo`)
