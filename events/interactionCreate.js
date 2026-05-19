@@ -1717,6 +1717,17 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
           [acceptedAt, termsSnapshot, interaction.channel.id]
         );
 
+        const confirmRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("ticket_confirm_purchase")
+            .setLabel("Confirmar Compra")
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId("ticket_cancel_purchase")
+            .setLabel("Cancelar")
+            .setStyle(ButtonStyle.Danger)
+        );
+
         await interaction.message.edit({
           embeds: [
             buildCartEmbed(config, interaction.user, product)
@@ -1729,7 +1740,7 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
                 `Termos aceitos em **${new Date(acceptedAt).toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"})}**.`
               ].join("\n"))
           ],
-          components: []
+          components: [confirmRow]
         }).catch(() => null);
 
         const couponModal = new ModalBuilder()
