@@ -479,6 +479,37 @@ module.exports = {
         return;
       }
 
+      if (interaction.customId === "select_payment_gateway_menu") {
+        const ticket = await listTicketByChannel(interaction.channel.id);
+        const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
+        if (!product) {
+          return interaction.reply({
+            embeds: [dangerEmbed(config, "Produto não encontrado", "Não foi possível identificar o produto deste carrinho.")],
+            ephemeral: true
+          });
+        }
+
+        const gatewayRow = new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId("select_payment_gateway")
+            .setPlaceholder("Selecione o método de pagamento...")
+            .addOptions([
+              {
+                label: "Mercado Pago PIX",
+                description: `Pagar com PIX via Mercado Pago`,
+                value: "mercadopago"
+              }
+            ])
+        );
+
+        await interaction.reply({
+          embeds: [infoEmbed(config, "Selecione o Pagamento", `Escolha o gateway de pagamento para **${product.name}**.\n\n**Total:** ${formatPrice(product.price)}`)],
+          components: [gatewayRow],
+          ephemeral: true
+        });
+        return;
+      }
+
       if (interaction.customId === "select_payment_gateway") {
         await interaction.deferUpdate();
 
@@ -1696,7 +1727,11 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
 
         const confirmRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId("ticket_confirm_purchase")
+            .setCustomId("cart_apply_coupon")
+            .setLabel("Aplicar Cupom")
+            .setStyle(ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId("select_payment_gateway_menu")
             .setLabel("Fazer Pagamento")
             .setStyle(ButtonStyle.Success),
           new ButtonBuilder()
@@ -1714,27 +1749,16 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
                 `**Plano:** ${product.tier === "premium-plus" ? "Premium+" : String(product.tier).replace(/(^|-)(\w)/g, (_, separator, letter) => `${separator ? " " : ""}${letter.toUpperCase()}`)}`,
                 `**Valor:** ${formatPrice(product.price)}`,
                 "",
-                `Termos aceitos em **${new Date(acceptedAt).toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"})}**.`
+                `Termos aceitos em **${new Date(acceptedAt).toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"})}**.`,
+                "",
+                "Clique em **Fazer Pagamento** para gerar o PIX."
               ].join("\n"))
           ],
           components: [confirmRow]
-        }).catch(() => null);
+        });
 
-        const couponModal = new ModalBuilder()
-          .setCustomId("coupon_modal")
-          .setTitle("Cupom de Desconto");
-
-        const couponInput = new TextInputBuilder()
-          .setCustomId("coupon_code")
-          .setLabel("Código do cupom (opcional)")
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setPlaceholder("Digite o código do cupom...");
-
-        const firstRow = new ActionRowBuilder().addComponents(couponInput);
-        couponModal.addComponents(firstRow);
-
-        return interaction.showModal(couponModal);
+        await interaction.deferUpdate();
+        return;
       }
 
       if (interaction.customId === "verify_button") {
