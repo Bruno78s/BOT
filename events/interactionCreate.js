@@ -487,8 +487,8 @@ module.exports = {
         });
         return;
       }
-
-      if (interaction.customId === "select_payment_gateway_menu") {
+      console.log("[DEBUG CUSTOM ID]", interaction.customId);
+     if (interaction.customId.includes("select_payment_gateway_menu")) {
   console.log("[DEBUG] Botão Fazer Pagamento clicado");
 
   try {
