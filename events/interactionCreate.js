@@ -147,6 +147,7 @@ module.exports = {
       
       if (interaction.isButton() || interaction.isStringSelectMenu()) {
         console.log(`[INTERACTION] Button/Menu clicked: ${interaction.customId} by ${interaction.user.tag} in #${interaction.channelId}`);
+        console.log(`[DEBUG] Verificando handlers para: ${interaction.customId}`);
       }
       
       if (interaction.isChatInputCommand()) {
@@ -488,8 +489,9 @@ module.exports = {
       }
 
       if (interaction.customId === "select_payment_gateway_menu") {
-        console.log("[DEBUG] Botão Fazer Pagamento clicado");
+        console.log("[DEBUG] === HANDLER select_payment_gateway_menu INICIADO ===");
         try {
+          console.log("[DEBUG] Buscando ticket para canal:", interaction.channel.id);
           const ticket = await listTicketByChannel(interaction.channel.id);
           console.log("[DEBUG] Ticket:", ticket);
           const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
