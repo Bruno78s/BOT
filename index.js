@@ -73,7 +73,15 @@ registerCommands()
   .catch((error) => console.error("Falha ao registrar comandos", error));
 
 process.on("unhandledRejection", (error) => {
-  console.error("Erro nao tratado", error);
+  console.error("[ERRO] Rejeição não tratada:", error);
 });
 
-client.login(token);
+process.on("uncaughtException", (error) => {
+  console.error("[ERRO] Exceção não capturada:", error);
+  process.exit(1);
+});
+
+client.login(token).catch((error) => {
+  console.error("[ERRO] Falha ao conectar ao Discord:", error);
+  process.exit(1);
+});

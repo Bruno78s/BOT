@@ -613,8 +613,16 @@ module.exports = {
       }
 
       if (interaction.customId === "admin_menu") {
+        const settings = await getSettings(interaction.guild.id);
+        if (!isAdmin(interaction.member, settings)) {
+          return interaction.reply({
+            embeds: [dangerEmbed(config, "Acesso negado", "Apenas administradores podem usar este menu.")],
+            ephemeral: true
+          });
+        }
+
         const selectedValue = interaction.values[0];
-        
+
         if (selectedValue === "admin_products") {
           const { embed, components } = buildProductAdminView(config);
           return interaction.update({ embeds: [embed], components });
