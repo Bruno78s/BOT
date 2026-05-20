@@ -141,7 +141,15 @@ async function sendPurchaseAuditLog(interaction, config, ticket, product) {
 module.exports = {
   name: "interactionCreate",
   async execute(interaction, config) {
-    if (interaction.isChatInputCommand()) {
+    try {
+      // Log TODAS as interações no início
+      console.log(`[INTERACTION START] Tipo: ${interaction.type}, ID: ${interaction.id}, CustomId: ${interaction.customId || 'N/A'}`);
+      
+      if (interaction.isButton() || interaction.isStringSelectMenu()) {
+        console.log(`[INTERACTION] Button/Menu clicked: ${interaction.customId} by ${interaction.user.tag} in #${interaction.channelId}`);
+      }
+      
+      if (interaction.isChatInputCommand()) {
       const command = interaction.client.commands.get(interaction.commandName);
       if (command) {
         await command.execute(interaction, config);
@@ -2190,6 +2198,10 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
         );
       }
 
+    }
+    } catch (error) {
+      console.error('[INTERACTION ERROR]', error);
+      throw error;
     }
   }
 };
