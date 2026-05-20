@@ -136,6 +136,20 @@ function buildSupportEmbed(config) {
     .setTimestamp();
 }
 
+/**
+ * Cria snapshot dos termos aceitos para registro
+ */
+function buildTermsSnapshot(user, product) {
+  return JSON.stringify({
+    userId: user.id,
+    userTag: user.tag,
+    productId: product.id,
+    productName: product.name,
+    productPrice: product.price,
+    acceptedAt: Date.now()
+  });
+}
+
 module.exports = {
   readConfigFile,
   writeConfigFile,
@@ -146,5 +160,6 @@ module.exports = {
   buildProductEmbed,
   buildCartEmbed,
   buildTermsEmbed,
-  buildSupportEmbed
+  buildSupportEmbed,
+  buildTermsSnapshot
 };

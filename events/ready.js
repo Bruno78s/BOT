@@ -18,6 +18,11 @@ const { logSystemEvent } = require("../utils/advancedLogger");
 const { cacheGuildInvites } = require("../utils/invites");
 const { syncToSupabase } = require("../utils/syncToSupabase");
 const { isSupabaseEnabled } = require("../utils/supabase");
+const { backupDatabaseEncrypted } = require("../utils/backup");
+const Dashboard = require("../utils/dashboard");
+const ReportSystem = require("../utils/reports");
+const StockPrediction = require("../utils/stockPrediction");
+const AutoRestock = require("../utils/autoRestock");
 
 module.exports = {
   name: "clientReady",
@@ -31,6 +36,7 @@ module.exports = {
 
     cron.schedule("0 3 * * *", async () => {
       backupDatabase();
+      backupDatabaseEncrypted(); // Melhoria 12: Backup criptografado
       pruneBackups(config.limits.logRetentionDays);
     });
 
@@ -51,6 +57,73 @@ module.exports = {
       const limit = Date.now() - config.limits.logRetentionDays * 24 * 60 * 60 * 1000;
       await run("DELETE FROM logs WHERE created_at < ?", [limit]);
     });
+
+    // Melhoria 14: Relatórios Automáticos
+    const reports = new ReportSystem(config);
+    
+    // Relatório diário às 9h
+    cron.schedule("0 9 * * *", async () => {
+      const logChannelId = config.logChannels?.system || config.statsChannelId;
+      if (logChannelId) {
+        const channel = await client.channels.fetch(logChannelId).catch(() => null);
+        if (channel) {
+          await reports.sendReport(channel, 'daily');
+          console.log("[REPORTS] Relatório diário enviado");
+        }
+      }
+    });
+
+    // Relatório semanal às 10h de segunda
+    cron.schedule("0 10 * * 1", async () => {
+      const logChannelId = config.logChannels?.system || config.statsChannelId;
+      if (logChannelId) {
+        const channel = await client.channels.fetch(logChannelId).catch(() => null);
+        if (channel) {
+          await reports.sendReport(channel, 'weekly');
+          console.log("[REPORTS] Relatório semanal enviado");
+        }
+      }
+    });
+
+    // Relatório de estoque às 8h
+    cron.schedule("0 8 * * *", async () => {
+      const logChannelId = config.logChannels?.system || config.statsChannelId;
+      if (logChannelId) {
+        const channel = await client.channels.fetch(logChannelId).catch(() => null);
+        if (channel) {
+          await reports.sendReport(channel, 'stock');
+          console.log("[REPORTS] Relatório de estoque enviado");
+        }
+      }
+    });
+
+    // Melhoria 15 & 16: Previsão de Estoque e Restock Automático
+    const autoRestock = new AutoRestock(config, client);
+    
+    // Verificar estoque a cada 6 horas
+    cron.schedule("0 */6 * * *", async () => {
+      const prediction = new StockPrediction(config);
+      const report = await prediction.generatePredictionReport();
+      
+      console.log(`[STOCK] Previsão gerada: ${report.alert.summary.critical} críticos, ${report.alert.summary.high} altos`);
+      
+      // Executar restock automático se habilitado
+      if (process.env.AUTO_RESTOCK_ENABLED === 'true') {
+        const restockResult = await autoRestock.runAutoRestock();
+        if (restockResult.restocked.length > 0) {
+          const logChannelId = config.logChannels?.system || config.statsChannelId;
+          if (logChannelId) {
+            await autoRestock.notifyRestock(logChannelId, restockResult);
+          }
+        }
+      }
+    });
+
+    // Melhoria 13: Dashboard em Tempo Real - Atualizar a cada 2 minutos
+    const dashboard = new Dashboard(config);
+    setInterval(async () => {
+      dashboard.clearCache();
+    }, 120000); // Limpar cache a cada 2 minutos
 
     setInterval(() => {
       ensureStatsPanel(client, config).catch(() => null);

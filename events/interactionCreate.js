@@ -18,7 +18,7 @@ const { logToDb, logToChannel } = require("../utils/logger");
 const { notifySale } = require("../utils/notifications");
 const { performVerification, formatVerificationResults } = require("../utils/verification");
 const { logTicketEvent, logFeedbackEvent, logSecurityEvent } = require("../utils/advancedLogger");
-const { buildCartEmbed, buildTermsEmbed, formatPrice, readConfigFile, writeConfigFile } = require("../utils/salesFlow");
+const { buildCartEmbed, buildTermsEmbed, formatPrice, readConfigFile, writeConfigFile, buildTermsSnapshot } = require("../utils/salesFlow");
 const { createCheckoutPayment, getPendingPaymentByChannel, getCredentialMode } = require("../utils/mercadoPago");
 const { get, run, all } = require("../database/db");
 const { validateCoupon, calculateDiscount, useCoupon, getCoupon, listCoupons, createCoupon, deleteCoupon } = require("../utils/coupons");
@@ -94,21 +94,6 @@ function buildMainMenuBackRow() {
       .setLabel("Voltar ao Menu Principal")
       .setStyle(ButtonStyle.Secondary)
   );
-}
-
-function buildTermsSnapshot(user, product) {
-  return [
-    `Usuário: ${user.tag || user.username || user.id} (${user.id})`,
-    `Produto: ${product.name}`,
-    `Plano: ${product.tier}`,
-    `Valor: ${formatPrice(product.price)}`,
-    "",
-    "Termos aceitos:",
-    "1. O pedido só será processado após a confirmação do pagamento.",
-    "2. O prazo pode variar conforme o produto e a demanda da equipe.",
-    "3. O suporte cobre dúvidas e ajustes básicos relacionados ao serviço contratado.",
-    "4. O usuário confirma que revisou produto, plano e valor antes de continuar."
-  ].join("\n");
 }
 
 async function sendPurchaseAuditLog(interaction, config, ticket, product) {
