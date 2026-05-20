@@ -26,19 +26,19 @@ module.exports = {
       .setColor(config.colors.primary)
       .setTitle(`${config.botName} | Painel Administrativo`)
       .setDescription([
-        "`Gerenciamento completo da loja`",
-        "",
         "📊 **Estatísticas**",
+
         `├ Vendas hoje: **${stats?.today_sales || 0}**`,
         `├ Total vendas: **${stats?.total_sales || 0}**`,
         `├ Tickets abertos: **${stats?.open_tickets || 0}**`,
         "",
         "📦 **Produtos**",
+
         `├ Total: **${totalProducts}**`,
         `├ Estoque baixo: **${lowStock}**`,
         `└ Sem estoque: **${outOfStock}**`
       ].join("\n"))
-      .setFooter({ text: "Bzn X • Admin" })
+      .setFooter({ text: "BznX • Admin" })
       .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
