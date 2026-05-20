@@ -61,6 +61,7 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
   const qrCode = response.point_of_interaction?.transaction_data?.qr_code || null;
   const qrCodeBase64 = response.point_of_interaction?.transaction_data?.qr_code_base64 || null;
   const checkoutUrl = response.point_of_interaction?.transaction_data?.ticket_url || null;
+  const copyPasteCode = response.point_of_interaction?.transaction_data?.qr_code || null;
 
   await run(
     "INSERT INTO payments (guild_id, channel_id, user_id, product_id, provider, provider_payment_id, preference_id, status, amount, checkout_url, created_at) VALUES (?, ?, ?, ?, 'mercadopago', ?, ?, 'pending', ?, ?, ?)",
@@ -72,7 +73,8 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
     paymentId: response.id,
     checkoutUrl,
     qrCode,
-    qrCodeBase64
+    qrCodeBase64,
+    copyPasteCode
   };
 }
 

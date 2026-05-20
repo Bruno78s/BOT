@@ -4,6 +4,7 @@ const { Client, Collection, GatewayIntentBits, Partials, REST, Routes } = requir
 const dotenv = require("dotenv");
 const { loadConfig } = require("./utils/config");
 const { startWebhookServer } = require("./utils/webhookServer");
+const { exportData, importData } = require("./utils/backup");
 
 dotenv.config();
 
@@ -30,8 +31,14 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-client.once("clientReady", () => {
+client.once("clientReady", async () => {
   startWebhookServer(client, config);
+  
+  // Importar dados salvos após reiniciar
+  const imported = importData();
+  if (imported.success) {
+    console.log(`[BACKUP] Dados importados: ${imported.data.invites?.length || 0} invites, ${imported.data.pendingPayments?.length || 0} pagamentos pendentes`);
+  }
 });
 
 const commandsPath = path.join(__dirname, "commands");
@@ -76,9 +83,23 @@ process.on("unhandledRejection", (error) => {
   console.error("[ERRO] Rejeição não tratada:", error);
 });
 
-process.on("uncaughtException", (error) => {
+process.on("uncaughtException", async (error) => {
   console.error("[ERRO] Exceção não capturada:", error);
+  await exportData();
   process.exit(1);
+});
+
+// Exportar dados antes de desligar
+process.on("SIGINT", async () => {
+  console.log("[BACKUP] Exportando dados antes de desligar...");
+  await exportData();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("[BACKUP] Exportando dados antes de desligar...");
+  await exportData();
+  process.exit(0);
 });
 
 client.login(token).catch((error) => {

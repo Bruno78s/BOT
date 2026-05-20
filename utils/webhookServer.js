@@ -1,7 +1,6 @@
 const express = require("express");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { fetchPayment, attachProviderPaymentIdByReference, getPaymentByProviderPaymentId, updatePaymentStatusByProviderId } = require("./mercadoPago");
-const { getPayment: getAsaasPayment, updatePaymentStatusByProviderId: updateAsaasPaymentStatus, getPaymentByProviderPaymentId: getAsaasPaymentByProviderId } = require("./asaas");
 const { formatPrice } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
 
@@ -86,7 +85,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   }
 
   await logTicketEvent(client, config, "Pagamento Aprovado", localPayment.channel_id, {
-    description: `Pagamento aprovado automaticamente via ${localPayment.provider === "asaas" ? "Asaas" : "Mercado Pago"}.`,
+    description: `Pagamento aprovado automaticamente via Mercado Pago.`,
     fields: [
       { name: "Cliente", value: `<@${localPayment.user_id}>`, inline: true },
       { name: "Produto", value: product?.name || localPayment.product_id, inline: true },
@@ -133,34 +132,9 @@ function startWebhookServer(client, config) {
     }
   });
 
-  app.post("/asaas/webhook", async (req, res) => {
-    res.sendStatus(200);
-
-    try {
-      const paymentId = req.body?.payment?.id;
-      const paymentStatus = req.body?.payment?.status;
-      if (!paymentId || !paymentStatus) return;
-
-      const paymentData = await getAsaasPayment(paymentId);
-      const channelId = paymentData?.externalReference;
-      if (!channelId) return;
-
-      let localPayment = await getAsaasPaymentByProviderId(paymentId);
-      if (!localPayment) return;
-
-      await updateAsaasPaymentStatus(paymentId, paymentStatus);
-      localPayment = await getAsaasPaymentByProviderId(paymentId);
-
-      if (paymentStatus === "CONFIRMED" || paymentStatus === "RECEIVED") {
-        await confirmApprovedPayment(client, config, paymentData, localPayment);
-      }
-    } catch (error) {
-      console.error("Erro no webhook Asaas:", error);
-    }
-  });
 
   const server = app.listen(port, () => {
-    console.log(`Webhook Mercado Pago e Asaas ativos na porta ${port}`);
+    console.log(`Webhook Mercado Pago ativo na porta ${port}`);
   });
 
   server.on("error", (error) => {

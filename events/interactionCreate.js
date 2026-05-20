@@ -20,7 +20,6 @@ const { performVerification, formatVerificationResults } = require("../utils/ver
 const { logTicketEvent, logFeedbackEvent, logSecurityEvent } = require("../utils/advancedLogger");
 const { buildCartEmbed, buildTermsEmbed, formatPrice, readConfigFile, writeConfigFile } = require("../utils/salesFlow");
 const { createCheckoutPayment, getPendingPaymentByChannel, getCredentialMode } = require("../utils/mercadoPago");
-const asaas = require("../utils/asaas");
 const { get, run, all } = require("../database/db");
 const { validateCoupon, calculateDiscount, useCoupon, getCoupon, listCoupons, createCoupon, deleteCoupon } = require("../utils/coupons");
 const { getInviteStats, getInviteLeaderboard, getRedeemableInvites, resetRedeemableInvites, setRedeemedInvites } = require("../utils/invites");
@@ -371,12 +370,7 @@ module.exports = {
                 description: `Pagar com PIX via Mercado Pago ${coupon ? `(Desconto: ${formatPrice(discount)})` : ""}`,
                 value: "mercadopago"
               },
-              {
-                label: "Asaas PIX",
-                description: `Pagar com PIX via Asaas ${coupon ? `(Desconto: ${formatPrice(discount)})` : ""}`,
-                value: "asaas"
-              }
-            ])
+              ])
         );
 
         const description = coupon 
@@ -529,23 +523,13 @@ module.exports = {
         let checkout = null;
 
         try {
-          if (gateway === "asaas") {
-            checkout = await asaas.createPixPayment({
-              guildId: interaction.guild.id,
-              channelId: interaction.channel.id,
-              userId: interaction.user.id,
-              product: { ...product, price: finalPrice },
-              user: interaction.user
-            });
-          } else {
-            checkout = await createCheckoutPayment({
-              guildId: interaction.guild.id,
-              channelId: interaction.channel.id,
-              userId: interaction.user.id,
-              product: { ...product, price: finalPrice },
-              user: interaction.user
-            });
-          }
+          checkout = await createCheckoutPayment({
+            guildId: interaction.guild.id,
+            channelId: interaction.channel.id,
+            userId: interaction.user.id,
+            product: { ...product, price: finalPrice },
+            user: interaction.user
+          });
         } catch (error) {
           console.error(`Erro ao criar pagamento ${gateway}:`, error.response?.data || error);
           const errorDescription = error?.message || error?.error || error?.cause?.[0]?.description || error?.response?.data?.errors?.[0]?.description || "Erro desconhecido";
@@ -598,7 +582,7 @@ module.exports = {
         if (checkout.checkoutUrl) {
           row.addComponents(
             new ButtonBuilder()
-              .setLabel(gateway === "asaas" ? "Abrir no Asaas" : "Abrir no Mercado Pago")
+              .setLabel("Pagar no Mercado Pago")
               .setStyle(ButtonStyle.Link)
               .setURL(checkout.checkoutUrl)
           );
