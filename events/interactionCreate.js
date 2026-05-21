@@ -361,7 +361,7 @@ module.exports = {
             .addOptions([
               {
                 label: " PIX",
-                description: `Pagar com PIX via QR CODE ${coupon ? `(Desconto: ${formatPrice(discount)})` : ""}`,
+                description: `Pagar com PIX via QR CODE e Copia e cola ${coupon ? `(Desconto: ${formatPrice(discount)})` : ""}`,
                 value: "mercadopago"
               },
               ])
@@ -372,7 +372,7 @@ module.exports = {
           : "Nenhum cupom aplicado.";
 
         await interaction.reply({
-          embeds: [infoEmbed(config, "Selecione o Pagamento", `Escolha o gateway de pagamento para **${product.name}**.\n\n${description}\n\n**Total:** ${formatPrice(finalPrice)} (${coupon ? `De ${formatPrice(product.price)}` : ""})`)],
+          embeds: [infoEmbed(config, "Selecione o Pagamento", `Escolha o método de pagamento para **${product.name}**.\n\n${description}\n\n**Total:** ${formatPrice(finalPrice)} (${coupon ? `De ${formatPrice(product.price)}` : ""})`)],
           components: [gatewayRow],
           ephemeral: true
         });
@@ -1113,10 +1113,10 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
             new StringSelectMenuBuilder()
               .setCustomId("select_payment_gateway")
               .setPlaceholder("Selecione o método de pagamento...")
-              .addOptions([{ label: "Mercado Pago PIX", description: "Pagar com PIX via Mercado Pago", value: "mercadopago" }])
+              .addOptions([{ label: "PIX", description: "Pagar com PIX", value: "mercadopago" }])
           );
           await interaction.editReply({
-            embeds: [infoEmbed(config, "Selecione o Pagamento", `Escolha o gateway para **${product.name}**.\n\n**Total:** ${formatPrice(product.price)}`)],
+            embeds: [infoEmbed(config, "Selecione o Pagamento", `Escolha o método para **${product.name}**.\n\n**Total:** ${formatPrice(product.price)}`)],
             components: [gatewayRow]
           });
           return;
