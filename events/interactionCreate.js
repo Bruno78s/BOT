@@ -1168,6 +1168,23 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
     }
 
     if (interaction.isButton()) {
+      if (interaction.customId === "cart_apply_coupon") {
+        const modal = new ModalBuilder()
+          .setCustomId("coupon_modal")
+          .setTitle("Aplicar Cupom");
+
+        const couponInput = new TextInputBuilder()
+          .setCustomId("coupon_code")
+          .setLabel("Código do cupom")
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder("Ex: DESCONTO10")
+          .setRequired(false);
+
+        modal.addComponents(new ActionRowBuilder().addComponents(couponInput));
+        await interaction.showModal(modal);
+        return;
+      }
+
       if (interaction.customId === "select_payment_gateway_menu") {
         console.log("[DEBUG] Botão Fazer Pagamento clicado");
         try {
