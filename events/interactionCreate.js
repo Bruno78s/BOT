@@ -607,50 +607,50 @@ module.exports = {
           await useCoupon(coupon.id);
         }
 
-        const paymentEmbed = new EmbedBuilder()
-          .setColor(config.colors.primary)
-          .setTitle(`${config.botName} | Pagamento`)
-          .setDescription([
-            `> **Cliente:** ${interaction.user.username}`,
-            `> **Produto:** ${product.name}`,
-            coupon ? `> **Valor original:** ${formatPrice(product.price)}` : null,
-            coupon ? `> **Desconto:** ${formatPrice(discount)}` : null,
-            `> **Valor final:** ${formatPrice(finalPrice)}`,
-            "",
-            checkout.method === "pix"
-              ? "> Escaneie o QR Code ou copie o código PIX abaixo para pagar por qualquer banco."
-              : "> O PIX direto foi bloqueado pelo ambiente de teste. Use o botão abaixo para pagar pelo Checkout Pro.",
-            "> Assim que o pagamento for aprovado, o bot confirma automaticamente.",
-            "",
-            checkout.copyPasteCode ? `\`\`\`\n${checkout.copyPasteCode}\n\`\`\`` : null,
-            "",
-            `> **Status:** Aguardando pagamento`
-          ].filter(Boolean).join("\n"))
-          .setFooter({ text: "Bzn X • Pagamento" })
-          .setTimestamp();
-
         const files = [];
+        let qrCodeAttached = false;
         if (checkout.qrCode && checkout.qrCode !== checkout.copyPasteCode) {
           const qrBuffer = Buffer.from(checkout.qrCode, "base64");
           files.push(new AttachmentBuilder(qrBuffer, { name: "pix-qrcode.png" }));
+          qrCodeAttached = true;
+        }
+
+        const descLines = [
+          `> 👤 **Cliente:** <@${interaction.user.id}>`,
+          `> 📦 **Produto:** ${product.name}`,
+          coupon ? `> 🏷️ **Desconto:** ${formatPrice(discount)} (cupom **${coupon.code.toUpperCase()}**)` : null,
+          `> 💰 **Valor:** ${formatPrice(finalPrice)}`,
+          "",
+          "─────────────────────────────",
+          "",
+          checkout.copyPasteCode
+            ? `📋 **Copia e Cola PIX:**\n\`\`\`\n${checkout.copyPasteCode}\n\`\`\``
+            : null,
+          "",
+          "─────────────────────────────",
+          "",
+          "> 🔄 **Status:** ⏳ Aguardando pagamento...",
+          "> ✅ A confirmação será **automática** após o pagamento!",
+        ].filter(Boolean).join("\n");
+
+        const paymentEmbed = new EmbedBuilder()
+          .setColor(0x00c853)
+          .setTitle("💳 Pagamento via PIX")
+          .setDescription(descLines)
+          .setFooter({ text: `${config.botName} • Pagamento seguro`, iconURL: interaction.client.user.displayAvatarURL() })
+          .setTimestamp();
+
+        if (qrCodeAttached) {
           paymentEmbed.setImage("attachment://pix-qrcode.png");
+          paymentEmbed.setThumbnail("attachment://pix-qrcode.png");
         }
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId("ticket_cancel_purchase")
-            .setLabel("Cancelar")
+            .setLabel("❌ Cancelar Pedido")
             .setStyle(ButtonStyle.Danger)
         );
-
-        if (checkout.checkoutUrl) {
-          row.addComponents(
-            new ButtonBuilder()
-              .setLabel("Pagar no Mercado Pago")
-              .setStyle(ButtonStyle.Link)
-              .setURL(checkout.checkoutUrl)
-          );
-        }
 
         await interaction.editReply({
           embeds: [paymentEmbed],
