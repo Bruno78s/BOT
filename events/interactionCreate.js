@@ -383,6 +383,76 @@ module.exports = {
 
         return;
       }
+
+      if (interaction.customId.startsWith("create_coupon_modal")) {
+        try {
+          const code = interaction.fields.getTextInputValue("coupon_code").trim();
+          const discountType = interaction.fields.getTextInputValue("coupon_discount_type").trim();
+          const discountValueStr = interaction.fields.getTextInputValue("coupon_discount_value").trim();
+          const maxUses = interaction.fields.getTextInputValue("coupon_max_uses").trim();
+          const minAmount = interaction.fields.getTextInputValue("coupon_min_amount").trim();
+          const modalProductId = interaction.customId.includes(":") ? interaction.customId.split(":")[1] : "all";
+          const productId = modalProductId === "all" ? "" : modalProductId;
+
+          if (!["percentage", "fixed"].includes(discountType)) {
+            return interaction.reply({
+              embeds: [dangerEmbed(config, "Tipo inválido", "O tipo deve ser 'percentage' ou 'fixed'.")],
+              ephemeral: true
+            });
+          }
+
+          const discountValue = parsePriceInput(discountValueStr.replace("%", ""));
+          if (!Number.isFinite(discountValue) || discountValue <= 0) {
+            return interaction.reply({
+              embeds: [dangerEmbed(config, "Valor inválido", "O valor do desconto deve ser positivo (ex: 5 ou 5%).")],
+              ephemeral: true
+            });
+          }
+
+          const options = {};
+          if (maxUses) {
+            options.maxUses = parseInt(maxUses);
+            if (Number.isNaN(options.maxUses) || options.maxUses <= 0) {
+              return interaction.reply({
+                embeds: [dangerEmbed(config, "Valor inválido", "O máximo de usos deve ser um número positivo.")],
+                ephemeral: true
+              });
+            }
+          }
+          if (minAmount) {
+            options.minAmount = parsePriceInput(minAmount);
+            if (!Number.isFinite(options.minAmount) || options.minAmount <= 0) {
+              return interaction.reply({
+                embeds: [dangerEmbed(config, "Valor inválido", "O valor mínimo deve ser um número positivo.")],
+                ephemeral: true
+              });
+            }
+          }
+          if (productId) {
+            const product = config.products.find(p => p.id === productId);
+            if (!product) {
+              return interaction.reply({
+                embeds: [dangerEmbed(config, "Produto não encontrado", "O ID do produto informado não existe.")],
+                ephemeral: true
+              });
+            }
+            options.productId = productId;
+          }
+
+          await createCoupon(interaction.guild.id, code, discountType, discountValue, options);
+          await interaction.reply({
+            embeds: [successEmbed(config, "Cupom criado", `Cupom **${code.toUpperCase()}** criado com sucesso!${productId ? ` Válido para: ${config.products.find(p => p.id === productId)?.name || 'Produto específico'}` : ' Válido para todos os produtos'}`)],
+            ephemeral: true
+          });
+          return;
+        } catch (error) {
+          console.error("[Coupon] Erro ao criar cupom:", error);
+          return interaction.reply({
+            embeds: [dangerEmbed(config, "Erro ao criar cupom", error.message || "Erro desconhecido.")],
+            ephemeral: true
+          });
+        }
+      }
     }
 
     if (interaction.isStringSelectMenu()) {
@@ -1421,88 +1491,6 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
           .setDescription("Escolha para qual produto o cupom será válido. Se selecionar 'Todos os produtos', o cupom funcionará em qualquer compra.");
 
         return interaction.update({ embeds: [embed], components: [row] });
-      }
-
-      if (interaction.customId.startsWith("create_coupon_modal")) {
-        try {
-          const code = interaction.fields.getTextInputValue("coupon_code").trim();
-          const discountType = interaction.fields.getTextInputValue("coupon_discount_type").trim();
-          const discountValueStr = interaction.fields.getTextInputValue("coupon_discount_value").trim();
-          const maxUses = interaction.fields.getTextInputValue("coupon_max_uses").trim();
-          const minAmount = interaction.fields.getTextInputValue("coupon_min_amount").trim();
-          const modalProductId = interaction.customId.includes(":") ? interaction.customId.split(":")[1] : "all";
-          const productId = modalProductId === "all" ? "" : modalProductId;
-
-          console.log("[Coupon] Criando cupom:", { code, discountType, discountValueStr, maxUses, minAmount, productId });
-
-          if (!["percentage", "fixed"].includes(discountType)) {
-            console.log("[Coupon] Tipo inválido:", discountType);
-            return interaction.reply({
-              embeds: [dangerEmbed(config, "Tipo inválido", "O tipo deve ser 'percentage' ou 'fixed'.")],
-              ephemeral: true
-            });
-          }
-
-          const discountValue = parsePriceInput(discountValueStr.replace("%", ""));
-          console.log("[Coupon] Valor do desconto:", discountValue);
-          
-          if (!Number.isFinite(discountValue) || discountValue <= 0) {
-            console.log("[Coupon] Valor inválido:", discountValue);
-            return interaction.reply({
-              embeds: [dangerEmbed(config, "Valor inválido", "O valor do desconto deve ser positivo (ex: 5 ou 5%).")],
-              ephemeral: true
-            });
-          }
-
-          const options = {};
-          if (maxUses) {
-            options.maxUses = parseInt(maxUses);
-            if (Number.isNaN(options.maxUses) || options.maxUses <= 0) {
-              console.log("[Coupon] Max uses inválido:", maxUses);
-              return interaction.reply({
-                embeds: [dangerEmbed(config, "Valor inválido", "O máximo de usos deve ser um número positivo.")],
-                ephemeral: true
-              });
-            }
-          }
-          if (minAmount) {
-            options.minAmount = parsePriceInput(minAmount);
-            if (!Number.isFinite(options.minAmount) || options.minAmount <= 0) {
-              console.log("[Coupon] Min amount inválido:", minAmount);
-              return interaction.reply({
-                embeds: [dangerEmbed(config, "Valor inválido", "O valor mínimo deve ser um número positivo.")],
-                ephemeral: true
-              });
-            }
-          }
-          if (productId) {
-            const product = config.products.find(p => p.id === productId);
-            if (!product) {
-              console.log("[Coupon] Produto não encontrado:", productId);
-              return interaction.reply({
-                embeds: [dangerEmbed(config, "Produto não encontrado", "O ID do produto informado não existe.")],
-                ephemeral: true
-              });
-            }
-            options.productId = productId;
-          }
-
-          console.log("[Coupon] Opções:", options);
-          await createCoupon(interaction.guild.id, code, discountType, discountValue, options);
-          console.log("[Coupon] Cupom criado com sucesso");
-
-          await interaction.reply({
-            embeds: [successEmbed(config, "Cupom criado", `Cupom **${code.toUpperCase()}** criado com sucesso!${productId ? ` Válido para: ${config.products.find(p => p.id === productId)?.name || 'Produto específico'}` : ' Válido para todos os produtos'}`)],
-            ephemeral: true
-          });
-          return;
-        } catch (error) {
-          console.error("[Coupon] Erro ao criar cupom:", error);
-          return interaction.reply({
-            embeds: [dangerEmbed(config, "Erro ao criar cupom", error.message || "Erro desconhecido.")],
-            ephemeral: true
-          });
-        }
       }
 
       if (interaction.customId.startsWith("toggle_coupon_")) {
