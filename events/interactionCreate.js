@@ -609,8 +609,8 @@ module.exports = {
 
         const files = [];
         let qrCodeAttached = false;
-        if (checkout.qrCode && checkout.qrCode !== checkout.copyPasteCode) {
-          const qrBuffer = Buffer.from(checkout.qrCode, "base64");
+        if (checkout.qrCodeBase64) {
+          const qrBuffer = Buffer.from(checkout.qrCodeBase64, "base64");
           files.push(new AttachmentBuilder(qrBuffer, { name: "pix-qrcode.png" }));
           qrCodeAttached = true;
         }
@@ -652,7 +652,9 @@ module.exports = {
             .setStyle(ButtonStyle.Danger)
         );
 
-        await interaction.editReply({
+        await interaction.editReply({ content: "✅ PIX gerado! Veja abaixo.", ephemeral: true });
+
+        await interaction.channel.send({
           embeds: [paymentEmbed],
           components: [row],
           files
