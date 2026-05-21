@@ -487,75 +487,41 @@ module.exports = {
         });
         return;
       }
-      console.log("[DEBUG CUSTOM ID]", interaction.customId);
-     if (interaction.customId.includes("select_payment_gateway_menu")) {
-  console.log("[DEBUG] Botão Fazer Pagamento clicado");
 
-  try {
-    await interaction.deferReply({ ephemeral: true });
-
-    const ticket = await listTicketByChannel(interaction.channel.id);
-    console.log("[DEBUG] Ticket:", ticket);
-
-    const product = ticket?.product_id
-      ? config.products.find((p) => p.id === ticket.product_id)
-      : null;
-
-    console.log("[DEBUG] Produto:", product);
-
-    if (!product) {
-      console.log("[DEBUG] Produto não encontrado");
-
-      return interaction.editReply({
-        embeds: [
-          dangerEmbed(
-            config,
-            "Produto não encontrado",
-            "Não foi possível identificar o produto deste carrinho."
-          )
-        ]
-      });
-    }
-
-    const gatewayRow = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId("select_payment_gateway")
-        .setPlaceholder("Selecione o método de pagamento...")
-        .addOptions([
-          {
-            label: "Mercado Pago PIX",
-            description: "Pagar com PIX via Mercado Pago",
-            value: "mercadopago"
+      if (interaction.customId === "select_payment_gateway_menu") {
+        console.log("[DEBUG] Botão Fazer Pagamento clicado");
+        try {
+          await interaction.deferReply({ ephemeral: true });
+          const ticket = await listTicketByChannel(interaction.channel.id);
+          console.log("[DEBUG] Ticket:", ticket);
+          const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
+          console.log("[DEBUG] Produto:", product);
+          if (!product) {
+            return interaction.editReply({
+              embeds: [dangerEmbed(config, "Produto não encontrado", "Não foi possível identificar o produto deste carrinho.")]
+            });
           }
-        ])
-    );
+          const gatewayRow = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+              .setCustomId("select_payment_gateway")
+              .setPlaceholder("Selecione o método de pagamento...")
+              .addOptions([{ label: "Mercado Pago PIX", description: "Pagar com PIX via Mercado Pago", value: "mercadopago" }])
+          );
+          await interaction.editReply({
+            embeds: [infoEmbed(config, "Selecione o Pagamento", `Escolha o gateway para **${product.name}**.\n\n**Total:** ${formatPrice(product.price)}`)],
+            components: [gatewayRow]
+          });
+          console.log("[DEBUG] Menu enviado com sucesso");
+          return;
+        } catch (error) {
+          console.error("[DEBUG] Erro no handler select_payment_gateway_menu:", error);
+          if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: "Erro ao gerar pagamento.", ephemeral: true });
+          }
+          return;
+        }
+      }
 
-    console.log("[DEBUG] Enviando menu de gateway");
-
-    await interaction.editReply({
-      embeds: [
-        infoEmbed(
-          config,
-          "Selecione o Pagamento",
-          `Escolha o gateway de pagamento para **${product.name}**.\n\n**Total:** ${formatPrice(product.price)}`
-        )
-      ],
-      components: [gatewayRow]
-    });
-
-    console.log("[DEBUG] Menu enviado com sucesso");
-
-  } catch (error) {
-    console.error("[DEBUG] Erro no handler:", error);
-
-    if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({
-        content: "Erro ao gerar pagamento.",
-        ephemeral: true
-      });
-    }
-  }
-}
       if (interaction.customId === "select_payment_gateway") {
         await interaction.deferReply({ ephemeral: true });
 
