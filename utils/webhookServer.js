@@ -105,7 +105,7 @@ function startWebhookServer(client, config) {
     res.json({ ok: true });
   });
 
-  app.post("/mercadopago/webhook", async (req, res) => {
+  async function handleMercadoPagoWebhook(req, res) {
     res.sendStatus(200);
 
     try {
@@ -130,8 +130,10 @@ function startWebhookServer(client, config) {
     } catch (error) {
       console.error("Erro no webhook Mercado Pago:", error);
     }
-  });
+  }
 
+  app.post("/mercadopago/webhook", handleMercadoPagoWebhook);
+  app.post("/api/pix/webhook", handleMercadoPagoWebhook);
 
   const server = app.listen(port, () => {
     console.log(`Webhook Mercado Pago ativo na porta ${port}`);
