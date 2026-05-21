@@ -360,8 +360,8 @@ module.exports = {
             .setPlaceholder("Selecione o método de pagamento...")
             .addOptions([
               {
-                label: "Mercado Pago PIX",
-                description: `Pagar com PIX via Mercado Pago ${coupon ? `(Desconto: ${formatPrice(discount)})` : ""}`,
+                label: " PIX",
+                description: `Pagar com PIX via QR CODE ${coupon ? `(Desconto: ${formatPrice(discount)})` : ""}`,
                 value: "mercadopago"
               },
               ])
