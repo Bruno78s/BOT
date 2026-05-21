@@ -98,13 +98,14 @@ async function useCoupon(couponId) {
 function calculateDiscount(amount, coupon) {
   if (!coupon) return 0;
   
+  let discount = 0;
   if (coupon.discount_type === "percentage") {
-    return amount * (coupon.discount_value / 100);
+    discount = amount * (coupon.discount_value / 100);
   } else if (coupon.discount_type === "fixed") {
-    return Math.min(coupon.discount_value, amount);
+    discount = Math.min(coupon.discount_value, amount);
   }
   
-  return 0;
+  return Math.round(discount * 100) / 100;
 }
 
 module.exports = {

@@ -580,7 +580,7 @@ module.exports = {
           coupon = await get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
           if (coupon) {
             discount = calculateDiscount(product.price, coupon);
-            finalPrice = product.price - discount;
+            finalPrice = Math.round((product.price - discount) * 100) / 100;
           }
         }
 

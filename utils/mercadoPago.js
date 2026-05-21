@@ -40,7 +40,7 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
 
   const response = await payment.create({
     body: {
-      transaction_amount: Number(product.price),
+      transaction_amount: Math.max(0.01, Math.round(Number(product.price) * 100) / 100),
       description: product.name,
       payment_method_id: "pix",
       external_reference: channelId,
