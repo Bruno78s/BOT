@@ -2,17 +2,7 @@ const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const path = require("path");
 const { get, run, all } = require("../database/db");
 
-const LOG_CHANNELS = {
-  sistema:        "1469735341165514794",
-  relatorio:      "1507183329961574430",
-  vendas:         "1469735299008565319",
-  comprovantes:   "1469735330511851732",
-  pedidos:        "1469735333662032013",
-  ticket:         "1469735337604415612",
-  seguranca:      "1469735354956251177",
-  feedback:       "1469735361914601492",
-  vendasSites:    "1507183243764699136",
-};
+const LOG_CHANNELS = {};
 
 const COLORS = {
   sistema:      0x5865F2,
@@ -31,8 +21,8 @@ function getLogo() {
   return new AttachmentBuilder(logoPath, { name: "logo.png" });
 }
 
-async function sendToChannel(client, channelKey, embed, extra = {}) {
-  const channelId = LOG_CHANNELS[channelKey];
+async function sendToChannel(client, channelKey, embed, extra = {}, config = null) {
+  const channelId = (config?.logChannels || LOG_CHANNELS)[channelKey];
   if (!channelId) return null;
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel?.isTextBased()) return null;
@@ -42,8 +32,8 @@ async function sendToChannel(client, channelKey, embed, extra = {}) {
   return channel.send(payload).catch(() => null);
 }
 
-async function editOrSend(client, channelKey, embed, storeKey) {
-  const channelId = LOG_CHANNELS[channelKey];
+async function editOrSend(client, channelKey, embed, storeKey, config = null) {
+  const channelId = (config?.logChannels || LOG_CHANNELS)[channelKey];
   if (!channelId) return;
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel?.isTextBased()) return;
@@ -81,7 +71,7 @@ async function logSistema(client, config, event, details = {}) {
   if (details.description) embed.setDescription(details.description);
   if (details.fields?.length) embed.addFields(details.fields);
 
-  await editOrSend(client, "sistema", embed, `sistema_${event.toLowerCase().replace(/\s+/g,"_")}`);
+  await editOrSend(client, "sistema", embed, `sistema_${event.toLowerCase().replace(/\s+/g,"_")}`, config);
 }
 
 async function logVenda(client, config, { userId, productName, amount, orderId, paymentId, channelId, coupon }) {
@@ -99,10 +89,10 @@ async function logVenda(client, config, { userId, productName, amount, orderId, 
       `> 🆔 **Pagamento:** \`${paymentId}\``,
     ].filter(Boolean).join("\n"))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs-vendas`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs Vendas`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
-  await sendToChannel(client, "vendas", embed);
+  await sendToChannel(client, "vendas", embed, {}, config);
 }
 
 async function logComprovante(client, config, { userId, productName, amount, orderId, paymentId, channelId }) {
@@ -119,10 +109,10 @@ async function logComprovante(client, config, { userId, productName, amount, ord
       { name: "🛒 Canal", value: `<#${channelId}>`, inline: true },
     ])
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs-comprovantes`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs Comprovantes`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
-  await sendToChannel(client, "comprovantes", embed);
+  await sendToChannel(client, "comprovantes", embed, {}, config);
 }
 
 async function logPedido(client, config, { userId, productName, amount, orderId, channelId }) {
@@ -138,10 +128,10 @@ async function logPedido(client, config, { userId, productName, amount, orderId,
       `> 🔖 **Pedido:** #${orderId}`,
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs-pedidos`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs Pedidos`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
-  await sendToChannel(client, "pedidos", embed);
+  await sendToChannel(client, "pedidos", embed, {}, config);
 }
 
 async function logTicketCriado(client, config, { userId, type, channelId, reason }) {
@@ -157,10 +147,10 @@ async function logTicketCriado(client, config, { userId, type, channelId, reason
       reason ? `> 📝 **Motivo:** ${reason}` : null,
     ].filter(Boolean).join("\n"))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs-ticket`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs Ticket`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
-  await sendToChannel(client, "ticket", embed);
+  await sendToChannel(client, "ticket", embed, {}, config);
 }
 
 async function logSeguranca(client, config, { evento, userId, detalhes }) {
@@ -173,10 +163,10 @@ async function logSeguranca(client, config, { evento, userId, detalhes }) {
       detalhes ? `> 📝 **Detalhes:** ${detalhes}` : null,
     ].filter(Boolean).join("\n"))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs-segurança`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • logs Segurança`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
-  await sendToChannel(client, "seguranca", embed);
+  await sendToChannel(client, "seguranca", embed, {}, config);
 }
 
 async function logFeedback(client, config, { userId, rating, ticketName, ticketId }) {
@@ -191,10 +181,10 @@ async function logFeedback(client, config, { userId, rating, ticketName, ticketI
       `> 🎫 **Ticket:** ${ticketName || ticketId}`,
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs-feedback`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • logs Feedback`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
-  await sendToChannel(client, "feedback", embed);
+  await sendToChannel(client, "feedback", embed, {}, config);
 }
 
 async function logVendaSite(client, config, { customerName, customerEmail, orderId, total, items, paymentMethod }) {
@@ -213,10 +203,10 @@ async function logVendaSite(client, config, { customerName, customerEmail, order
       itemList,
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs-vendas-sites`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Vendas Sites`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
-  await sendToChannel(client, "vendasSites", embed);
+  await sendToChannel(client, "vendasSites", embed, {}, config);
 }
 
 async function logRelatorio(client, config) {
@@ -241,10 +231,10 @@ async function logRelatorio(client, config) {
       ).join("\n") || "Sem produtos"
     )
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs-relatorio`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • logs Relatorios`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
-  await editOrSend(client, "relatorio", embed, "relatorio_geral");
+  await editOrSend(client, "relatorio", embed, "relatorio_geral", config);
 }
 
 module.exports = {
