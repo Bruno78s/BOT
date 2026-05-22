@@ -145,6 +145,11 @@ function startWebhookServer(client, config) {
       let localPayment = await getPaymentByProviderPaymentId(paymentData.id);
       if (!localPayment) return;
 
+      if (paymentData.status === "approved" && localPayment.status === "approved") {
+        console.log("[WEBHOOK] Pagamento já confirmado anteriormente, ignorando duplicata:", paymentData.id);
+        return;
+      }
+
       await updatePaymentStatusByProviderId(paymentData.id, paymentData.status);
       localPayment = await getPaymentByProviderPaymentId(paymentData.id);
 
