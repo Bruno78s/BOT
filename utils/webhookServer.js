@@ -3,6 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("
 const { fetchPayment, attachProviderPaymentIdByReference, getPaymentByProviderPaymentId, updatePaymentStatusByProviderId } = require("./mercadoPago");
 const { formatPrice } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
+const { logVenda, logComprovante, logPedido } = require("./channelLogger");
 
 async function confirmApprovedPayment(client, config, paymentData, localPayment) {
   console.log("[WEBHOOK] confirmApprovedPayment chamado para canal:", localPayment.channel_id);
@@ -26,19 +27,22 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   }
 
   const summaryEmbed = new EmbedBuilder()
-    .setColor(config.colors.success)
-    .setTitle(`${config.botName} | Pedido Confirmado`)
+    .setColor(0x00c853)
+    .setAuthor({ name: `${config.botName} • Pagamento`, iconURL: client.user.displayAvatarURL() })
+    .setTitle("✅ Pagamento Confirmado!")
     .setDescription([
-      `> **ID do Pedido:** #${orderId}`,
-      `> **Produto:** ${product?.name || localPayment.product_id}`,
-      `> **Valor:** ${formatPrice(localPayment.amount)}`,
-      `> **Pagamento:** ${paymentId}`,
+      `> 👤 **Cliente:** <@${localPayment.user_id}>`,
+      `> 📦 **Produto:** ${product?.name || localPayment.product_id}`,
+      `> 💰 **Valor:** ${formatPrice(localPayment.amount)}`,
+      `> 🔖 **Pedido:** #${orderId}`,
+      `> 🆔 **Pagamento:** \`${paymentId}\``,
       "",
-      "> Seu pagamento foi aprovado automaticamente.",
-      "> Abra um ticket de entrega para receber o produto.",
-      "> Use o botão abaixo para copiar os dados do pedido."
+      "─────────────────────────────",
+      "",
+      "> ✅ Seu pagamento foi **aprovado automaticamente**.",
+      "> 📦 Clique em **Abrir Ticket de Entrega** para receber seu produto.",
     ].join("\n"))
-    .setFooter({ text: "Bzn X • Pedido" })
+    .setFooter({ text: `${config.botName} • Pedido Confirmado`, iconURL: client.user.displayAvatarURL() })
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
@@ -69,20 +73,40 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     await deliveryChannel.send({
       embeds: [
         new EmbedBuilder()
-          .setColor(config.colors.success)
-          .setTitle(`${config.botName} | Compra Aprovada`)
-          .setDescription([
-            `> **Cliente:** <@${localPayment.user_id}>`,
-            `> **Produto:** ${product?.name || localPayment.product_id}`,
-            `> **Valor:** ${formatPrice(localPayment.amount)}`,
-            `> **Canal:** <#${localPayment.channel_id}>`,
-            `> **Pagamento:** ${paymentId}`,
-            `> **ID do Pedido:** #${orderId}`
-          ].join("\n"))
+          .setColor(0x00c853)
+          .setAuthor({ name: `${config.botName} • Entrega`, iconURL: client.user.displayAvatarURL() })
+          .setTitle("🚀 Nova Entrega Pendente")
+          .addFields([
+            { name: "👤 Cliente", value: `<@${localPayment.user_id}>`, inline: true },
+            { name: "📦 Produto", value: product?.name || localPayment.product_id, inline: true },
+            { name: "💰 Valor", value: formatPrice(localPayment.amount), inline: true },
+            { name: "🛒 Canal", value: `<#${localPayment.channel_id}>`, inline: true },
+            { name: "🔖 Pedido", value: `#${orderId}`, inline: true },
+            { name: "🆔 Pagamento", value: `\`${paymentId}\``, inline: true },
+          ])
+          .setFooter({ text: `${config.botName} • Entrega`, iconURL: client.user.displayAvatarURL() })
           .setTimestamp()
       ]
     });
   }
+
+  await logVenda(client, config, {
+    userId: localPayment.user_id,
+    productName: product?.name || localPayment.product_id,
+    amount: localPayment.amount,
+    orderId,
+    paymentId,
+    channelId: localPayment.channel_id,
+  });
+
+  await logComprovante(client, config, {
+    userId: localPayment.user_id,
+    productName: product?.name || localPayment.product_id,
+    amount: localPayment.amount,
+    orderId,
+    paymentId,
+    channelId: localPayment.channel_id,
+  });
 
   await logTicketEvent(client, config, "Pagamento Aprovado", localPayment.channel_id, {
     description: `Pagamento aprovado automaticamente via Mercado Pago.`,

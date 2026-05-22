@@ -15,6 +15,7 @@ const { ensureTermsPanel } = require("../utils/termsPanel");
 const { ensureRulesPanel } = require("../utils/rulesPanel");
 const { ensureProductPanels } = require("../utils/productPanels");
 const { logSystemEvent } = require("../utils/advancedLogger");
+const { logSistema, logRelatorio } = require("../utils/channelLogger");
 const { cacheGuildInvites } = require("../utils/invites");
 const { syncToSupabase } = require("../utils/syncToSupabase");
 const { isSupabaseEnabled } = require("../utils/supabase");
@@ -63,38 +64,14 @@ module.exports = {
     
     // Relatório diário às 9h
     cron.schedule("0 9 * * *", async () => {
-      const logChannelId = config.logChannels?.system || config.statsChannelId;
-      if (logChannelId) {
-        const channel = await client.channels.fetch(logChannelId).catch(() => null);
-        if (channel) {
-          await reports.sendReport(channel, 'daily');
-          console.log("[REPORTS] Relatório diário enviado");
-        }
-      }
+      await logRelatorio(client, config);
+      console.log("[REPORTS] Relatório diário enviado");
     });
 
-    // Relatório semanal às 10h de segunda
-    cron.schedule("0 10 * * 1", async () => {
-      const logChannelId = config.logChannels?.system || config.statsChannelId;
-      if (logChannelId) {
-        const channel = await client.channels.fetch(logChannelId).catch(() => null);
-        if (channel) {
-          await reports.sendReport(channel, 'weekly');
-          console.log("[REPORTS] Relatório semanal enviado");
-        }
-      }
-    });
-
-    // Relatório de estoque às 8h
+    // Relatório de estoque às 8h (atualiza o mesmo)
     cron.schedule("0 8 * * *", async () => {
-      const logChannelId = config.logChannels?.system || config.statsChannelId;
-      if (logChannelId) {
-        const channel = await client.channels.fetch(logChannelId).catch(() => null);
-        if (channel) {
-          await reports.sendReport(channel, 'stock');
-          console.log("[REPORTS] Relatório de estoque enviado");
-        }
-      }
+      await logRelatorio(client, config);
+      console.log("[REPORTS] Relatório de estoque enviado");
     });
 
     // Melhoria 15 & 16: Previsão de Estoque e Restock Automático
@@ -139,19 +116,22 @@ module.exports = {
     await ensureRulesPanel(client, config);
     await ensureProductPanels(client, config);
 
-    await logSystemEvent(
-      client,
-      config,
-      "Bot Iniciado",
-      {
-        description: `Bot ${config.botName} iniciado com sucesso como ${client.user.tag}.`,
-        fields: [
-          { name: "Bot", value: `${config.botName}`, inline: true },
-          { name: "Usuário", value: client.user.tag, inline: true },
-          { name: "Servidores", value: client.guilds.cache.size.toString(), inline: true }
-        ]
-      }
-    );
+    await logSistema(client, config, "Bot Iniciado", {
+      description: [
+        `> 🤖 **Bot:** ${config.botName}`,
+        `> 👤 **Usuário:** ${client.user.tag}`,
+        `> 🌐 **Servidores:** ${client.guilds.cache.size}`,
+        `> 📅 **Iniciado em:** <t:${Math.floor(Date.now()/1000)}:F>`,
+        "",
+        "> ✅ Todos os sistemas foram iniciados com sucesso.",
+      ].join("\n"),
+      fields: [
+        { name: "🔖 Versão Node", value: process.version, inline: true },
+        { name: "⏱️ Uptime", value: `0s`, inline: true },
+        { name: "📦 Produtos", value: `${config.products?.length || 0} cadastrados`, inline: true },
+      ]
+    });
+    await logRelatorio(client, config);
 
     console.log(`${config.botName} conectado como ${client.user.tag}`);
   }

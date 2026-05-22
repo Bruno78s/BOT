@@ -22,6 +22,7 @@ const { buildCartEmbed, buildTermsEmbed, formatPrice, readConfigFile, writeConfi
 const { createCheckoutPayment, getPendingPaymentByChannel, getCredentialMode } = require("../utils/mercadoPago");
 const { get, run, all } = require("../database/db");
 const { validateCoupon, calculateDiscount, useCoupon, getCoupon, listCoupons, createCoupon, deleteCoupon } = require("../utils/coupons");
+const { logSeguranca } = require("../utils/channelLogger");
 const { getInviteStats, getInviteLeaderboard, getRedeemableInvites, resetRedeemableInvites, setRedeemedInvites } = require("../utils/invites");
 
 function formatDuration(ms) {
@@ -1871,6 +1872,11 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
               ]
             }
           );
+          await logSeguranca(interaction.client, config, {
+            evento: "Usuário Verificado",
+            userId: member.id,
+            detalhes: `${member.user.tag} passou pela verificação com sucesso.`,
+          }).catch(() => null);
         } catch (error) {
           console.error("Erro ao verificar usuário:", error);
           return interaction.editReply({

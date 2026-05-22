@@ -7,6 +7,7 @@
 } = require("discord.js");
 const { all, get, run } = require("../database/db");
 const { infoEmbed, successEmbed, warningEmbed } = require("./embeds");
+const { logTicketCriado, logFeedback } = require("./channelLogger");
 const { buildTermsEmbed } = require("./salesFlow");
 
 function formatTicketNumber(number) {
@@ -238,6 +239,13 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
     });
   }
 
+  await logTicketCriado(channel.client, config, {
+    userId: member.id,
+    type,
+    channelId: channel.id,
+    reason: reason || null,
+  }).catch(() => null);
+
   return { channel };
 }
 
@@ -298,21 +306,12 @@ async function registerRating(channel, rating, config) {
 
   const feedbackChannelId = config.feedbackChannelId;
   const feedbackChannel = feedbackChannelId ? await channel.client.channels.fetch(feedbackChannelId).catch(() => null) : null;
-  if (feedbackChannel?.send) {
-    await feedbackChannel.send({
-      embeds: [
-        successEmbed(
-          config,
-          `${config.botName} | Feedback Recebido`,
-          [
-            `> **Usuário:** <@${ticket.user_id}>`,
-            `> **Nota:** ${rating}/5`,
-            `> **Ticket:** ${channel.name}`
-          ].join("\n")
-        )
-      ]
-    });
-  }
+  await logFeedback(channel.client, config, {
+    userId: ticket.user_id,
+    rating,
+    ticketName: channel.name,
+    ticketId: ticket.id,
+  }).catch(() => null);
 
   const ratingEmbed = warningEmbed(
     config,
