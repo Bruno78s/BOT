@@ -137,7 +137,7 @@ function buildSupportEmbed(config) {
       "",
       "Selecione abaixo o tipo de atendimento desejado."
     ].join("\n"))
-    .setFooter({ text: "BznX Store • Suporte" })
+    .setFooter({ text: `${config.botName} • Atendimento` })
     .setTimestamp();
 }
 

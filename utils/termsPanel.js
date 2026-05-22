@@ -57,7 +57,7 @@ async function ensureTermsPanel(client, config) {
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
     .setFooter({ 
-      text: "Bzn X • Termos de Uso", 
+      text: `${config.botName} • Termos de Uso`, 
       iconURL: "attachment://logo.png"
     })
     .setTimestamp();

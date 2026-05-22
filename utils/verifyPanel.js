@@ -48,7 +48,7 @@ async function ensureVerifyPanel(client, config) {
     .setThumbnail("attachment://logo.png")
     .setImage("attachment://banner.png")
     .setFooter({
-      text: "BznX • Verificação",
+      text: `${config.botName} • Verificação`,
       iconURL: "attachment://logo.png"
     })
     .setTimestamp();

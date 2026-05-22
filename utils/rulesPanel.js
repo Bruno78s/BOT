@@ -57,7 +57,7 @@ async function ensureRulesPanel(client, config) {
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
     .setFooter({ 
-      text: "Bzn X • Regras do Servidor", 
+      text: `${config.botName} • Regras`, 
       iconURL: "attachment://logo.png"
     })
     .setTimestamp();

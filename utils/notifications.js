@@ -27,7 +27,7 @@ async function notifySale(client, config, product, guild, userId) {
       "Um ticket de vendas foi criado para processar esta compra."
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: "BznX Store • Sistema de Vendas", iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Vendas`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
   await channel.send({ embeds: [embed], files: [logoAttachment] });

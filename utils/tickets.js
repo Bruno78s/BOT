@@ -171,7 +171,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
         value: payment?.provider_payment_id || payment?.preference_id || "N/A",
         inline: false
       }
-    ]).setFooter({ text: "Bzn X • Entrega" });
+    ]).setFooter({ text: `${config.botName} • Entrega` });
 
     const deliveryRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -219,7 +219,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
       name: "Instruções",
       value: `Motivo: **${reason || "suporte"}**\nInforme detalhes, anexos e qualquer informação importante para agilizar o atendimento.`,
       inline: false
-    }).setFooter({ text: "BznX Store" });
+    }).setFooter({ text: `${config.botName} • Suporte` });
 
     const supportRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -278,7 +278,7 @@ async function closeTicket(channel, userId, config, options = {}) {
       config,
       "Ticket encerrado",
       "Avalie o atendimento de 1 a 5 para concluir."
-    ).setFooter({ text: "BznX Store • Feedback" });
+    ).setFooter({ text: `${config.botName} • Feedback` });
 
     await channel.send({ embeds: [closeEmbed], components: [ratingRow] });
   } else {
@@ -286,7 +286,7 @@ async function closeTicket(channel, userId, config, options = {}) {
       config,
       "Ticket encerrado",
       "O canal será encerrado em instantes."
-    ).setFooter({ text: "BznX Store • Encerramento" });
+    ).setFooter({ text: `${config.botName} • Encerramento` });
 
     await channel.send({ embeds: [closeEmbed] });
 
@@ -315,7 +315,7 @@ async function registerRating(channel, rating, config) {
     config,
     "⭐ Obrigado!",
     "Sua avaliação foi registrada. O canal será encerrado em 5 segundos."
-  ).setFooter({ text: "BznX Store • Encerramento" });
+  ).setFooter({ text: `${config.botName} • Encerramento` });
 
   await channel.send({ embeds: [ratingEmbed] });
 

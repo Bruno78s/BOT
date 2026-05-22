@@ -94,7 +94,7 @@ async function ensureStatsPanel(client, config) {
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
     .setFooter({ 
-      text: "Bzn X • Estatísticas", 
+      text: `${config.botName} • Estatísticas`, 
       iconURL: "attachment://logo.png"
     })
     .setTimestamp()

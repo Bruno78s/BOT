@@ -51,7 +51,7 @@ async function ensureWelcomePanel(client, config) {
     .setThumbnail("attachment://logo.png")
     .setImage("attachment://banner.png")
     .setFooter({ 
-      text: "BznX Store • Bem-vindo", 
+      text: `${config.botName} • Bem-vindo`, 
       iconURL: "attachment://logo.png"
     })
     .setTimestamp();
