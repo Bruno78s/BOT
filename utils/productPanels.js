@@ -17,17 +17,12 @@ async function ensureProductPanels(client, config) {
     let existingMessage = null;
     if (recent) {
       const botMessages = recent.filter((msg) => msg.author?.id === client.user.id);
-      existingMessage = botMessages.find(
-        (msg) =>
-          msg.embeds?.[0]?.footer?.text?.includes(`product-panel:${group}`)
-      );
-
-      if (!existingMessage) {
-        existingMessage = botMessages.find((msg) => {
-          const title = msg.embeds?.[0]?.title || "";
-          return products.some((product) => title.includes(product.name.replace(/\s+(Basic|Premium|Platinum|Premium\+|Diamond)$/i, "")));
-        });
-      }
+      const groupTitle = group === "site" ? "Sites" : products[0]?.name?.replace(/\s+(Basic|Premium|Platinum|Premium\+|Diamond)$/i, "") || group;
+      existingMessage = botMessages.find((msg) => {
+        const title = msg.embeds?.[0]?.title || "";
+        const footer = msg.embeds?.[0]?.footer?.text || "";
+        return footer.includes(`product-panel:${group}`) || title.includes(groupTitle);
+      });
 
       const duplicates = botMessages.filter((msg) => msg.id !== existingMessage?.id);
       for (const duplicate of duplicates.values()) {
@@ -35,7 +30,7 @@ async function ensureProductPanels(client, config) {
         const footer = duplicate.embeds?.[0]?.footer?.text || "";
         const isSameProductPanel =
           footer.includes(`product-panel:${group}`) ||
-          products.some((product) => title.includes(product.name.replace(/\s+(Basic|Premium|Platinum|Premium\+|Diamond)$/i, "")));
+          (groupTitle && title.includes(groupTitle));
 
         if (isSameProductPanel) {
           await duplicate.delete().catch(() => null);
@@ -52,7 +47,7 @@ async function ensureProductPanels(client, config) {
     const embed = buildProductEmbed(config, group, products)
       .setThumbnail("attachment://logo.png")
       .setImage("attachment://banner.png")
-      .setFooter({ text: `Bzn X • product-panel:${group}`, iconURL: "attachment://logo.png" });
+      .setFooter({ text: `${config.botName} • Produtos`, iconURL: "attachment://logo.png" });
 
     const options = products.map((product) => ({
       label: getProductLabel(product).slice(0, 100),
