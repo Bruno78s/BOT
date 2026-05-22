@@ -644,10 +644,10 @@ module.exports = {
 
         const paymentEmbed = new EmbedBuilder()
           .setColor(0x00b4d8)
-          .setAuthor({ name: `${config.botName} • Pagamento PIX`, iconURL: interaction.client.user.displayAvatarURL() })
+          .setAuthor({ name: `${config.botName} • Pagamento`, iconURL: interaction.client.user.displayAvatarURL() })
           .setTitle("💳 Pagamento via PIX")
           .setDescription(descLines)
-          .setFooter({ text: `${config.botName} • Pagamento 100% seguro via Mercado Pago`, iconURL: interaction.client.user.displayAvatarURL() })
+          .setFooter({ text: `${config.botName} • Pagamento 100% seguro.`, iconURL: interaction.client.user.displayAvatarURL() })
           .setTimestamp();
 
         if (qrCodeAttached) {
@@ -1779,20 +1779,14 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
             .setStyle(ButtonStyle.Danger)
         );
 
+        const cartEmbed = buildCartEmbed(config, interaction.user, product);
+        cartEmbed.setDescription(
+          `Termos aceitos em **${new Date(acceptedAt).toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"})}**.\n\n` +
+          "Clique em **Fazer Pagamento** para gerar o PIX."
+        );
+
         await interaction.message.edit({
-          embeds: [
-            buildCartEmbed(config, interaction.user, product)
-              .setDescription([
-                `**Cliente:** ${interaction.user}`,
-                `**Produto:** ${product.name}`,
-                `**Plano:** ${product.tier === "premium-plus" ? "Premium+" : String(product.tier).replace(/(^|-)(\w)/g, (_, separator, letter) => `${separator ? " " : ""}${letter.toUpperCase()}`)}`,
-                `**Valor:** ${formatPrice(product.price)}`,
-                "",
-                `Termos aceitos em **${new Date(acceptedAt).toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"})}**.`,
-                "",
-                "Clique em **Fazer Pagamento** para gerar o PIX."
-              ].join("\n"))
-          ],
+          embeds: [cartEmbed],
           components: [confirmRow]
         });
 
@@ -1940,7 +1934,7 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
         const pendingPayment = await getPendingPaymentByChannel(interaction.channel.id);
         if (pendingPayment) {
           return interaction.reply({
-            embeds: [dangerEmbed(config, "Pagamento pendente", "Aguarde a confirmação automática do Mercado Pago antes de finalizar a compra.")],
+            embeds: [dangerEmbed(config, "Pagamento pendente", "Aguarde a confirmação automática do PIX antes de finalizar a compra.")],
             ephemeral: true
           });
         }
