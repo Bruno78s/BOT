@@ -58,11 +58,6 @@ async function ensureTicketPanel(client, config) {
           value: "support"
         },
         {
-          label: "Receber Produto",
-          description: "Solicitar a entrega de uma compra aprovada",
-          value: "delivery"
-        },
-        {
           label: "Problema com Serviço",
           description: "Relatar falhas em um serviço comprado",
           value: "service_issue"

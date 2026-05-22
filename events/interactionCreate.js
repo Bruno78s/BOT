@@ -520,7 +520,6 @@ module.exports = {
       if (interaction.customId === "support_ticket_select") {
         const reasonMap = {
           support: "suporte",
-          delivery: "receber-produto",
           service_issue: "problema-servico"
         };
         const reason = reasonMap[interaction.values[0]] || "suporte";
