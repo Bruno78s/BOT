@@ -3,7 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("
 const { fetchPayment, attachProviderPaymentIdByReference, getPaymentByProviderPaymentId, updatePaymentStatusByProviderId } = require("./mercadoPago");
 const { formatPrice } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
-const { logVenda, logComprovante, logPedido } = require("./channelLogger");
+const { logVenda, logComprovante, logPedido, logVendaSite } = require("./channelLogger");
 
 async function confirmApprovedPayment(client, config, paymentData, localPayment) {
   console.log("[WEBHOOK] confirmApprovedPayment chamado para canal:", localPayment.channel_id);
@@ -158,6 +158,16 @@ function startWebhookServer(client, config) {
 
   app.post("/mercadopago/webhook", handleMercadoPagoWebhook);
   app.post("/api/pix/webhook", handleMercadoPagoWebhook);
+
+  app.post("/site/venda", async (req, res) => {
+    res.sendStatus(200);
+    try {
+      const { customerName, customerEmail, orderId, total, paymentMethod, items } = req.body;
+      await logVendaSite(client, config, { customerName, customerEmail, orderId, total, paymentMethod, items });
+    } catch (err) {
+      console.error("[SITE VENDA] Erro ao logar venda do site:", err);
+    }
+  });
 
   const server = app.listen(port, () => {
     console.log(`Webhook Mercado Pago ativo na porta ${port}`);
