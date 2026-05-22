@@ -304,8 +304,6 @@ async function registerRating(channel, rating, config) {
 
   await run("UPDATE tickets SET rating = ? WHERE id = ?", [rating, ticket.id]);
 
-  const feedbackChannelId = config.feedbackChannelId;
-  const feedbackChannel = feedbackChannelId ? await channel.client.channels.fetch(feedbackChannelId).catch(() => null) : null;
   await logFeedback(channel.client, config, {
     userId: ticket.user_id,
     rating,

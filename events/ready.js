@@ -4,7 +4,8 @@
 
 
 const cron = require("node-cron");
-const { initDb, run } = require("../database/db");
+const { EmbedBuilder } = require("discord.js");
+const { initDb, run, all } = require("../database/db");
 const { backupDatabase, pruneBackups } = require("../utils/backup");
 const { joinConfiguredVoice, keepAlive } = require("../utils/voice");
 const { ensureTicketPanel } = require("../utils/panel");
@@ -84,14 +85,18 @@ module.exports = {
       
       console.log(`[STOCK] Previsão gerada: ${report.alert.summary.critical} críticos, ${report.alert.summary.high} altos`);
       
+      // Verificar produtos com estoque zerado/baixo e notificar no relatorio
+      const lowStockProducts = config.products.filter(p => p.stock === 0 || p.stock < 3);
+      if (lowStockProducts.length > 0) {
+        await logRelatorio(client, config);
+        console.log(`[STOCK] ${lowStockProducts.length} produto(s) com estoque cr\u00edtico — relat\u00f3rio atualizado`);
+      }
+
       // Executar restock automático se habilitado
       if (process.env.AUTO_RESTOCK_ENABLED === 'true') {
         const restockResult = await autoRestock.runAutoRestock();
         if (restockResult.restocked.length > 0) {
-          const logChannelId = config.logChannels?.system || config.statsChannelId;
-          if (logChannelId) {
-            await autoRestock.notifyRestock(logChannelId, restockResult);
-          }
+          await logRelatorio(client, config);
         }
       }
     });
@@ -105,6 +110,39 @@ module.exports = {
     setInterval(() => {
       ensureStatsPanel(client, config).catch(() => null);
     }, 30000);
+
+    // Expirar pagamentos PIX pendentes a cada 15 minutos (expiram em 30 min)
+    const PIX_EXPIRY_MS = 30 * 60 * 1000;
+    setInterval(async () => {
+      try {
+        const expiredPayments = await all(
+          "SELECT * FROM payments WHERE status = 'pending' AND created_at < ?",
+          [Date.now() - PIX_EXPIRY_MS]
+        );
+        for (const payment of expiredPayments) {
+          await run("UPDATE payments SET status = 'expired', updated_at = ? WHERE id = ?", [Date.now(), payment.id]);
+          const channel = await client.channels.fetch(payment.channel_id).catch(() => null);
+          if (channel?.send) {
+            await channel.send({
+              embeds: [
+                new EmbedBuilder()
+                  .setColor(0xe74c3c)
+                  .setTitle("\u23F0 PIX Expirado")
+                  .setDescription([
+                    "> Seu PIX expirou sem confirma\u00e7\u00e3o de pagamento.",
+                    "> Use o bot\u00e3o abaixo para gerar um novo, se desejar.",
+                  ].join("\n"))
+                  .setFooter({ text: `${config.botName} \u2022 Pagamento expirado` })
+                  .setTimestamp()
+              ]
+            }).catch(() => null);
+          }
+          console.log(`[PIX] Pagamento #${payment.id} expirado (canal: ${payment.channel_id})`);
+        }
+      } catch (err) {
+        console.error("[PIX EXPIRY] Erro:", err);
+      }
+    }, 15 * 60 * 1000);
 
     await joinConfiguredVoice(client, config);
     keepAlive(client, config);

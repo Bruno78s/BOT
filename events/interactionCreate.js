@@ -22,7 +22,7 @@ const { buildCartEmbed, buildTermsEmbed, formatPrice, readConfigFile, writeConfi
 const { createCheckoutPayment, getPendingPaymentByChannel, getCredentialMode } = require("../utils/mercadoPago");
 const { get, run, all } = require("../database/db");
 const { validateCoupon, calculateDiscount, useCoupon, getCoupon, listCoupons, createCoupon, deleteCoupon } = require("../utils/coupons");
-const { logSeguranca } = require("../utils/channelLogger");
+const { logSeguranca, logPedido } = require("../utils/channelLogger");
 const { getInviteStats, getInviteLeaderboard, getRedeemableInvites, resetRedeemableInvites, setRedeemedInvites } = require("../utils/invites");
 
 function formatDuration(ms) {
@@ -608,6 +608,15 @@ module.exports = {
           await useCoupon(coupon.id);
         }
 
+        const localPaymentRecord = await getPendingPaymentByChannel(interaction.channel.id);
+        await logPedido(interaction.client, config, {
+          userId: interaction.user.id,
+          productName: product.name,
+          amount: finalPrice,
+          orderId: localPaymentRecord?.id || "?",
+          channelId: interaction.channel.id,
+        }).catch(() => null);
+
         const files = [];
         let qrCodeAttached = false;
         if (checkout.qrCodeBase64) {
@@ -635,15 +644,15 @@ module.exports = {
         ].filter(Boolean).join("\n");
 
         const paymentEmbed = new EmbedBuilder()
-          .setColor(0x00c853)
+          .setColor(0x00b4d8)
+          .setAuthor({ name: `${config.botName} • Pagamento PIX`, iconURL: interaction.client.user.displayAvatarURL() })
           .setTitle("💳 Pagamento via PIX")
           .setDescription(descLines)
-          .setFooter({ text: `${config.botName} • Pagamento seguro`, iconURL: interaction.client.user.displayAvatarURL() })
+          .setFooter({ text: `${config.botName} • Pagamento 100% seguro via Mercado Pago`, iconURL: interaction.client.user.displayAvatarURL() })
           .setTimestamp();
 
         if (qrCodeAttached) {
           paymentEmbed.setImage("attachment://pix-qrcode.png");
-          paymentEmbed.setThumbnail("attachment://pix-qrcode.png");
         }
 
         const row = new ActionRowBuilder().addComponents(
@@ -681,33 +690,47 @@ module.exports = {
         
         if (selectedValue === "admin_payments") {
           const payments = await all("SELECT * FROM payments WHERE guild_id = ? ORDER BY created_at DESC LIMIT 25", [interaction.guild.id]);
+          const stats = await get(`
+            SELECT
+              COUNT(*) as total,
+              SUM(CASE WHEN status='approved' THEN amount ELSE 0 END) as receita,
+              SUM(CASE WHEN status='approved' THEN 1 ELSE 0 END) as aprovados,
+              SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pendentes
+            FROM payments WHERE guild_id = ?`, [interaction.guild.id]);
 
           if (!payments || payments.length === 0) {
             const embed = new EmbedBuilder()
-              .setColor(config.colors.primary)
-              .setTitle(`${config.botName} | Pagamentos`)
-              .setDescription("Nenhum pagamento encontrado.");
-
+              .setColor(0x5865F2)
+              .setTitle("💰 Histórico de Pagamentos")
+              .setDescription("> Nenhum pagamento encontrado.");
             return interaction.update({ embeds: [embed], components: [buildMainMenuBackRow()] });
           }
 
+          const statusEmoji = { approved: "✅", pending: "⏳", rejected: "❌", cancelled: "⛔" };
           const paymentOptions = payments.slice(0, 25).map(p => ({
-            label: `Pedido #${p.id} - ${formatPrice(p.amount)}`,
-            description: `${p.provider} | ${p.status} | ${new Date(p.created_at).toLocaleDateString('pt-BR')}`,
+            label: `#${p.id} — ${formatPrice(p.amount)}`,
+            description: `${statusEmoji[p.status] || "⭕"} ${p.status.toUpperCase()} | ${new Date(p.created_at).toLocaleDateString('pt-BR')} | <@${p.user_id}>`,
             value: `view_payment_${p.id}`
           }));
 
           const row = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
               .setCustomId("payment_menu")
-              .setPlaceholder("Selecione um pagamento...")
+              .setPlaceholder("Selecione um pagamento para detalhar...")
               .addOptions(paymentOptions)
           );
 
           const embed = new EmbedBuilder()
-            .setColor(config.colors.primary)
-            .setTitle(`${config.botName} | Pagamentos Recentes`)
-            .setDescription(`Total de pagamentos: ${payments.length}`);
+            .setColor(0x5865F2)
+            .setTitle("💰 Histórico de Pagamentos")
+            .setDescription("> Últimos 25 pagamentos registrados.")
+            .addFields([
+              { name: "✅ Aprovados", value: `${stats?.aprovados || 0}`, inline: true },
+              { name: "⏳ Pendentes", value: `${stats?.pendentes || 0}`, inline: true },
+              { name: "💵 Receita Total", value: formatPrice(stats?.receita || 0), inline: true },
+            ])
+            .setFooter({ text: `${config.botName} • Pagamentos` })
+            .setTimestamp();
 
           return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
         }
