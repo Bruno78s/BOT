@@ -149,19 +149,20 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   await sendClientDM(client, config, localPayment, product, orderId, paymentId);
 
   if (deliveryChannel?.send) {
+    const deliveryType = hasAutoDelivery ? "✅ Automática (DM)" : "📋 Via Ticket";
     await deliveryChannel.send({
       embeds: [
         new EmbedBuilder()
-          .setColor(0x00c853)
+          .setColor(hasAutoDelivery ? 0x00c853 : 0xffa000)
           .setAuthor({ name: `${config.botName} • Entrega`, iconURL: client.user.displayAvatarURL() })
-          .setTitle("🚀 Nova Entrega Pendente")
+          .setTitle(hasAutoDelivery ? "✅ Entrega Confirmada" : "📋 Entrega Pendente (Ticket)")
           .addFields([
             { name: "👤 Cliente", value: `<@${localPayment.user_id}>`, inline: true },
             { name: "📦 Produto", value: product?.name || localPayment.product_id, inline: true },
             { name: "💰 Valor", value: formatPrice(localPayment.amount), inline: true },
-            { name: "🛒 Canal", value: `<#${localPayment.channel_id}>`, inline: true },
             { name: "🔖 Pedido", value: `#${orderId}`, inline: true },
             { name: "📦 Estoque", value: `${remainingStock >= 0 ? remainingStock : "?"} restantes`, inline: true },
+            { name: "🚀 Entrega", value: deliveryType, inline: true },
           ])
           .setFooter({ text: `${config.botName} • Entrega`, iconURL: client.user.displayAvatarURL() })
           .setTimestamp()
