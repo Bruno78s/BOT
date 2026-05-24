@@ -5,6 +5,7 @@ const { fetchPayment, attachProviderPaymentIdByReference, getPaymentByProviderPa
 const { formatPrice, readConfigFile, writeConfigFile } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
 const { logVenda, logComprovante, logPedido, logVendaSite } = require("./channelLogger");
+const { ensureProductPanels } = require("./productPanels");
 
 function decrementStock(config, productId) {
   try {
@@ -97,6 +98,11 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   }
 
   const remainingStock = decrementStock(config, localPayment.product_id);
+
+  // Atualizar painéis de produtos com novo estoque
+  ensureProductPanels(client, config).catch(err => 
+    console.log("[WEBHOOK] Erro ao atualizar painéis:", err.message)
+  );
 
   const hasAutoDelivery = !!product?.deliveryUrl;
 
