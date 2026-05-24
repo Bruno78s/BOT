@@ -146,6 +146,19 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   });
   console.log("[WEBHOOK] Mensagem enviada com sucesso");
 
+  // Dar cargo de cliente
+  try {
+    const guild = channel.guild;
+    const member = await guild.members.fetch(localPayment.user_id).catch(() => null);
+    const clientRoleId = config.clientRoleId || "1508254072619143209";
+    if (member && !member.roles.cache.has(clientRoleId)) {
+      await member.roles.add(clientRoleId);
+      console.log(`[WEBHOOK] Cargo de cliente adicionado para ${member.user.tag}`);
+    }
+  } catch (err) {
+    console.log(`[WEBHOOK] Falha ao adicionar cargo de cliente:`, err.message);
+  }
+
   await sendClientDM(client, config, localPayment, product, orderId, paymentId);
 
   if (deliveryChannel?.send) {
