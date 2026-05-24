@@ -28,7 +28,10 @@ function decrementStock(config, productId) {
 async function sendClientDM(client, config, localPayment, product, orderId, paymentId) {
   try {
     const user = await client.users.fetch(localPayment.user_id).catch(() => null);
-    if (!user) return;
+    if (!user) return false;
+
+    const hasAutoDelivery = !!product?.deliveryUrl;
+
     const dmEmbed = new EmbedBuilder()
       .setColor(0x00c853)
       .setAuthor({ name: `${config.botName} • Compra Confirmada`, iconURL: client.user.displayAvatarURL() })
@@ -38,14 +41,38 @@ async function sendClientDM(client, config, localPayment, product, orderId, paym
         `> 💰 **Valor:** ${formatPrice(localPayment.amount)}`,
         `> 🔖 **Pedido:** #${orderId}`,
         "",
-        "> Volte ao servidor e clique em **Abrir Ticket de Entrega** para receber seu produto.",
+        hasAutoDelivery
+          ? "> 🚀 Seu produto foi entregue automaticamente! Confira abaixo:"
+          : "> Volte ao servidor e clique em **Abrir Ticket de Entrega** para receber seu produto.",
       ].join("\n"))
       .setFooter({ text: `${config.botName} • Obrigado pela compra!` })
       .setTimestamp();
-    await user.send({ embeds: [dmEmbed] }).catch(() => null);
-    console.log(`[DM] Notificação enviada para ${user.tag}`);
+
+    if (hasAutoDelivery) {
+      const deliveryEmbed = new EmbedBuilder()
+        .setColor(0x1e88e5)
+        .setTitle("📦 Entrega do Produto")
+        .setDescription([
+          `> **Produto:** ${product.name}`,
+          `> **Link de acesso:**`,
+          `> ${product.deliveryUrl}`,
+          "",
+          "⚠️ Este link é pessoal e intransferível.",
+          "Em caso de problemas, abra um ticket de suporte no servidor.",
+        ].join("\n"))
+        .setFooter({ text: `${config.botName} • Entrega Automática` })
+        .setTimestamp();
+
+      await user.send({ embeds: [dmEmbed, deliveryEmbed] }).catch(() => null);
+    } else {
+      await user.send({ embeds: [dmEmbed] }).catch(() => null);
+    }
+
+    console.log(`[DM] Notificação enviada para ${user.tag} (entrega automática: ${hasAutoDelivery})`);
+    return hasAutoDelivery;
   } catch (err) {
     console.log(`[DM] Falha ao enviar DM para ${localPayment.user_id}:`, err.message);
+    return false;
   }
 }
 
@@ -71,6 +98,8 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
 
   const remainingStock = decrementStock(config, localPayment.product_id);
 
+  const hasAutoDelivery = !!product?.deliveryUrl;
+
   const summaryEmbed = new EmbedBuilder()
     .setColor(0x00c853)
     .setAuthor({ name: `${config.botName} • Pagamento`, iconURL: client.user.displayAvatarURL() })
@@ -85,25 +114,29 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       "─────────────────────────────",
       "",
       "> ✅ Seu pagamento foi **aprovado automaticamente**.",
-      "> 📦 Clique em **Abrir Ticket de Entrega** para receber seu produto.",
+      hasAutoDelivery
+        ? "> � Seu produto foi **entregue por DM**! Verifique suas mensagens privadas."
+        : "> �📦 Clique em **Abrir Ticket de Entrega** para receber seu produto.",
     ].join("\n"))
     .setFooter({ text: `${config.botName} • Pedido Confirmado`, iconURL: client.user.displayAvatarURL() })
     .setTimestamp();
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("order_open_delivery_ticket")
-      .setLabel("Abrir Ticket de Entrega")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("order_copy_summary")
-      .setLabel("Copiar Resumo")
-      .setStyle(ButtonStyle.Secondary),
+  const buttons = [];
+  if (!hasAutoDelivery) {
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId("order_open_delivery_ticket")
+        .setLabel("Abrir Ticket de Entrega")
+        .setStyle(ButtonStyle.Primary)
+    );
+  }
+  buttons.push(
     new ButtonBuilder()
       .setCustomId("order_close_cart")
       .setLabel("Fechar Carrinho")
       .setStyle(ButtonStyle.Danger)
   );
+  const row = new ActionRowBuilder().addComponents(...buttons);
 
   console.log("[WEBHOOK] Enviando mensagem de pagamento aprovado para canal:", channel.id);
   await channel.send({

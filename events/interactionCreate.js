@@ -53,7 +53,7 @@ function buildProductAdminView(config, description = "Selecione um produto para 
   const products = getCurrentProducts(config);
   const menuOptions = products.map((product) => ({
     label: product.name.slice(0, 100),
-    description: `Preço: ${formatPrice(product.price)} | Estoque: ${product.stock > 0 ? product.stock : "Esgotado"}`.slice(0, 100),
+    description: `${formatPrice(product.price)} | Est: ${product.stock > 0 ? product.stock : "Esgotado"} | ${product.deliveryUrl ? "🚀 Auto" : "📋 Ticket"}`.slice(0, 100),
     value: `edit_product_${product.id}`
   }));
 
@@ -208,40 +208,55 @@ module.exports = {
       }
 
       if (interaction.customId === "add_product_modal") {
-        const name = interaction.fields.getTextInputValue("product_name");
-        const price = parsePriceInput(interaction.fields.getTextInputValue("product_price"));
-        const stock = parseInt(interaction.fields.getTextInputValue("product_stock"));
-        const category = interaction.fields.getTextInputValue("product_category");
-        const tier = interaction.fields.getTextInputValue("product_tier");
-        const channelId = interaction.fields.getTextInputValue("product_channelId");
-        const description = interaction.fields.getTextInputValue("product_description");
+        const name = interaction.fields.getTextInputValue("product_name").trim();
+        const priceStockRaw = interaction.fields.getTextInputValue("product_price_stock");
+        const catTierRaw = interaction.fields.getTextInputValue("product_category_tier");
+        const description = interaction.fields.getTextInputValue("product_description").trim();
+        const deliveryUrl = interaction.fields.getTextInputValue("product_delivery_url")?.trim() || "";
+
+        const [priceStr, stockStr] = priceStockRaw.split("|").map(s => s.trim());
+        const price = parsePriceInput(priceStr);
+        const stock = parseInt(stockStr);
+
+        const [category, tier] = catTierRaw.split("|").map(s => s.trim().toLowerCase());
 
         if (!Number.isFinite(price) || price < 0 || Number.isNaN(stock) || stock < 0) {
           return interaction.reply({
-            embeds: [dangerEmbed(config, "Valor inválido", "Use um preço válido, como 9,99 ou 9.99, e um estoque válido.")],
+            embeds: [dangerEmbed(config, "Valor inválido", "Use formato: `9.99 | 10` para preço e estoque.")],
             ephemeral: true
           });
         }
 
+        if (!category || !tier) {
+          return interaction.reply({
+            embeds: [dangerEmbed(config, "Formato inválido", "Use formato: `bots | premium` para categoria e tier.")],
+            ephemeral: true
+          });
+        }
+
+        const group = name.toLowerCase().replace(/\s+(basic|premium|platinum|diamond|plus)$/i, "").replace(/\s+/g, "-");
         const newProduct = {
           id: name.toLowerCase().replace(/\s+/g, "-"),
           name,
           category,
+          group,
           tier,
-          channelId,
+          channelId: interaction.channel.id,
           price,
           stock,
           description
         };
+        if (deliveryUrl) newProduct.deliveryUrl = deliveryUrl;
 
-        const configPath = require("path").join(__dirname, "..", "config.json");
-        const fs = require("fs");
-        const configData = JSON.parse(fs.readFileSync(configPath, "utf8"));
+        const configData = readConfigFile();
         configData.products.push(newProduct);
-        fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+        writeConfigFile(configData);
 
+        config.products.push({ ...newProduct });
+
+        const deliveryInfo = deliveryUrl ? `\n📦 Entrega automática: ✅` : `\n📦 Entrega: Via ticket`;
         await interaction.reply({
-          embeds: [successEmbed(config, "Produto adicionado", `Produto ${name} adicionado com sucesso! O bot precisa ser reiniciado para aplicar as mudanças. Clique em Voltar para editar outro produto.`)],
+          embeds: [successEmbed(config, "Produto adicionado", `**${name}** criado com sucesso!\nPreço: ${formatPrice(price)} | Estoque: ${stock}${deliveryInfo}`)],
           ephemeral: true
         });
         return;
@@ -286,6 +301,40 @@ module.exports = {
 
         await interaction.reply({
           embeds: [successEmbed(config, "Canais atualizados", "Os canais principais foram salvos no config.json.")],
+          ephemeral: true
+        });
+        return;
+      }
+
+      if (interaction.customId.startsWith("edit_delivery_modal_")) {
+        const productId = interaction.customId.replace("edit_delivery_modal_", "");
+        const deliveryUrl = interaction.fields.getTextInputValue("delivery_url").trim();
+
+        const configData = readConfigFile();
+        const productIndex = configData.products.findIndex(p => p.id === productId);
+        if (productIndex === -1) {
+          return interaction.reply({ content: "Produto não encontrado", ephemeral: true });
+        }
+
+        if (deliveryUrl) {
+          configData.products[productIndex].deliveryUrl = deliveryUrl;
+        } else {
+          delete configData.products[productIndex].deliveryUrl;
+        }
+        writeConfigFile(configData);
+
+        const memProduct = config.products.find(p => p.id === productId);
+        if (memProduct) {
+          if (deliveryUrl) memProduct.deliveryUrl = deliveryUrl;
+          else delete memProduct.deliveryUrl;
+        }
+
+        const status = deliveryUrl
+          ? `✅ Entrega automática configurada!\nLink: ${deliveryUrl}`
+          : "❌ Entrega automática removida. O cliente abrirá ticket de entrega.";
+
+        await interaction.reply({
+          embeds: [successEmbed(config, "Entrega atualizada", `**${configData.products[productIndex].name}**\n\n${status}`)],
           ephemeral: true
         });
         return;
@@ -1102,57 +1151,46 @@ module.exports = {
             .setCustomId("add_product_modal")
             .setTitle("Adicionar Produto");
 
-          const nameInput = new TextInputBuilder()
-            .setCustomId("product_name")
-            .setLabel("Nome do Produto")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-          const priceInput = new TextInputBuilder()
-            .setCustomId("product_price")
-            .setLabel("Preço (R$)")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-          const stockInput = new TextInputBuilder()
-            .setCustomId("product_stock")
-            .setLabel("Estoque")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-          const categoryInput = new TextInputBuilder()
-            .setCustomId("product_category")
-            .setLabel("Categoria (bots/sites)")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-          const tierInput = new TextInputBuilder()
-            .setCustomId("product_tier")
-            .setLabel("Tier (basic/premium)")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-          const channelIdInput = new TextInputBuilder()
-            .setCustomId("product_channelId")
-            .setLabel("ID do Canal")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-          const descriptionInput = new TextInputBuilder()
-            .setCustomId("product_description")
-            .setLabel("Descrição")
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true);
-
-          const firstRow = new ActionRowBuilder().addComponents(nameInput);
-          const secondRow = new ActionRowBuilder().addComponents(priceInput);
-          const thirdRow = new ActionRowBuilder().addComponents(stockInput);
-          const fourthRow = new ActionRowBuilder().addComponents(categoryInput);
-          const fifthRow = new ActionRowBuilder().addComponents(tierInput);
-          const sixthRow = new ActionRowBuilder().addComponents(channelIdInput);
-          const seventhRow = new ActionRowBuilder().addComponents(descriptionInput);
-
-          modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow, sixthRow, seventhRow);
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId("product_name")
+                .setLabel("Nome do Produto")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId("product_price_stock")
+                .setLabel("Preço e Estoque (ex: 9.99 | 10)")
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder("9.99 | 10")
+                .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId("product_category_tier")
+                .setLabel("Categoria e Tier (ex: bots | premium)")
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder("bots | premium")
+                .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId("product_description")
+                .setLabel("Descrição")
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId("product_delivery_url")
+                .setLabel("Link de entrega (vazio = abre ticket)")
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder("https://... (opcional)")
+                .setRequired(false)
+            )
+          );
 
           return interaction.showModal(modal);
         }
@@ -1171,6 +1209,10 @@ module.exports = {
               .setLabel("Editar Preço/Estoque")
               .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
+              .setCustomId(`edit_product_delivery_${productId}`)
+              .setLabel("Editar Entrega")
+              .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
               .setCustomId(`delete_product_${productId}`)
               .setLabel("Deletar Produto")
               .setStyle(ButtonStyle.Danger),
@@ -1180,12 +1222,21 @@ module.exports = {
               .setStyle(ButtonStyle.Secondary)
           );
 
+          const deliveryStatus = product.deliveryUrl
+            ? `✅ Entrega automática: [Link](${product.deliveryUrl})`
+            : "❌ Sem entrega automática (abre ticket)";
+
           return interaction.update({
             embeds: [new EmbedBuilder()
               .setColor(config.colors.primary)
               .setTitle(`${config.botName} | Gerenciar Produto`)
-              .setDescription(`Gerenciando: **${product.name}**
-Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
+              .setDescription([
+                `Gerenciando: **${product.name}**`,
+                `Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`,
+                `Categoria: ${product.category} | Tier: ${product.tier}`,
+                "",
+                `📦 ${deliveryStatus}`
+              ].join("\n"))],
             components: [row]
           });
         }
@@ -1568,6 +1619,33 @@ Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock}`)],
           ephemeral: true
         });
         return;
+      }
+
+      if (interaction.customId.startsWith("edit_product_delivery_")) {
+        const productId = interaction.customId.replace("edit_product_delivery_", "");
+        const product = config.products.find(p => p.id === productId);
+        
+        if (!product) {
+          return interaction.reply({ content: "Produto não encontrado", ephemeral: true });
+        }
+
+        const modal = new ModalBuilder()
+          .setCustomId(`edit_delivery_modal_${productId}`)
+          .setTitle(`Entrega: ${product.name}`.slice(0, 45));
+
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("delivery_url")
+              .setLabel("Link de entrega (deixe vazio para remover)")
+              .setStyle(TextInputStyle.Paragraph)
+              .setValue(product.deliveryUrl || "")
+              .setRequired(false)
+              .setPlaceholder("https://drive.google.com/... ou link do produto")
+          )
+        );
+
+        return interaction.showModal(modal);
       }
 
       if (interaction.customId.startsWith("edit_product_price_")) {
