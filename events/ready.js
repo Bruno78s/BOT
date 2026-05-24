@@ -4,7 +4,7 @@
 
 
 const cron = require("node-cron");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { initDb, run, all } = require("../database/db");
 const { backupDatabase, pruneBackups } = require("../utils/backup");
 const { joinConfiguredVoice, keepAlive } = require("../utils/voice");
@@ -111,7 +111,7 @@ module.exports = {
       ensureStatsPanel(client, config).catch(() => null);
     }, 30000);
 
-    // Expirar pagamentos PIX pendentes a cada 15 minutos (expiram em 30 min)
+    // Expirar pagamentos PIX pendentes a cada 5 minutos (expiram em 30 min)
     const PIX_EXPIRY_MS = 30 * 60 * 1000;
     setInterval(async () => {
       try {
@@ -123,18 +123,37 @@ module.exports = {
           await run("UPDATE payments SET status = 'expired', updated_at = ? WHERE id = ?", [Date.now(), payment.id]);
           const channel = await client.channels.fetch(payment.channel_id).catch(() => null);
           if (channel?.send) {
+            const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+            if (messages) {
+              const botMessages = messages.filter(m => m.author.id === client.user.id);
+              await channel.bulkDelete(botMessages).catch(() => null);
+            }
+
+            const expiredRow = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId("select_payment_gateway_menu")
+                .setLabel("Gerar Novo PIX")
+                .setStyle(ButtonStyle.Primary),
+              new ButtonBuilder()
+                .setCustomId("ticket_cancel_purchase")
+                .setLabel("Cancelar Compra")
+                .setStyle(ButtonStyle.Danger)
+            );
+
             await channel.send({
+              content: `<@${payment.user_id}>`,
               embeds: [
                 new EmbedBuilder()
                   .setColor(0xe74c3c)
                   .setTitle("\u23F0 PIX Expirado")
                   .setDescription([
                     "> Seu PIX expirou sem confirma\u00e7\u00e3o de pagamento.",
-                    "> Use o bot\u00e3o abaixo para gerar um novo, se desejar.",
+                    "> Clique abaixo para gerar um novo ou cancelar a compra.",
                   ].join("\n"))
-                  .setFooter({ text: `${config.botName} \u2022 Pagamento expirado` })
+                  .setFooter({ text: `${config.botName} \u2022 Pagamento Expirado` })
                   .setTimestamp()
-              ]
+              ],
+              components: [expiredRow]
             }).catch(() => null);
           }
           console.log(`[PIX] Pagamento #${payment.id} expirado (canal: ${payment.channel_id})`);
@@ -142,7 +161,7 @@ module.exports = {
       } catch (err) {
         console.error("[PIX EXPIRY] Erro:", err);
       }
-    }, 15 * 60 * 1000);
+    }, 5 * 60 * 1000);
 
     await joinConfiguredVoice(client, config);
     keepAlive(client, config);
