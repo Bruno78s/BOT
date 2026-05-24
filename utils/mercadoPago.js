@@ -146,8 +146,8 @@ async function updatePaymentStatusByProviderId(providerPaymentId, status) {
 
 async function attachProviderPaymentIdByReference(channelId, providerPaymentId, status) {
   await run(
-    "UPDATE payments SET provider_payment_id = ?, status = ?, updated_at = ? WHERE channel_id = ? AND status = 'pending'",
-    [String(providerPaymentId), status, Date.now(), channelId]
+    "UPDATE payments SET provider_payment_id = ?, updated_at = ? WHERE channel_id = ? AND (provider_payment_id IS NULL OR provider_payment_id = '')",
+    [String(providerPaymentId), Date.now(), channelId]
   );
 }
 
