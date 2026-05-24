@@ -109,7 +109,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   });
 
   await logTicketEvent(client, config, "Pagamento Aprovado", localPayment.channel_id, {
-    description: `Pagamento aprovado automaticamente via Mercado Pago.`,
+    description: `Pagamento aprovado automaticamente via PIX.`,
     fields: [
       { name: "Cliente", value: `<@${localPayment.user_id}>`, inline: true },
       { name: "Produto", value: product?.name || localPayment.product_id, inline: true },
