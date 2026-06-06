@@ -36,7 +36,10 @@ function splitCommaOutsideParens(input) {
 }
 
 function normalizeIdentifier(identifier) {
-  return identifier.trim().replace(/['"`]/g, "");
+  // Remove quotes and any table prefix (e.g. users.last_ticket_at -> last_ticket_at)
+  const cleaned = identifier.trim().replace(/['"`]/g, "");
+  const parts = cleaned.split('.');
+  return parts[parts.length - 1];
 }
 
 function parseWhereClause(whereClause, params = [], startIndex = 0) {
