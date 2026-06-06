@@ -68,12 +68,12 @@ async function ensureStatsPanel(client, config) {
     .setColor(config.colors.primary)
     .setTitle(`${config.botName} • Estatísticas do Servidor`)
     .setAuthor({ name: guild.name, iconURL: guild.iconURL({ dynamic: true }) || undefined })
-    .setDescription(`**Resumo rápido**\nServidor atualizado: **${new Date().toLocaleTimeString('pt-BR')}**\nAtualização automática: **a cada 30 segundos**`)
+    .setDescription(`**Resumo rápido**\nServidor atualizado: **${new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}**\nAtualização automática: **a cada 30 segundos**`)
     .setThumbnail("attachment://logo.png")
     .addFields([
       {
         name: "Visão geral",
-        value: [`**Nome:** ${guild.name}`, `**ID:** ${guild.id}`, `**Dono:** <@${guild.ownerId}>`, `**Criado em:** ${guild.createdAt.toLocaleDateString('pt-BR')}`].join('\n'),
+          value: [`**Nome:** ${guild.name}`, `**ID:** ${guild.id}`, `**Dono:** <@${guild.ownerId}>`, `**Criado em:** ${guild.createdAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`].join('\n'),
         inline: false
       },
       {
