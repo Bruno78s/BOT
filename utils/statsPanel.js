@@ -73,37 +73,37 @@ async function ensureStatsPanel(client, config) {
     .addFields([
       {
         name: "Visão geral",
-          value: [`**Nome:** ${guild.name}`, `**ID:** ${guild.id}`, `**Dono:** <@${guild.ownerId}>`, `**Criado em:** ${guild.createdAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`].join('\n'),
+        value: [`**Nome:** ${guild.name}`, `**ID:** ${guild.id}`, `**Dono:** <@${guild.ownerId}>`, `**Criado em:** ${guild.createdAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`].join('\n'),
         inline: false
       },
       {
         name: "Membros",
         value: [`**Total:** ${totalMembers}`, `**Humanos:** ${humanMembers.size}`, `**Bots:** ${botMembers.size}`].join('\n'),
-        inline: true
+        inline: false
       },
       {
         name: "Status ativos",
         value: [`**Online:** ${onlineMembers}`, `**Ausente:** ${idleMembers}`, `**Não perturbe:** ${dndMembers}`, `**Offline:** ${offlineMembers}`].join('\n'),
-        inline: true
+        inline: false
       },
       {
         name: "Canais",
         value: [`**Texto:** ${textChannels}`, `**Voz:** ${voiceChannels}`, `**Categorias:** ${categoryChannels}`, `**Total:** ${channels.size}`].join('\n'),
-        inline: true
+        inline: false
       },
       {
         name: "Boosts",
         value: [`**Nível:** ${boostLevel}`, `**Total Boosts:** ${boostCount}`].join('\n'),
-        inline: true
+        inline: false
       },
       {
         name: "Cargos",
         value: `**Total:** ${roles.size}`,
-        inline: true
+        inline: false
       },
       {
         name: "Progresso",
-        value: [`**Ativos agora:** ${activeMembers}`, buildProgressBar(activePercent), `**Bots:** ${botMembers.size}`, buildProgressBar(botPercent)].join('\n'),
+        value: [`**Ativos agora:** ${activeMembers}`, `${buildProgressBar(activePercent)}`, `\n**Bots:** ${botMembers.size}`, `${buildProgressBar(botPercent)}`].join('\n'),
         inline: false
       }
     ])
