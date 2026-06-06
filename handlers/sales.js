@@ -26,21 +26,21 @@ const { createReceiptAttachment } = require("../utils/receipt");
 const { sendPurchaseAuditLog } = require("./shared");
 
 async function handleProductSelect(interaction, config) {
+  await interaction.deferReply({ ephemeral: true });
+  
   const productId = interaction.values[0].replace("cart_start_", "");
   const settings = await getSettings(interaction.guild.id) || {};
   const product = config.products.find((p) => p.id === productId);
 
   if (!product) {
-    return interaction.reply({
-      embeds: [dangerEmbed(config, "Produto n\u00E3o encontrado", "Este produto n\u00E3o est\u00E1 dispon\u00EDvel no momento.")],
-      ephemeral: true
+    return interaction.editReply({
+      embeds: [dangerEmbed(config, "Produto não encontrado", "Este produto não está disponível no momento.")]
     });
   }
 
   if (product.stock <= 0) {
-    return interaction.reply({
-      embeds: [dangerEmbed(config, "Produto esgotado", "Este produto est\u00E1 temporariamente sem estoque.")],
-      ephemeral: true
+    return interaction.editReply({
+      embeds: [dangerEmbed(config, "Produto esgotado", "Este produto está temporariamente sem estoque.")]
     });
   }
 
@@ -54,15 +54,13 @@ async function handleProductSelect(interaction, config) {
   });
 
   if (result.error) {
-    return interaction.reply({
-      embeds: [dangerEmbed(config, "Carrinho n\u00E3o criado", result.error)],
-      ephemeral: true
+    return interaction.editReply({
+      embeds: [dangerEmbed(config, "Carrinho não criado", result.error)]
     });
   }
 
-  await interaction.reply({
-    embeds: [successEmbed(config, "Carrinho criado", `Acesse seu carrinho em ${result.channel}.`)],
-    ephemeral: true
+  await interaction.editReply({
+    embeds: [successEmbed(config, "Carrinho criado", `Acesse seu carrinho em ${result.channel}.`)]
   });
 
   await logToDb(interaction.guild.id, "info", "Carrinho criado", {
@@ -85,6 +83,8 @@ async function handleProductSelect(interaction, config) {
 }
 
 async function handleSupportTicketSelect(interaction, config) {
+  await interaction.deferReply({ ephemeral: true });
+  
   const reasonMap = {
     support: "suporte",
     service_issue: "problema-servico"
@@ -103,15 +103,13 @@ async function handleSupportTicketSelect(interaction, config) {
   });
 
   if (result.error) {
-    return interaction.reply({
-      embeds: [dangerEmbed(config, "Ticket n\u00E3o criado", result.error)],
-      ephemeral: true
+    return interaction.editReply({
+      embeds: [dangerEmbed(config, "Ticket não criado", result.error)]
     });
   }
 
-  await interaction.reply({
-    embeds: [successEmbed(config, "Ticket criado", `Acesse seu atendimento em ${result.channel}.`)],
-    ephemeral: true
+  await interaction.editReply({
+    embeds: [successEmbed(config, "Ticket criado", `Acesse seu atendimento em ${result.channel}.`)]
   });
 
   await logTicketEvent(interaction.client, config, "Ticket de Suporte Criado", result.channel.id, {
