@@ -12,7 +12,20 @@ function initSupabase() {
   }
   
   try {
-    supabase = createClient(url, key);
+    const nodeMajor = parseInt(process.versions.node.split('.')[0], 10);
+    const options = {};
+
+    if (nodeMajor < 22) {
+      try {
+        const WebSocket = require('ws');
+        options.realtime = { transport: WebSocket };
+        console.log('[SUPABASE] Usando transporte ws para Realtime (Node < 22)');
+      } catch (err) {
+        console.warn('[SUPABASE] Pacote "ws" não encontrado. Instale com `npm i ws` para suporte Realtime no Node < 22');
+      }
+    }
+
+    supabase = createClient(url, key, options);
     console.log('[SUPABASE] Conectado com sucesso');
     return supabase;
   } catch (error) {

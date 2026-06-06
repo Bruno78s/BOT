@@ -172,16 +172,24 @@ module.exports = {
     const presenceTypeKey = process.env.BOT_PRESENCE_TYPE || config.botPresence?.type || "WATCHING";
     const presenceType = ActivityType[presenceTypeKey] || ActivityType.Watching;
 
-    client.user.setPresence({
-      activities: [{ name: presenceMessage, type: presenceType }],
-      status: "online"
-    }).catch(() => null);
-
-    setInterval(() => {
-      client.user.setPresence({
+    try {
+      await client.user.setPresence({
         activities: [{ name: presenceMessage, type: presenceType }],
         status: "online"
-      }).catch(() => null);
+      });
+    } catch (err) {
+      // ignore presence errors
+    }
+
+    setInterval(async () => {
+      try {
+        await client.user.setPresence({
+          activities: [{ name: presenceMessage, type: presenceType }],
+          status: "online"
+        });
+      } catch (err) {
+        // ignore presence errors
+      }
     }, 10 * 60 * 1000);
 
     await logSistema(client, config, "Bot Iniciado", {
