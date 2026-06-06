@@ -62,13 +62,32 @@ async function handleTicketButtons(interaction, config) {
     }
 
     const ticketData = await listTicketByChannel(interaction.channel.id);
+    if (!ticketData) {
+      await interaction.editReply({
+        embeds: [dangerEmbed(config, "Aviso", "Este ticket não está registrado ou já foi fechado. O canal será removido em 5 segundos.")]
+      });
+      await interaction.channel.send({
+        embeds: [successEmbed(config, "🔴 Fechamento", "Este canal será encerrado em 5 segundos...")]
+      });
+      setTimeout(() => {
+        interaction.channel.delete("Ticket não encontrado no registro").catch(() => null);
+      }, 5000);
+      return true;
+    }
+
     const shouldRequestRating = ticketData?.type === "support";
     const result = await closeTicket(interaction.channel, interaction.user.id, config, {
       requestRating: shouldRequestRating
     });
     if (result.error) {
+      await interaction.channel.send({
+        embeds: [successEmbed(config, "🔴 Fechamento", "Este canal será encerrado em 5 segundos...")]
+      });
+      setTimeout(() => {
+        interaction.channel.delete("Ticket fechado manualmente").catch(() => null);
+      }, 5000);
       return interaction.editReply({
-        embeds: [dangerEmbed(config, "Erro", result.error)],
+        embeds: [infoEmbed(config, "Aviso", "Ticket sendo encerrado. O canal será removido em 5 segundos.")]
       });
     }
 
@@ -78,8 +97,8 @@ async function handleTicketButtons(interaction, config) {
           config,
           "Fechamento iniciado",
           shouldRequestRating
-            ? "Ticket encerrado. Aguarde a avalia\u00E7\u00E3o."
-            : "Ticket encerrado sem solicita\u00E7\u00E3o de avalia\u00E7\u00E3o."
+            ? "Ticket encerrado. Aguarde a avaliação."
+            : "Ticket encerrado sem solicitação de avaliação."
         )
       ]
     });
