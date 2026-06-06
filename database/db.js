@@ -2,12 +2,14 @@ const { getSupabase, isSupabaseEnabled } = require("../utils/supabase");
 
 function ensureSupabase() {
   if (!isSupabaseEnabled()) {
-    throw new Error("Supabase não configurado. Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE no .env.");
+    console.warn("[SUPABASE] Supabase não configurado. Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE no .env.");
+    return null;
   }
 
   const supabase = getSupabase();
   if (!supabase) {
-    throw new Error("Falha ao inicializar Supabase.");
+    console.error("[SUPABASE] Falha ao inicializar Supabase.");
+    return null;
   }
 
   return supabase;
@@ -376,6 +378,7 @@ function computeGroupedView(rows, select, groupBy, order, limit) {
 
 async function selectSupabase(sql, params = []) {
   const supabase = ensureSupabase();
+  if (!supabase) return null;
   const parsed = parseSelectQuery(sql.trim(), params);
   if (!parsed) return null;
 
@@ -433,6 +436,7 @@ async function selectSupabase(sql, params = []) {
 
 async function insertSupabase(sql, params = []) {
   const supabase = ensureSupabase();
+  if (!supabase) return null;
   const parsed = parseInsertQuery(sql, params);
   if (!parsed) return null;
 
@@ -450,6 +454,7 @@ async function insertSupabase(sql, params = []) {
 
 async function updateSupabase(sql, params = []) {
   const supabase = ensureSupabase();
+  if (!supabase) return null;
   const parsed = parseUpdateQuery(sql, params);
   if (!parsed) return null;
 
@@ -485,6 +490,7 @@ async function updateSupabase(sql, params = []) {
 
 async function deleteSupabase(sql, params = []) {
   const supabase = ensureSupabase();
+  if (!supabase) return null;
   const parsed = parseDeleteQuery(sql, params);
   if (!parsed) return null;
 
