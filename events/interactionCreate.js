@@ -7,6 +7,9 @@ module.exports = {
       await routeInteraction(interaction, config);
     } catch (error) {
       console.error('[INTERACTION ERROR]', error);
+      if (error && error.stack) {
+        console.error('[INTERACTION ERROR STACK]', error.stack);
+      }
       
       // Tentar responder ao usuario sobre o erro
       const reply = { content: "Ocorreu um erro ao processar esta interacao.", ephemeral: true };
