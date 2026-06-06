@@ -138,12 +138,30 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
     permissionOverwrites: overwrites
   });
 
-  await run(
-    "INSERT INTO tickets (guild_id, channel_id, user_id, type, product_id, number, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'open', ?)",
-    [guild.id, channel.id, member.id, type, productId || null, number, Date.now()]
-  );
+  const insertStartTime = Date.now();
+  try {
+    await run(
+      "INSERT INTO tickets (guild_id, channel_id, user_id, type, product_id, number, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'open', ?)",
+      [guild.id, channel.id, member.id, type, productId || null, number, Date.now()]
+    );
+    const insertTime = Date.now() - insertStartTime;
+    console.log(`[TICKETS] ✓ INSERT successful (${insertTime}ms): channel=${channel.id}, user=${member.id}, type=${type}, product_id=${productId || null}`);
+  } catch (error) {
+    console.error(`[TICKETS] ✗ INSERT failed: ${error.message}`, { 
+      guild_id: guild.id,
+      channel_id: channel.id,
+      user_id: member.id,
+      type,
+      product_id: productId || null,
+      number
+    });
+    throw error;
+  }
 
   console.log(`[TICKETS] Ticket created: guild=${guild.id}, channel=${channel.id}, user=${member.id}, type=${type}, number=${formatted}`);
+  
+  // Wait for Supabase replication before returning
+  await new Promise(resolve => setTimeout(resolve, 150));
 
   await run(
     "INSERT INTO users (guild_id, user_id, last_ticket_at) VALUES (?, ?, ?) ON CONFLICT(guild_id, user_id) DO UPDATE SET last_ticket_at = excluded.last_ticket_at",
@@ -267,14 +285,19 @@ async function closeTicket(channel, userId, config, options = {}) {
   );
 
   if (!ticket) {
-    console.error(`[TICKETS] closeTicket: ticket not found for channel ${channel.id}`);
+    console.error(`[TICKETS] ✗ closeTicket: ticket not found for channel ${channel.id}`);
     return { error: "Ticket não encontrado ou já fechado." };
   }
 
-  await run(
-    "UPDATE tickets SET status = 'closed', closed_at = ? WHERE id = ?",
-    [Date.now(), ticket.id]
-  );
+  try {
+    await run(
+      "UPDATE tickets SET status = 'closed', closed_at = ? WHERE id = ?",
+      [Date.now(), ticket.id]
+    );
+    console.log(`[TICKETS] ✓ Ticket closed: channel=${channel.id}, ticket_id=${ticket.id}`);
+  } catch (error) {
+    console.error(`[TICKETS] ✗ Error closing ticket: ${error.message}`, { channel_id: channel.id, ticket_id: ticket.id });
+  }
 
   if (options.requestRating) {
     const ratingRow = new ActionRowBuilder().addComponents(
@@ -312,7 +335,10 @@ async function closeTicket(channel, userId, config, options = {}) {
 
 async function registerRating(channel, rating, config) {
   const ticket = await get("SELECT * FROM tickets WHERE channel_id = ?", [channel.id]);
-  if (!ticket) return { error: "Ticket não encontrado." };
+  if (!ticket) {
+    console.error(`[TICKETS] ✗ registerRating: ticket not found for channel ${channel.id}`);
+    return { error: "Ticket não encontrado." };
+  }
 
   await run("UPDATE tickets SET rating = ? WHERE id = ?", [rating, ticket.id]);
 
@@ -346,18 +372,25 @@ async function countOpenTickets(guildId) {
   return result && typeof result.total === "number" ? result.total : 0;
 }
 
-async function listTicketByChannel(channelId, retries = 3, delayMs = 200) {
+async function listTicketByChannel(channelId, retries = 8, delayMs = 350) {
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const ticket = await get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
-    if (ticket) {
-      if (attempt > 1) console.log(`[TICKETS] Found ticket on attempt ${attempt}`);
-      return ticket;
+    try {
+      const ticket = await get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
+      if (ticket) {
+        if (attempt > 1) console.log(`[TICKETS] ✓ Found ticket on attempt ${attempt} after ${(attempt - 1) * delayMs}ms`);
+        return ticket;
+      }
+      if (attempt < retries) {
+        console.log(`[TICKETS] Attempt ${attempt}/${retries}: ticket not found, retrying in ${delayMs}ms...`);
+      }
+    } catch (error) {
+      console.error(`[TICKETS] Error on attempt ${attempt}: ${error.message}`);
     }
     if (attempt < retries) {
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
-  console.error(`[TICKETS] Ticket not found for channel ${channelId} after ${retries} retries`);
+  console.error(`[TICKETS] ✗ Ticket not found for channel ${channelId} after ${retries} retries (waited ${(retries - 1) * delayMs}ms total)`);
   return null;
 }
 
