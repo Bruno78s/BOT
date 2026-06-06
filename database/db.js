@@ -538,6 +538,9 @@ async function deleteSupabase(sql, params = []) {
 async function query(sql, params = []) {
   const normalized = sql.trim().replace(/;$/, "");
   const transformed = transformDotNumberToJson(normalized);
+  if (/counters/i.test(normalized)) {
+    console.error("[SUPABASE] query com 'counters': original=", normalized, "transformed=", transformed, "params=", params);
+  }
   const lower = transformed.toLowerCase();
 
   if (lower.startsWith("select")) {
