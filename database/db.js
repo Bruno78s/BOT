@@ -383,7 +383,10 @@ async function selectSupabase(sql, params = []) {
   if (!parsed) return null;
 
   const { table, select, filters, order, limit, groupBy } = parsed;
-  let builder = supabase.from(table).select("*");
+  
+  // Select correct columns upfront (don't call .select() twice)
+  const selectCols = (!hasAggregateSelect(select) && !groupBy && select !== "*") ? select : "*";
+  let builder = supabase.from(table).select(selectCols);
 
   let filterConditions = [];
   if (filters && filters.length) {
@@ -399,10 +402,6 @@ async function selectSupabase(sql, params = []) {
     if (supportedFilters.length > 0) {
       builder = applyFilters(builder, supportedFilters);
     }
-  }
-
-  if (!hasAggregateSelect(select) && !groupBy && select !== "*") {
-    builder = builder.select(select);
   }
 
   if (!hasAggregateSelect(select) && !groupBy) {
