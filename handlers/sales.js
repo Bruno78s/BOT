@@ -356,10 +356,12 @@ async function handleCartButtons(interaction, config) {
 
   if (customId === "cart_accept_terms") {
     const ticket = await listTicketByChannel(interaction.channel.id);
+    console.log(`[CART] cart_accept_terms: channel=${interaction.channel.id}, ticket=${ticket ? `found (id=${ticket.id}, productId=${ticket.product_id})` : "NOT FOUND"}`);
     const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
     if (!product) {
+      console.error(`[CART] Product not found: ticket=${ticket ? "exists" : "null"}, product_id=${ticket?.product_id}, config.products=${config.products?.length || 0}`);
       return interaction.reply({
-        embeds: [dangerEmbed(config, "Produto n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel identificar o produto deste carrinho.")],
+        embeds: [dangerEmbed(config, "Produto não encontrado", "Não foi possível identificar o produto deste carrinho.")],
         ephemeral: true
       });
     }

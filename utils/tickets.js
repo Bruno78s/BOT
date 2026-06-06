@@ -143,6 +143,8 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
     [guild.id, channel.id, member.id, type, productId || null, number, Date.now()]
   );
 
+  console.log(`[TICKETS] Ticket created: guild=${guild.id}, channel=${channel.id}, user=${member.id}, type=${type}, number=${formatted}`);
+
   await run(
     "INSERT INTO users (guild_id, user_id, last_ticket_at) VALUES (?, ?, ?) ON CONFLICT(guild_id, user_id) DO UPDATE SET last_ticket_at = excluded.last_ticket_at",
     [guild.id, member.id, Date.now()]
@@ -265,6 +267,7 @@ async function closeTicket(channel, userId, config, options = {}) {
   );
 
   if (!ticket) {
+    console.error(`[TICKETS] closeTicket: ticket not found for channel ${channel.id}`);
     return { error: "Ticket não encontrado ou já fechado." };
   }
 
@@ -344,7 +347,11 @@ async function countOpenTickets(guildId) {
 }
 
 async function listTicketByChannel(channelId) {
-  return get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
+  const ticket = await get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
+  if (!ticket) {
+    console.error(`[TICKETS] Ticket not found for channel ${channelId}`);
+  }
+  return ticket;
 }
 
 async function listTicketByUser(guildId, userId) {
