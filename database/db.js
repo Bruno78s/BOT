@@ -6,6 +6,12 @@ function ensureSupabase() {
     return null;
   }
 
+function transformDotNumberToJson(sql) {
+  // Transform occurrences like `counters.0` => `counters->>'0'`
+  // Matches identifiers starting with a letter/underscore to avoid touching numeric literals.
+  return sql.replace(/\b([a-zA-Z_][\w]*)\.(\d+)\b/g, (m, col, idx) => `${col}->>'${idx}'`);
+}
+
   const supabase = getSupabase();
   if (!supabase) {
     console.error("[SUPABASE] Falha ao inicializar Supabase.");
@@ -519,24 +525,25 @@ async function deleteSupabase(sql, params = []) {
 
 async function query(sql, params = []) {
   const normalized = sql.trim().replace(/;$/, "");
-  const lower = normalized.toLowerCase();
+  const transformed = transformDotNumberToJson(normalized);
+  const lower = transformed.toLowerCase();
 
   if (lower.startsWith("select")) {
-    return await selectSupabase(normalized, params);
+    return await selectSupabase(transformed, params);
   }
 
   if (lower.startsWith("insert")) {
-    await insertSupabase(normalized, params);
+    await insertSupabase(transformed, params);
     return [];
   }
 
   if (lower.startsWith("update")) {
-    await updateSupabase(normalized, params);
+    await updateSupabase(transformed, params);
     return [];
   }
 
   if (lower.startsWith("delete")) {
-    await deleteSupabase(normalized, params);
+    await deleteSupabase(transformed, params);
     return [];
   }
 
