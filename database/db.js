@@ -479,6 +479,24 @@ async function insertSupabase(sql, params = []) {
       const { error } = await supabase.from(qTable).upsert(row, { onConflict: conflictColumns.join(",") });
       if (error) {
         console.error("[SUPABASE] insert/upsert error", { sql, params, qTable, row, conflictColumns, error });
+        if (error.code === "42P10") {
+          const matchKey = {};
+          for (const conflictColumn of conflictColumns) {
+            if (row[conflictColumn] === undefined) {
+              console.error("[SUPABASE] fallback update failed because conflict column value is missing", { conflictColumn, row });
+              throw error;
+            }
+            matchKey[conflictColumn] = row[conflictColumn];
+          }
+
+          console.warn("[SUPABASE] falling back from upsert to update due missing unique constraint", { qTable, conflictColumns, matchKey });
+          const { error: updateError } = await supabase.from(qTable).update(row).match(matchKey);
+          if (updateError) {
+            console.error("[SUPABASE] fallback update error", { sql, params, qTable, row, conflictColumns, matchKey, updateError });
+            throw updateError;
+          }
+          return null;
+        }
         throw error;
       }
       return null;
