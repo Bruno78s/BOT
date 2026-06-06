@@ -83,12 +83,19 @@ async function canCreateTicket(guild, userId, type, config) {
     "SELECT last_ticket_at FROM users WHERE guild_id = ? AND user_id = ?",
     [guildId, userId]
   );
-  if (user && user.last_ticket_at) {
-    const diffMs = Date.now() - user.last_ticket_at;
+  
+  // Aplicar cooldown apenas se o último ticket foi do MESMO tipo
+  const lastSameTypeTicket = await get(
+    "SELECT created_at FROM tickets WHERE guild_id = ? AND user_id = ? AND type = ? AND status = 'closed' ORDER BY created_at DESC LIMIT 1",
+    [guildId, userId, type]
+  );
+  
+  if (lastSameTypeTicket) {
+    const diffMs = Date.now() - lastSameTypeTicket.created_at;
     const cooldownMs = config.limits.ticketCooldownMinutes * 60 * 1000;
     if (diffMs < cooldownMs) {
       const remaining = Math.ceil((cooldownMs - diffMs) / 60000);
-      return { ok: false, reason: `Aguarde ${remaining} minuto(s) para abrir novo ticket.` };
+      return { ok: false, reason: `Aguarde ${remaining} minuto(s) para abrir novo ${type === "sales" ? "carrinho" : type === "delivery" ? "pedido de entrega" : "ticket de suporte"}.` };
     }
   }
 
