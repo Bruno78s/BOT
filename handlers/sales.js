@@ -252,14 +252,14 @@ async function handlePaymentGatewaySelect(interaction, config) {
 
 
 async function handleCouponModal(interaction, config) {
+  await interaction.deferReply({ ephemeral: true });
   const couponCode = interaction.fields.getTextInputValue("coupon_code").trim();
   const ticket = await listTicketByChannel(interaction.channel.id);
   const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
 
   if (!product) {
-    return interaction.reply({
-      embeds: [dangerEmbed(config, "Produto n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel identificar o produto deste carrinho.")],
-      ephemeral: true
+    return interaction.editReply({
+      embeds: [dangerEmbed(config, "Produto não encontrado", "Não foi possível identificar o produto deste carrinho.")]
     });
   }
 
@@ -271,9 +271,8 @@ async function handleCouponModal(interaction, config) {
     const validation = await validateCoupon(interaction.guild.id, couponCode, product.price, product.id);
 
     if (!validation.valid) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Cupom inv\u00E1lido", validation.reason)],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Cupom inv\u00E1lido", validation.reason)]
       });
     }
 
@@ -293,10 +292,9 @@ async function handleCouponModal(interaction, config) {
     ? `Cupom **${coupon.code}** aplicado! Desconto de ${formatPrice(discount)}.`
     : "Nenhum cupom aplicado.";
 
-  await interaction.reply({
+  await interaction.editReply({
     embeds: [infoEmbed(config, "Gerar Pagamento", `Clique no botão abaixo para gerar o pagamento de **${product.name}**.\n\n${description}\n\n**Total:** ${formatPrice(finalPrice)} (${coupon ? `De ${formatPrice(product.price)}` : ""})`)],
-    components: [gatewayRow],
-    ephemeral: true
+    components: [gatewayRow]
   });
 
   if (coupon) {
@@ -332,22 +330,25 @@ async function handleCartButtons(interaction, config) {
     } catch (error) {
       console.error("[DEBUG] Erro no handler select_payment_gateway_menu:", error);
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: "Erro ao gerar pagamento.", ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
+      }
+      if (interaction.deferred) {
+        await interaction.editReply({ content: "\u274C Erro ao gerar pagamento. Tente novamente." });
       }
       return true;
     }
   }
 
   if (customId === "cart_read_terms") {
+    await interaction.deferReply({ ephemeral: true });
     const ticket = await listTicketByChannel(interaction.channel.id);
     const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
     if (!product) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Produto n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel identificar o produto deste carrinho.")],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Produto não encontrado", "Não foi possível identificar o produto deste carrinho.")]
       });
     }
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [buildTermsEmbed(config, interaction.user, product)],
       ephemeral: true
     });
@@ -355,12 +356,13 @@ async function handleCartButtons(interaction, config) {
   }
 
   if (customId === "cart_accept_terms") {
+    await interaction.deferReply({ ephemeral: true });
     const ticket = await listTicketByChannel(interaction.channel.id);
     console.log(`[CART] cart_accept_terms: channel=${interaction.channel.id}, ticket=${ticket ? `found (id=${ticket.id}, productId=${ticket.product_id})` : "NOT FOUND"}`);
     const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
     if (!product) {
       console.error(`[CART] Product not found: ticket=${ticket ? "exists" : "null"}, product_id=${ticket?.product_id}, config.products=${config.products?.length || 0}`);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [dangerEmbed(config, "Produto não encontrado", "Não foi possível identificar o produto deste carrinho.")],
         ephemeral: true
       });
@@ -399,28 +401,31 @@ async function handleCartButtons(interaction, config) {
       components: [confirmRow]
     });
 
-    await interaction.deferUpdate();
+    await interaction.editReply({
+      content: "✅ Termos aceitos! Escolha a ação abaixo.",
+      embeds: [],
+      components: []
+    });
     return true;
   }
 
   if (customId === "ticket_cancel_purchase") {
+    await interaction.deferReply({ ephemeral: true });
     const ticket = await listTicketByChannel(interaction.channel.id);
     if (!ticket || ticket.user_id !== interaction.user.id) {
-      await interaction.reply({
-        embeds: [dangerEmbed(config, "Sem permiss\u00E3o", "Apenas o cliente deste carrinho pode cancelar a compra.")],
-        ephemeral: true
+      await interaction.editReply({
+        embeds: [dangerEmbed(config, "Sem permissão", "Apenas o cliente deste carrinho pode cancelar a compra.")]
       });
       return true;
     }
 
     const channel = interaction.channel;
     await channel.send({
-      embeds: [dangerEmbed(config, "Compra cancelada", "Este carrinho ser\u00E1 fechado em 3 segundos.")]
+      embeds: [dangerEmbed(config, "Compra cancelada", "Este carrinho será fechado em 3 segundos.")]
     });
 
-    await interaction.reply({
-      embeds: [successEmbed(config, "Carrinho encerrado", "A compra foi cancelada com sucesso.")],
-      ephemeral: true
+    await interaction.editReply({
+      embeds: [successEmbed(config, "Carrinho encerrado", "A compra foi cancelada com sucesso.")]
     });
 
     setTimeout(() => {
@@ -436,19 +441,18 @@ async function handleOrderButtons(interaction, config) {
   const { customId } = interaction;
 
   if (customId === "order_open_delivery_ticket") {
+    await interaction.deferReply({ ephemeral: true });
     const payment = await get("SELECT * FROM payments WHERE channel_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 1", [interaction.channel.id]);
     if (!payment) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Pedido n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel encontrar o pedido aprovado neste carrinho.")],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Pedido n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel encontrar o pedido aprovado neste carrinho.")]
       });
     }
 
     const existingDeliveryTicket = await get("SELECT channel_id FROM tickets WHERE user_id = ? AND type = 'delivery' AND status = 'open' LIMIT 1", [interaction.user.id]);
     if (existingDeliveryTicket) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Ticket j\u00E1 existe", "Voc\u00EA j\u00E1 possui um ticket de entrega aberto: <#" + existingDeliveryTicket.channel_id + ">.")],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Ticket j\u00E1 existe", "Voc\u00EA j\u00E1 possui um ticket de entrega aberto: <#" + existingDeliveryTicket.channel_id + ">")]
       });
     }
 
@@ -462,25 +466,23 @@ async function handleOrderButtons(interaction, config) {
     });
 
     if (result.error) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Erro ao criar ticket", result.error)],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Erro ao criar ticket", result.error)]
       });
     }
 
-    await interaction.reply({
-      embeds: [successEmbed(config, "Ticket de entrega criado", "Seu ticket de entrega foi aberto: <#" + result.channel.id + ">.")],
-      ephemeral: true
+    await interaction.editReply({
+      embeds: [successEmbed(config, "Ticket de entrega criado", "Seu ticket de entrega foi aberto: <#" + result.channel.id + ">")]
     });
     return true;
   }
 
   if (customId === "order_copy_summary") {
+    await interaction.deferReply({ ephemeral: true });
     const payment = await get("SELECT * FROM payments WHERE channel_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 1", [interaction.channel.id]);
     if (!payment) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Pedido n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel encontrar o pedido aprovado neste carrinho.")],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Pedido n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel encontrar o pedido aprovado neste carrinho.")]
       });
     }
 
@@ -493,19 +495,18 @@ async function handleOrderButtons(interaction, config) {
       `Data: ${new Date(payment.created_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'})}`
     ].join("\n");
 
-    await interaction.reply({
-      content: "\uD83D\uDCCB **Resumo do Pedido**\n```\n" + summary + "\n```",
-      ephemeral: true
+    await interaction.editReply({
+      content: "\uD83D\uDCCB **Resumo do Pedido**\n```\n" + summary + "\n```"
     });
     return true;
   }
 
   if (customId === "order_close_cart") {
+    await interaction.deferReply({ ephemeral: true });
     const ticket = await listTicketByChannel(interaction.channel.id);
     if (!ticket || ticket.user_id !== interaction.user.id) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Sem permiss\u00E3o", "Apenas o cliente deste carrinho pode fechar o carrinho.")],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Sem permiss\u00E3o", "Apenas o cliente deste carrinho pode fechar o carrinho.")]
       });
     }
 
@@ -514,9 +515,8 @@ async function handleOrderButtons(interaction, config) {
       embeds: [dangerEmbed(config, "Carrinho fechado", "Este carrinho ser\u00E1 fechado em 3 segundos.")]
     });
 
-    await interaction.reply({
-      embeds: [successEmbed(config, "Carrinho encerrado", "O carrinho foi fechado com sucesso.")],
-      ephemeral: true
+    await interaction.editReply({
+      embeds: [successEmbed(config, "Carrinho encerrado", "O carrinho foi fechado com sucesso.")]
     });
 
     setTimeout(() => {
@@ -526,11 +526,11 @@ async function handleOrderButtons(interaction, config) {
   }
 
   if (customId === "ticket_confirm_purchase") {
+    await interaction.deferReply({ ephemeral: true });
     const pendingPayment = await getPendingPaymentByChannel(interaction.channel.id);
     if (pendingPayment) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Pagamento pendente", "Aguarde a confirma\u00E7\u00E3o autom\u00E1tica do PIX antes de finalizar a compra.")],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Pagamento pendente", "Aguarde a confirma\u00E7\u00E3o autom\u00E1tica do PIX antes de finalizar a compra.")]
       });
     }
 
@@ -574,9 +574,8 @@ async function handleOrderButtons(interaction, config) {
       console.error("Erro ao enviar registro de compra:", error);
     });
 
-    await interaction.reply({
-      embeds: [successEmbed(config, "Compra finalizada", "A entrega foi registrada no canal correto.")],
-      ephemeral: true
+    await interaction.editReply({
+      embeds: [successEmbed(config, "Compra finalizada", "A entrega foi registrada no canal correto.")]
     });
     return true;
   }

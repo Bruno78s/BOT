@@ -346,12 +346,19 @@ async function countOpenTickets(guildId) {
   return result && typeof result.total === "number" ? result.total : 0;
 }
 
-async function listTicketByChannel(channelId) {
-  const ticket = await get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
-  if (!ticket) {
-    console.error(`[TICKETS] Ticket not found for channel ${channelId}`);
+async function listTicketByChannel(channelId, retries = 3, delayMs = 200) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const ticket = await get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
+    if (ticket) {
+      if (attempt > 1) console.log(`[TICKETS] Found ticket on attempt ${attempt}`);
+      return ticket;
+    }
+    if (attempt < retries) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
   }
-  return ticket;
+  console.error(`[TICKETS] Ticket not found for channel ${channelId} after ${retries} retries`);
+  return null;
 }
 
 async function listTicketByUser(guildId, userId) {

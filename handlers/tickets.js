@@ -18,29 +18,29 @@ async function handleTicketButtons(interaction, config) {
   const { customId } = interaction;
 
   if (customId === "ticket_claim") {
+    await interaction.deferReply({ ephemeral: true });
     const settings = await getSettings(interaction.guild.id) || {};
     const member = interaction.member;
     const hasSupportRole = settings.support_role_id && member.roles.cache.has(settings.support_role_id);
     if (!hasSupportRole && !member.permissions.has(PermissionFlagsBits.Administrator)) {
-      return interaction.reply({
-        embeds: [dangerEmbed(config, "Sem permiss\u00E3o", "Apenas staff pode assumir tickets.")],
-        ephemeral: true
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Sem permissão", "Apenas staff pode assumir tickets.")]
       });
     }
 
     const channel = interaction.channel;
     await channel.send({
-      content: `\uD83C\uDFAB **Ticket assumido por ${member.user.tag}**`
+      content: `🎫 **Ticket assumido por ${member.user.tag}**`
     });
 
-    await interaction.reply({
-      embeds: [successEmbed(config, "Ticket assumido", "Voc\u00EA assumiu este ticket com sucesso.")],
-      ephemeral: true
+    await interaction.editReply({
+      embeds: [successEmbed(config, "Ticket assumido", "Você assumiu este ticket com sucesso.")]
     });
     return true;
   }
 
   if (customId === "ticket_close") {
+    await interaction.deferReply({ ephemeral: true });
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("ticket_close_confirm")
@@ -48,10 +48,9 @@ async function handleTicketButtons(interaction, config) {
         .setStyle(ButtonStyle.Danger)
     );
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [infoEmbed(config, "<a:atencaocc:1472985634678505603> Confirma\u00E7\u00E3o <a:atencaocc:1472985634678505603>", "Deseja realmente fechar este ticket?")],
-      components: [row],
-      ephemeral: true
+      components: [row]
     });
     return true;
   }
