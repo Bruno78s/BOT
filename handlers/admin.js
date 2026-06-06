@@ -164,7 +164,7 @@ async function handleAdminMenu(interaction, config) {
 async function showInvitesPanel(interaction, config) {
   const leaderboard = await getInviteLeaderboard(interaction.guild.id, 10);
   const ranking = leaderboard.length
-    ? leaderboard.map((row, index) => `${index + 1}. <@${row.user_id}> \u2022 Dispon\u00EDveis: **${getRedeemableInvites(row)}** \u2022 Total: **${row.total || 0}** \u2022 Fake: **${row.fake || 0}** \u2022 Saiu: **${row.left || 0}**`).join("\n")
+      ? leaderboard.map((row, index) => `${index + 1}. <@${row.user_id}> \u2022 Dispon\u00EDveis: **${getRedeemableInvites(row)}** \u2022 Total: **${row.total || 0}** \u2022 Fake: **${row.fake || 0}** \u2022 Saiu: **${row.left_count || 0}**`).join("\n")
     : "Nenhum convite registrado ainda.";
 
   const embed = new EmbedBuilder()
@@ -203,11 +203,11 @@ async function handleAdminButtons(interaction, config) {
         .setCustomId("admin_menu")
         .setPlaceholder("Selecione uma op\u00E7\u00E3o")
         .addOptions([
-          { label: "Produtos", description: "Gerenciar produtos", value: "admin_products" },
-          { label: "Pagamentos", description: "Ver pagamentos recentes", value: "admin_payments" },
-          { label: "Cupons", description: "Gerenciar cupons de desconto", value: "admin_coupons" },
-          { label: "Invites", description: "Ranking e ferramentas de invites", value: "admin_invites" },
-          { label: "Configura\u00E7\u00F5es", description: "Configurar canais e pagamento", value: "admin_settings" }
+          { label: "📦 Produtos", description: "Gerenciar produtos", value: "admin_products" },
+          { label: "💰 Pagamentos", description: "Ver pagamentos recentes", value: "admin_payments" },
+          { label: "🏷️ Cupons", description: "Gerenciar cupons de desconto", value: "admin_coupons" },
+          { label: "📨 Invites", description: "Ranking e ferramentas de invites", value: "admin_invites" },
+          { label: "⚙️ Configura\u00E7\u00F5es", description: "Configurar canais e pagamento", value: "admin_settings" }
         ])
     );
 

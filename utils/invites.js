@@ -101,7 +101,7 @@ async function markMemberLeft(member) {
     await run(
       `UPDATE invite_stats
        SET current = CASE WHEN current > 0 THEN current - ? ELSE 0 END,
-           left = left + 1,
+           left_count = left_count + 1,
            updated_at = ?
        WHERE guild_id = ? AND user_id = ?`,
       [joinRecord.is_fake ? 0 : 1, Date.now(), guildId, joinRecord.inviter_id]
@@ -146,7 +146,7 @@ function buildInviteStatsEmbed(config, member, stats) {
       `> **Disponíveis:** ${getRedeemableInvites(stats)}`,
       `> **Resgatados/Resetados:** ${stats.redeemed || 0}`,
       `> **Fake:** ${stats.fake || 0}`,
-      `> **Saiu:** ${stats.left || 0}`,
+      `> **Saiu:** ${stats.left_count || 0}`,
       `> **Entrou válido:** ${stats.current || 0}`
     ].join("\n"))
     .setTimestamp();

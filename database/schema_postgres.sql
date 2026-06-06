@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS invite_stats (
   total integer NOT NULL DEFAULT 0,
   current integer NOT NULL DEFAULT 0,
   fake integer NOT NULL DEFAULT 0,
-  left integer NOT NULL DEFAULT 0,
+  left_count integer NOT NULL DEFAULT 0,
   redeemed integer NOT NULL DEFAULT 0,
   updated_at bigint NOT NULL,
   PRIMARY KEY (guild_id, user_id)
