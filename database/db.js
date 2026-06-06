@@ -1,10 +1,10 @@
 const { getSupabase, isSupabaseEnabled } = require("../utils/supabase");
 
-function transformDotNumberToJson(sql) {
+const transformDotNumberToJson = (sql) => {
   // Transform occurrences like `counters.0` => `counters->>'0'`
   // Matches identifiers starting with a letter/underscore to avoid touching numeric literals.
   return sql.replace(/\b([a-zA-Z_][\w]*)\.(\d+)\b/g, (m, col, idx) => `${col}->>'${idx}'`);
-}
+};
 
 function ensureSupabase() {
   if (!isSupabaseEnabled()) {
