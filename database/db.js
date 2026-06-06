@@ -506,7 +506,9 @@ async function updateSupabase(sql, params = []) {
   const qTable = qualifyTableName(table);
   try {
     if (expressions.length === 0) {
-      const { error } = await supabase.from(qTable).update(set).match(where);
+      let builder = supabase.from(qTable).update(set);
+      if (where && where.length > 0) builder = applyFilters(builder, where);
+      const { error } = await builder;
       if (error) {
         console.error("[SUPABASE] update error", { sql, params, qTable, set, where, error });
         throw error;
@@ -556,7 +558,9 @@ async function deleteSupabase(sql, params = []) {
   const { table, where } = parsed;
   const qTable = qualifyTableName(table);
   try {
-    const { error } = await supabase.from(qTable).delete().match(where);
+    let builder = supabase.from(qTable).delete();
+    if (where && where.length > 0) builder = applyFilters(builder, where);
+    const { error } = await builder;
     if (error) {
       console.error("[SUPABASE] delete error", { sql, params, qTable, where, error });
       throw error;
