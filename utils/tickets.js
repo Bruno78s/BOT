@@ -39,12 +39,14 @@ async function nextTicketNumber(guildId, type) {
   return next;
 }
 
-async function canCreateTicket(guildId, userId, type, config) {
+async function canCreateTicket(guild, userId, type, config) {
+  const guildId = guild.id;
   const openTickets = await get(
     "SELECT COUNT(*) as total FROM tickets WHERE guild_id = ? AND status = 'open'",
     [guildId]
   );
-  if (openTickets.total >= config.limits.maxOpenTicketsPerGuild) {
+  const totalOpen = openTickets && typeof openTickets.total === "number" ? openTickets.total : 0;
+  if (totalOpen >= config.limits.maxOpenTicketsPerGuild) {
     return { ok: false, reason: "Limite de tickets simultaneos atingido." };
   }
 
@@ -94,7 +96,7 @@ async function canCreateTicket(guildId, userId, type, config) {
 }
 
 async function createTicket({ guild, member, type, config, settings = {}, productId, reason = null, paymentId = null }) {
-  const canCreate = await canCreateTicket(guild.id, member.id, type, config);
+  const canCreate = await canCreateTicket(guild, member.id, type, config);
   if (!canCreate.ok) {
     return { error: canCreate.reason };
   }
@@ -331,7 +333,7 @@ async function countOpenTickets(guildId) {
     "SELECT COUNT(*) as total FROM tickets WHERE guild_id = ? AND status = 'open'",
     [guildId]
   );
-  return result.total;
+  return result && typeof result.total === "number" ? result.total : 0;
 }
 
 async function listTicketByChannel(channelId) {
