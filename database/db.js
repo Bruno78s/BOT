@@ -474,15 +474,26 @@ async function insertSupabase(sql, params = []) {
 
   const { table, row, conflictColumns } = parsed;
   const qTable = qualifyTableName(table);
-  if (conflictColumns && conflictColumns.length > 0) {
-    const { error } = await supabase.from(qTable).upsert(row, { onConflict: conflictColumns.join(",") });
-    if (error) throw error;
-    return null;
-  }
+  try {
+    if (conflictColumns && conflictColumns.length > 0) {
+      const { error } = await supabase.from(qTable).upsert(row, { onConflict: conflictColumns.join(",") });
+      if (error) {
+        console.error("[SUPABASE] insert/upsert error", { sql, params, qTable, row, conflictColumns, error });
+        throw error;
+      }
+      return null;
+    }
 
-  const { error } = await supabase.from(qTable).insert(row);
-  if (error) throw error;
-  return null;
+    const { error } = await supabase.from(qTable).insert(row);
+    if (error) {
+      console.error("[SUPABASE] insert error", { sql, params, qTable, row, error });
+      throw error;
+    }
+    return null;
+  } catch (err) {
+    console.error("[SUPABASE] exception during insertSupabase", { sql, params, qTable, row, conflictColumns, err });
+    throw err;
+  }
 }
 
 async function updateSupabase(sql, params = []) {
@@ -493,33 +504,47 @@ async function updateSupabase(sql, params = []) {
 
   const { table, set, expressions, where } = parsed;
   const qTable = qualifyTableName(table);
-  if (expressions.length === 0) {
-    const { error } = await supabase.from(qTable).update(set).match(where);
-    if (error) throw error;
-    return null;
-  }
+  try {
+    if (expressions.length === 0) {
+      const { error } = await supabase.from(qTable).update(set).match(where);
+      if (error) {
+        console.error("[SUPABASE] update error", { sql, params, qTable, set, where, error });
+        throw error;
+      }
+      return null;
+    }
 
-  let builder = supabase.from(qTable).select("*");
-  builder = applyFilters(builder, where);
-  const { data, error: selectError } = await builder;
-  if (selectError) throw selectError;
-  if (!data || data.length === 0) return null;
+    let builder = supabase.from(qTable).select("*");
+    builder = applyFilters(builder, where);
+    const { data, error: selectError } = await builder;
+    if (selectError) {
+      console.error("[SUPABASE] select before update error", { sql, params, qTable, where, selectError });
+      throw selectError;
+    }
+    if (!data || data.length === 0) return null;
 
-  for (const row of data) {
-    const updated = { ...row, ...set };
-    for (const expr of expressions) {
-      if (expr.operator === "+") {
-        updated[expr.column] = Number(row[expr.column] || 0) + Number(expr.amount || 0);
-      } else if (expr.operator === "-") {
-        updated[expr.column] = Number(row[expr.column] || 0) - Number(expr.amount || 0);
+    for (const row of data) {
+      const updated = { ...row, ...set };
+      for (const expr of expressions) {
+        if (expr.operator === "+") {
+          updated[expr.column] = Number(row[expr.column] || 0) + Number(expr.amount || 0);
+        } else if (expr.operator === "-") {
+          updated[expr.column] = Number(row[expr.column] || 0) - Number(expr.amount || 0);
+        }
+      }
+      const key = row.id ? { id: row.id } : where;
+      const { error: updateError } = await supabase.from(qTable).update(updated).match(key);
+      if (updateError) {
+        console.error("[SUPABASE] update row error", { sql, params, qTable, key, updated, updateError });
+        throw updateError;
       }
     }
-    const key = row.id ? { id: row.id } : where;
-    const { error: updateError } = await supabase.from(qTable).update(updated).match(key);
-    if (updateError) throw updateError;
-  }
 
-  return null;
+    return null;
+  } catch (err) {
+    console.error("[SUPABASE] exception during updateSupabase", { sql, params, qTable, set, where, err });
+    throw err;
+  }
 }
 
 async function deleteSupabase(sql, params = []) {
@@ -530,9 +555,17 @@ async function deleteSupabase(sql, params = []) {
 
   const { table, where } = parsed;
   const qTable = qualifyTableName(table);
-  const { error } = await supabase.from(qTable).delete().match(where);
-  if (error) throw error;
-  return null;
+  try {
+    const { error } = await supabase.from(qTable).delete().match(where);
+    if (error) {
+      console.error("[SUPABASE] delete error", { sql, params, qTable, where, error });
+      throw error;
+    }
+    return null;
+  } catch (err) {
+    console.error("[SUPABASE] exception during deleteSupabase", { sql, params, qTable, where, err });
+    throw err;
+  }
 }
 
 async function query(sql, params = []) {
