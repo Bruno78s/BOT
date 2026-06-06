@@ -426,7 +426,19 @@ async function selectSupabase(sql, params = []) {
     if (typeof limit === "number") builder = builder.limit(limit);
   }
 
-  const { data, error } = await builder;
+  let data;
+  let error;
+  try {
+    ({ data, error } = await builder);
+  } catch (err) {
+    console.error("[SUPABASE] exceção ao executar query:", err);
+    try {
+      console.error("[SUPABASE] SQL:", sql);
+      console.error("[SUPABASE] params:", params);
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
   if (error) {
     console.error("[SUPABASE] falha ao ler dados remotos:", error);
     try {
