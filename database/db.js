@@ -157,10 +157,10 @@ function parseSelectQuery(sql, params = []) {
 }
 
 function qualifyTableName(table) {
-  // Use explicit public schema to avoid collisions with auth.users in Supabase
+  // Ensure we pass a plain table name (Supabase client already handles schema)
   const cleaned = table.trim();
-  if (cleaned.includes('.')) return cleaned;
-  return `public.${cleaned}`;
+  const parts = cleaned.split('.');
+  return parts[parts.length - 1];
 }
 
 function parseInsertQuery(sql, params) {
