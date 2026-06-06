@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS settings (
   sales_category_id TEXT NOT NULL,
   support_category_id TEXT NOT NULL,
   log_channel_id TEXT NOT NULL,
-  payment_qr_code TEXT,
   panel_message_id TEXT
 );
 

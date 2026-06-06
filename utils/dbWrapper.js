@@ -1,17 +1,8 @@
 /**
- * Wrapper de Database - Usa Supabase quando disponível, ou SQLite local
+ * Wrapper de Database - Usa Supabase apenas
  */
 
 const { isSupabaseEnabled, getSupabase } = require('./supabase');
-
-// Importa SQLite apenas se necessário
-let sqliteDb = null;
-function getSqliteDb() {
-  if (!sqliteDb) {
-    sqliteDb = require('../database/db');
-  }
-  return sqliteDb;
-}
 
 // Query genérica que funciona com ambos
 async function query(sql, params = []) {
@@ -75,10 +66,7 @@ async function query(sql, params = []) {
     if (error) throw error;
     return data;
   }
-  
-  // Usar SQLite local
-  const db = getSqliteDb();
-  return db.all(sql, params);
+  throw new Error('Supabase não configurado. Esta aplicação agora exige Supabase.');
 }
 
 // Query single
@@ -94,13 +82,11 @@ async function all(sql, params = []) {
 
 // Run (insert/update/delete)
 async function run(sql, params = []) {
-  if (isSupabaseEnabled()) {
-    await query(sql, params);
-    return { lastID: null, changes: 1 };
+  if (!isSupabaseEnabled()) {
+    throw new Error('Supabase não configurado. Esta aplicação agora exige Supabase.');
   }
-  
-  const db = getSqliteDb();
-  return db.run(sql, params);
+  await query(sql, params);
+  return { lastID: null, changes: 1 };
 }
 
 // Funções auxiliares para parsear SQL

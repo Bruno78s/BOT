@@ -4,9 +4,9 @@
 
 
 const cron = require("node-cron");
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { initDb, run, all } = require("../database/db");
-const { backupDatabase, pruneBackups } = require("../utils/backup");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType } = require("discord.js");
+const { run, all } = require("../database/db");
+const { backupDatabase, pruneBackups, backupDatabaseEncrypted } = require("../utils/backup");
 const { joinConfiguredVoice, keepAlive } = require("../utils/voice");
 const { ensureTicketPanel } = require("../utils/panel");
 const { ensureVerifyPanel } = require("../utils/verifyPanel");
@@ -20,25 +20,20 @@ const { logSistema, logRelatorio } = require("../utils/channelLogger");
 const { cacheGuildInvites } = require("../utils/invites");
 const { syncToSupabase } = require("../utils/syncToSupabase");
 const { isSupabaseEnabled } = require("../utils/supabase");
-const { backupDatabaseEncrypted } = require("../utils/backup");
 const Dashboard = require("../utils/dashboard");
 const ReportSystem = require("../utils/reports");
 const StockPrediction = require("../utils/stockPrediction");
 const AutoRestock = require("../utils/autoRestock");
 
 module.exports = {
-  name: "clientReady",
+  name: "ready",
   once: true,
   async execute(client, config) {
-    await initDb();
-    await run("CREATE TABLE IF NOT EXISTS panel_messages (guild_id TEXT NOT NULL, type TEXT NOT NULL, channel_id TEXT NOT NULL, message_id TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (guild_id, type))").catch(() => null);
-    await run("ALTER TABLE tickets ADD COLUMN terms_accepted_at INTEGER").catch(() => null);
-    await run("ALTER TABLE tickets ADD COLUMN terms_snapshot TEXT").catch(() => null);
     await Promise.all(client.guilds.cache.map((guild) => cacheGuildInvites(guild).catch(() => null)));
 
     cron.schedule("0 3 * * *", async () => {
-      backupDatabase();
-      backupDatabaseEncrypted(); // Melhoria 12: Backup criptografado
+      await backupDatabase();
+      await backupDatabaseEncrypted(); // Melhoria 12: Backup criptografado
       pruneBackups(config.limits.logRetentionDays);
     });
 
@@ -172,6 +167,22 @@ module.exports = {
     await ensureTermsPanel(client, config);
     await ensureRulesPanel(client, config);
     await ensureProductPanels(client, config);
+
+    const presenceMessage = process.env.BOT_PRESENCE_MESSAGE || config.botPresence?.message || `a loja ${config.botName}`;
+    const presenceTypeKey = process.env.BOT_PRESENCE_TYPE || config.botPresence?.type || "WATCHING";
+    const presenceType = ActivityType[presenceTypeKey] || ActivityType.Watching;
+
+    client.user.setPresence({
+      activities: [{ name: presenceMessage, type: presenceType }],
+      status: "online"
+    }).catch(() => null);
+
+    setInterval(() => {
+      client.user.setPresence({
+        activities: [{ name: presenceMessage, type: presenceType }],
+        status: "online"
+      }).catch(() => null);
+    }, 10 * 60 * 1000);
 
     await logSistema(client, config, "Bot Iniciado", {
       description: [

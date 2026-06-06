@@ -1,13 +1,13 @@
 ﻿const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { DB_PATH, all } = require("../database/db");
+const { all } = require("../database/db");
 
 const BACKUP_DIR = path.join(__dirname, "..", "database", "backups");
 const DATA_DIR = path.join(__dirname, "..", "database", "data");
 
 // Chave de criptografia (deve estar no .env)
-const ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET || 'default-key-change-in-production';
+const ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET;
 const IV_LENGTH = 16;
 
 function ensureDir(dir) {
@@ -19,13 +19,19 @@ function ensureDir(dir) {
 /**
  * Criptografa dados usando AES-256-CBC
  */
-function encrypt(text) {
+function encrypt(input) {
   try {
+    if (!ENCRYPTION_KEY) {
+      throw new Error('BACKUP_ENCRYPTION_KEY ou JWT_SECRET não definido');
+    }
+
     const iv = crypto.randomBytes(IV_LENGTH);
-    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32)), iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    const key = Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32));
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    const bufferInput = Buffer.isBuffer(input) ? input : Buffer.from(input, 'utf8');
+    const encryptedBuffer = Buffer.concat([cipher.update(bufferInput), cipher.final()]);
+
+    return iv.toString('hex') + ':' + encryptedBuffer.toString('hex');
   } catch (error) {
     console.error('[ENCRYPTION] Erro ao criptografar:', error);
     return null;
@@ -35,15 +41,19 @@ function encrypt(text) {
 /**
  * Descriptografa dados
  */
-function decrypt(encryptedData) {
+function decrypt(encryptedData, returnBuffer = false) {
   try {
+    if (!ENCRYPTION_KEY) {
+      throw new Error('BACKUP_ENCRYPTION_KEY ou JWT_SECRET não definido');
+    }
+
     const parts = encryptedData.split(':');
     const iv = Buffer.from(parts[0], 'hex');
-    const encrypted = parts[1];
-    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32)), iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
+    const encrypted = Buffer.from(parts[1], 'hex');
+    const key = Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32));
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    const decryptedBuffer = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    return returnBuffer ? decryptedBuffer : decryptedBuffer.toString('utf8');
   } catch (error) {
     console.error('[ENCRYPTION] Erro ao descriptografar:', error);
     return null;
@@ -53,23 +63,19 @@ function decrypt(encryptedData) {
 /**
  * Backup criptografado do banco de dados
  */
-function backupDatabaseEncrypted() {
+async function backupDatabaseEncrypted() {
   ensureDir(BACKUP_DIR);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const source = DB_PATH;
-  
+
   try {
-    // Ler arquivo do banco
-    const data = fs.readFileSync(source, 'utf8');
-    
-    // Criptografar
-    const encrypted = encrypt(data);
+    const data = await exportData();
+    const jsonData = JSON.stringify(data, null, 2);
+    const encrypted = encrypt(jsonData);
     if (!encrypted) throw new Error('Falha na criptografia');
-    
-    // Salvar arquivo criptografado
+
     const target = path.join(BACKUP_DIR, `db-encrypted-${timestamp}.enc`);
     fs.writeFileSync(target, encrypted);
-    
+
     console.log(`[BACKUP] Backup criptografado criado: ${target}`);
     return { success: true, path: target };
   } catch (error) {
@@ -78,11 +84,20 @@ function backupDatabaseEncrypted() {
   }
 }
 
-function backupDatabase() {
+async function backupDatabase() {
   ensureDir(BACKUP_DIR);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const target = path.join(BACKUP_DIR, `db-${timestamp}.sqlite`);
-  fs.copyFileSync(DB_PATH, target);
+  const target = path.join(BACKUP_DIR, `db-${timestamp}.json`);
+
+  try {
+    const data = await exportData();
+    fs.writeFileSync(target, JSON.stringify(data, null, 2));
+    console.log(`[BACKUP] Backup JSON criado: ${target}`);
+    return { success: true, path: target };
+  } catch (error) {
+    console.error('[BACKUP] Erro ao criar backup JSON:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 function pruneBackups(retentionDays) {
@@ -101,38 +116,31 @@ function pruneBackups(retentionDays) {
 // Exportar dados importantes para JSON (criptografado)
 async function exportData() {
   ensureDir(DATA_DIR);
-  
+
   try {
-    const invites = await all("SELECT * FROM invite_stats");
-    const inviteJoins = await all("SELECT * FROM invite_joins WHERE left_at IS NULL");
-    const payments = await all("SELECT * FROM payments WHERE status = 'pending'");
-    
+    const tables = [
+      "settings",
+      "users",
+      "counters",
+      "tickets",
+      "logs",
+      "payments",
+      "panel_messages",
+      "auto_responses",
+      "coupons",
+      "invite_stats",
+      "invite_joins"
+    ];
+
     const data = {
-      exportedAt: Date.now(),
-      invites,
-      inviteJoins,
-      pendingPayments: payments
+      exportedAt: Date.now()
     };
-    
-    // Criptografar antes de salvar
-    const jsonData = JSON.stringify(data);
-    const encrypted = encrypt(jsonData);
-    
-    if (encrypted) {
-      fs.writeFileSync(
-        path.join(DATA_DIR, "exported-data.enc"),
-        encrypted
-      );
-      console.log('[BACKUP] Dados exportados e criptografados com sucesso');
-    } else {
-      // Fallback para não criptografado se falhar
-      fs.writeFileSync(
-        path.join(DATA_DIR, "exported-data.json"),
-        jsonData
-      );
+
+    for (const table of tables) {
+      data[table] = await all(`SELECT * FROM ${table}`);
     }
-    
-    return { success: true, message: "Dados exportados com sucesso" };
+
+    return data;
   } catch (error) {
     console.error("Erro ao exportar dados:", error);
     return { success: false, error: error.message };

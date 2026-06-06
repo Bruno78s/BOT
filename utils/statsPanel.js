@@ -54,62 +54,64 @@ async function ensureStatsPanel(client, config) {
   const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
   const logoAttachment = new AttachmentBuilder(logoPath, { name: "logo.png" });
 
+  const safeTotalMembers = totalMembers || 1;
+  const activePercent = Math.round((activeMembers / safeTotalMembers) * 100);
+  const botPercent = Math.round((botMembers.size / safeTotalMembers) * 100);
+
+  const buildProgressBar = (percent) => {
+    const filled = Math.round(percent / 10);
+    const empty = 10 - filled;
+    return `${"▰".repeat(filled)}${"▱".repeat(empty)} ${percent}%`;
+  };
+
   const embed = new EmbedBuilder()
     .setColor(config.colors.primary)
-    .setTitle(`${config.botName} | Estatísticas do Servidor`)
-    .setDescription([
-      "**Visão geral**",
-      `**Nome:** ${guild.name}`,
-      `**ID:** ${guild.id}`,
-      `**Dono:** <@${guild.ownerId}>`,
-      `**Criado em:** ${guild.createdAt.toLocaleDateString('pt-BR')}`,
-      "",
-      "**Membros**",
-      `**Total:** ${totalMembers}`,
-      `**Humanos:** ${humanMembers.size}`,
-      `**Bots:** ${botMembers.size}`,
-      "",
-      "**Status**",
-      `**Online:** ${onlineMembers}`,
-      `**Ausente:** ${idleMembers}`,
-      `**Não perturbe:** ${dndMembers}`,
-      `**Offline:** ${offlineMembers}`,
-      `**Ativos agora:** ${activeMembers}`,
-      "",
-      "**Canais**",
-      `**Texto:** ${textChannels}`,
-      `**Voz:** ${voiceChannels}`,
-      `**Categorias:** ${categoryChannels}`,
-      `**Total:** ${channels.size}`,
-      "",
-      "**Boosts**",
-      `**Nível:** ${boostLevel}`,
-      `**Total Boosts:** ${boostCount}`,
-      "",
-      "**Cargos**",
-      `**Total:** ${roles.size}`,
-      "",
-      `**Última atualização:** ${new Date().toLocaleTimeString("pt-BR")}`,
-      "**Atualização automática:** a cada 30 segundos"
-    ].join("\n"))
+    .setTitle(`${config.botName} • Estatísticas do Servidor`)
+    .setAuthor({ name: guild.name, iconURL: guild.iconURL({ dynamic: true }) || undefined })
+    .setDescription(`**Resumo rápido**\nServidor atualizado: **${new Date().toLocaleTimeString('pt-BR')}**\nAtualização automática: **a cada 30 segundos**`)
     .setThumbnail("attachment://logo.png")
-    .setFooter({ 
-      text: `${config.botName} • Estatísticas`, 
-      iconURL: "attachment://logo.png"
-    })
-    .setTimestamp()
     .addFields([
       {
-        name: "Membros online",
-        value: `${Math.round((activeMembers / totalMembers) * 100)}%`,
+        name: "Visão geral",
+        value: [`**Nome:** ${guild.name}`, `**ID:** ${guild.id}`, `**Dono:** <@${guild.ownerId}>`, `**Criado em:** ${guild.createdAt.toLocaleDateString('pt-BR')}`].join('\n'),
+        inline: false
+      },
+      {
+        name: "Membros",
+        value: [`**Total:** ${totalMembers}`, `**Humanos:** ${humanMembers.size}`, `**Bots:** ${botMembers.size}`].join('\n'),
         inline: true
       },
       {
-        name: "Bots",
-        value: `${Math.round((botMembers.size / totalMembers) * 100)}%`,
+        name: "Status ativos",
+        value: [`**Online:** ${onlineMembers}`, `**Ausente:** ${idleMembers}`, `**Não perturbe:** ${dndMembers}`, `**Offline:** ${offlineMembers}`].join('\n'),
         inline: true
+      },
+      {
+        name: "Canais",
+        value: [`**Texto:** ${textChannels}`, `**Voz:** ${voiceChannels}`, `**Categorias:** ${categoryChannels}`, `**Total:** ${channels.size}`].join('\n'),
+        inline: true
+      },
+      {
+        name: "Boosts",
+        value: [`**Nível:** ${boostLevel}`, `**Total Boosts:** ${boostCount}`].join('\n'),
+        inline: true
+      },
+      {
+        name: "Cargos",
+        value: `**Total:** ${roles.size}`,
+        inline: true
+      },
+      {
+        name: "Progresso",
+        value: [`**Ativos agora:** ${activeMembers}`, buildProgressBar(activePercent), `**Bots:** ${botMembers.size}`, buildProgressBar(botPercent)].join('\n'),
+        inline: false
       }
-    ]);
+    ])
+    .setFooter({ 
+      text: `${config.botName} • Estatísticas do Servidor`, 
+      iconURL: "attachment://logo.png"
+    })
+    .setTimestamp();
 
   if (existingMessage) {
     await existingMessage.edit({ 

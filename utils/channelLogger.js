@@ -78,18 +78,18 @@ async function logVenda(client, config, { userId, productName, amount, orderId, 
   const embed = new EmbedBuilder()
     .setColor(COLORS.vendas)
     .setAuthor({ name: `${config.botName} • Venda Aprovada`, iconURL: "attachment://logo.png" })
-    .setTitle("✅ Nova Venda Confirmada")
-    .setDescription([
-      `> 👤 **Cliente:** <@${userId}>`,
-      `> 📦 **Produto:** ${productName}`,
-      coupon ? `> 🏷️ **Cupom:** ${coupon}` : null,
-      `> 💰 **Valor:** R$ ${Number(amount).toFixed(2)}`,
-      `> 🛒 **Canal:** <#${channelId}>`,
-      `> 🔖 **Pedido:** #${orderId}`,
-      `> 🆔 **Pagamento:** \`${paymentId}\``,
-    ].filter(Boolean).join("\n"))
+    .setTitle("✅ Venda Confirmada")
+    .setDescription("Pagamento aprovado e pedido confirmado. Confira os dados abaixo para conferência.")
+    .addFields([
+      { name: "👤 Cliente", value: `<@${userId}>`, inline: true },
+      { name: "📦 Produto", value: productName, inline: true },
+      { name: "💰 Valor", value: `R$ ${Number(amount).toFixed(2)}`, inline: true },
+      { name: "🔖 Pedido", value: `#${orderId}`, inline: true },
+      { name: "🆔 Pagamento", value: `\`${paymentId}\``, inline: true },
+      coupon ? { name: "🏷️ Cupom", value: coupon, inline: true } : null,
+    ].filter(Boolean))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • Logs Vendas`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs de Venda`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
   await sendToChannel(client, "vendas", embed, {}, config);
@@ -99,17 +99,17 @@ async function logComprovante(client, config, { userId, productName, amount, ord
   const embed = new EmbedBuilder()
     .setColor(COLORS.comprovantes)
     .setAuthor({ name: `${config.botName} • Comprovante`, iconURL: "attachment://logo.png" })
-    .setTitle("🧾 Comprovante de Venda")
+    .setTitle("🧾 Comprovante Registrado")
+    .setDescription("O comprovante do pedido foi gerado e está disponível para conferência.")
     .addFields([
       { name: "👤 Cliente", value: `<@${userId}>`, inline: true },
       { name: "📦 Produto", value: productName, inline: true },
       { name: "💰 Valor", value: `R$ ${Number(amount).toFixed(2)}`, inline: true },
       { name: "🔖 Pedido", value: `#${orderId}`, inline: true },
       { name: "🆔 Pagamento", value: `\`${paymentId}\``, inline: true },
-      { name: "🛒 Canal", value: `<#${channelId}>`, inline: true },
     ])
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • Logs Comprovantes`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs de Comprovantes`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
   await sendToChannel(client, "comprovantes", embed, {}, config);
@@ -118,17 +118,18 @@ async function logComprovante(client, config, { userId, productName, amount, ord
 async function logPedido(client, config, { userId, productName, amount, orderId, channelId }) {
   const embed = new EmbedBuilder()
     .setColor(COLORS.pedidos)
-    .setAuthor({ name: `${config.botName} • Pedido Criado`, iconURL: "attachment://logo.png" })
-    .setTitle("📋 Novo Pedido")
-    .setDescription([
-      `> 👤 **Cliente:** <@${userId}>`,
-      `> 📦 **Produto:** ${productName}`,
-      `> 💰 **Valor:** R$ ${Number(amount).toFixed(2)}`,
-      `> 🛒 **Canal:** <#${channelId}>`,
-      `> 🔖 **Pedido:** #${orderId}`,
-    ].join("\n"))
+    .setAuthor({ name: `${config.botName} • Novo Pedido`, iconURL: "attachment://logo.png" })
+    .setTitle("📌 Pedido Criado")
+    .setDescription("Um novo pedido foi aberto e está aguardando confirmação de pagamento.")
+    .addFields([
+      { name: "👤 Cliente", value: `<@${userId}>`, inline: true },
+      { name: "📦 Produto", value: productName, inline: true },
+      { name: "💰 Valor", value: `R$ ${Number(amount).toFixed(2)}`, inline: true },
+      { name: "🔖 Pedido", value: `#${orderId}`, inline: true },
+      { name: "⏳ Status", value: "Aguardando PIX / aprovação automática", inline: true },
+    ])
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • Logs Pedidos`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs de Pedidos`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
   await sendToChannel(client, "pedidos", embed, {}, config);
@@ -139,15 +140,14 @@ async function logTicketCriado(client, config, { userId, type, channelId, reason
   const embed = new EmbedBuilder()
     .setColor(COLORS.ticket)
     .setAuthor({ name: `${config.botName} • Ticket`, iconURL: "attachment://logo.png" })
-    .setTitle(`${typeLabel} Aberto`)
-    .setDescription([
-      `> 👤 **Usuário:** <@${userId}>`,
-      `> 📁 **Tipo:** ${typeLabel}`,
-      `> 💬 **Canal:** <#${channelId}>`,
-      reason ? `> 📝 **Motivo:** ${reason}` : null,
-    ].filter(Boolean).join("\n"))
+    .setTitle(`${typeLabel} Criado`) 
+    .setDescription(`Um novo ticket de ${typeLabel.toLowerCase().replace(/🛒 |📦 |📩 /, "")} foi aberto.`)
+    .addFields([
+      { name: "👤 Usuário", value: `<@${userId}>`, inline: true },
+      reason ? { name: "📝 Motivo", value: reason, inline: false } : null,
+    ].filter(Boolean))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • Logs Ticket`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs de Ticket`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
   await sendToChannel(client, "ticket", embed, {}, config);
@@ -157,13 +157,14 @@ async function logSeguranca(client, config, { evento, userId, detalhes }) {
   const embed = new EmbedBuilder()
     .setColor(COLORS.seguranca)
     .setAuthor({ name: `${config.botName} • Segurança`, iconURL: "attachment://logo.png" })
-    .setTitle(`🔒 ${evento}`)
-    .setDescription([
-      `> 👤 **Usuário:** <@${userId}>`,
-      detalhes ? `> 📝 **Detalhes:** ${detalhes}` : null,
-    ].filter(Boolean).join("\n"))
+    .setTitle(`� ${evento}`)
+    .setDescription("Evento de segurança registrado para análise. Verifique os detalhes abaixo.")
+    .addFields([
+      { name: "👤 Usuário", value: `<@${userId}>`, inline: true },
+      detalhes ? { name: "📝 Detalhes", value: detalhes, inline: false } : null,
+    ].filter(Boolean))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs Segurança`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs de Segurança`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
   await sendToChannel(client, "seguranca", embed, {}, config);
@@ -175,13 +176,14 @@ async function logFeedback(client, config, { userId, rating, ticketName, ticketI
     .setColor(rating >= 4 ? COLORS.vendas : rating >= 3 ? COLORS.pedidos : COLORS.seguranca)
     .setAuthor({ name: `${config.botName} • Feedback`, iconURL: "attachment://logo.png" })
     .setTitle("💬 Feedback Recebido")
-    .setDescription([
-      `> 👤 **Usuário:** <@${userId}>`,
-      `> ⭐ **Nota:** ${stars} (${rating}/5)`,
-      `> 🎫 **Ticket:** ${ticketName || ticketId}`,
-    ].join("\n"))
+    .setDescription("Um novo feedback foi enviado pelo cliente. Veja o nível de satisfação abaixo.")
+    .addFields([
+      { name: "👤 Usuário", value: `<@${userId}>`, inline: true },
+      { name: "⭐ Nota", value: `${stars} (${rating}/5)`, inline: true },
+      { name: "🎫 Ticket", value: ticketName || `#${ticketId}`, inline: true },
+    ])
     .setThumbnail("attachment://logo.png")
-    .setFooter({ text: `${config.botName} • logs Feedback`, iconURL: "attachment://logo.png" })
+    .setFooter({ text: `${config.botName} • Logs de Feedback`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
   await sendToChannel(client, "feedback", embed, {}, config);

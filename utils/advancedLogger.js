@@ -2,6 +2,12 @@ const { EmbedBuilder } = require("discord.js");
 const { AttachmentBuilder } = require("discord.js");
 const path = require("path");
 
+async function resolveChannelReference(client, channelId) {
+  if (!channelId) return "Canal não informado";
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  return channel && channel.isTextBased() ? `<#${channelId}>` : `Canal: #${channelId}`;
+}
+
 async function logToChannel(client, config, channelType, title, description, fields = []) {
   const logChannels = config.logChannels;
   if (!logChannels || !logChannels[channelType]) return;
@@ -112,12 +118,13 @@ async function logFeedbackEvent(client, config, rating, ticketId, userId) {
 }
 
 async function logMessageEvent(client, config, event, channelId, userId, details) {
+  const channelReference = await resolveChannelReference(client, channelId);
   await logToChannel(
     client,
     config,
     "logs-mensagem",
     `Mensagem: ${event}`,
-    `Canal: <#${channelId}>\nUsuário: <@${userId}>\n${details.description || details}`,
+    `${channelReference}\nUsuário: <@${userId}>\n${details.description || details}`,
     details.fields || []
   );
 }

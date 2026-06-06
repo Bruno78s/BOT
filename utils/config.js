@@ -11,7 +11,7 @@ function loadConfig() {
 }
 
 function validateConfig(config) {
-  const required = ["botName", "colors", "limits", "keywords", "products", "payment"];
+  const required = ["botName", "colors", "limits", "keywords", "products"];
   for (const key of required) {
     if (!Object.prototype.hasOwnProperty.call(config, key)) {
       throw new Error(`config.json invalido: campo ausente ${key}`);
@@ -24,10 +24,6 @@ function validateConfig(config) {
 
   if (!Array.isArray(config.products) || config.products.length === 0) {
     throw new Error("config.json invalido: products deve conter itens");
-  }
-
-  if (!config.payment.pix || !config.payment.bank || !config.payment.beneficiary) {
-    throw new Error("config.json invalido: payment incompleto");
   }
 
   if (!config.verification || !config.verification.welcomeChannelId || !config.verification.channelId || !config.verification.unverifiedRoleId || !config.verification.verifiedRoleId) {
@@ -48,6 +44,25 @@ function validateConfig(config) {
 
   if (!config.logChannels || Object.keys(config.logChannels).length === 0) {
     throw new Error("config.json invalido: logChannels obrigatorio");
+  }
+
+  if (config.clientRoleId && typeof config.clientRoleId !== "string") {
+    throw new Error("config.json invalido: clientRoleId deve ser uma string");
+  }
+
+  if (config.booster) {
+    if (!config.booster.roleId || !config.booster.announceChannelId) {
+      throw new Error("config.json invalido: booster deve conter roleId e announceChannelId");
+    }
+  }
+
+  if (config.botPresence) {
+    if (!config.botPresence.message || typeof config.botPresence.message !== "string") {
+      throw new Error("config.json invalido: botPresence.message deve ser uma string");
+    }
+    if (!config.botPresence.type || typeof config.botPresence.type !== "string") {
+      throw new Error("config.json invalido: botPresence.type deve ser uma string");
+    }
   }
 
   for (const product of config.products) {

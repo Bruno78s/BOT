@@ -7,7 +7,7 @@ function initSupabase() {
   const key = process.env.SUPABASE_SERVICE_ROLE;
   
   if (!url || !key) {
-    console.log('[SUPABASE] Credenciais não configuradas, usando SQLite local');
+    console.log('[SUPABASE] Credenciais Supabase não configuradas');
     return null;
   }
   

@@ -12,7 +12,7 @@ const config = loadConfig();
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
-const guildId = "1426968118684811448";
+const guildId = process.env.GUILD_ID;
 
 if (!token || !clientId) {
   throw new Error("Variaveis DISCORD_TOKEN e CLIENT_ID sao obrigatorias.");
@@ -31,7 +31,7 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-client.once("clientReady", async () => {
+client.once("ready", async () => {
   startWebhookServer(client, config);
   
   // Importar dados salvos após reiniciar

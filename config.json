@@ -22,6 +22,15 @@
     "siteSalesChannelId": "1469735299008565319",
     "voiceChannelId": "1469735459553808477"
   },
+  "clientRoleId": "1469734831188348968",
+  "booster": {
+    "roleId": "1469734832073342996",
+    "announceChannelId": "1506684365734805544"
+  },
+  "botPresence": {
+    "type": "WATCHING",
+    "message": "a loja BznX Store"
+  },
   "statsChannelId": "1503149748813824016",
   "salesCategoryId": "1469734922431500412",
   "ticketCategoryId": "1503150259004768346",
@@ -72,7 +81,6 @@
       "bug"
     ],
     "faq": {
-      "pix": "Aceitamos PIX. Envie o pagamento para brunoquirin3@gmail.com (Nubank).",
       "prazo": "O prazo médio de atendimento é de até 24 horas úteis.",
       "garantia": "Oferecemos suporte para ajustes básicos por 7 dias após a entrega."
     }
@@ -277,11 +285,5 @@
       "description": "Site básico responsivo para presença digital."
     }
   ],
-  "payment": {
-    "pix": "d912cf9d-7788-4c26-a70c-2df48b122441",
-    "bank": "**Nubank**",
-    "beneficiary": "**Bruno Quirino**",
-    "qrCode": "00020126580014BR.GOV.BCB.PIX0136d912cf9d-7788-4c26-a70c-2df48b1224415204000053039865802BR5924Bruno Quirino de Almeida6009SAO PAULO62140510nrYHeYuBMg6304A23F"
-  },
   "voiceChannelId": "1469735459553808477"
 }

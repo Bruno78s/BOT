@@ -121,8 +121,8 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       "",
       "> ✅ Seu pagamento foi **aprovado automaticamente**.",
       hasAutoDelivery
-        ? "> � Seu produto foi **entregue por DM**! Verifique suas mensagens privadas."
-        : "> �📦 Clique em **Abrir Ticket de Entrega** para receber seu produto.",
+        ? "> 🚀 Seu produto foi **entregue por DM**. Verifique suas mensagens privadas."
+        : "> 📦 Seu pedido foi registrado. Abra um ticket de entrega para receber seu produto.",
     ].join("\n"))
     .setFooter({ text: `${config.botName} • Pedido Confirmado`, iconURL: client.user.displayAvatarURL() })
     .setTimestamp();
@@ -156,7 +156,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   try {
     const guild = channel.guild;
     const member = await guild.members.fetch(localPayment.user_id).catch(() => null);
-    const clientRoleId = config.clientRoleId || "1508254072619143209";
+    const clientRoleId = config.clientRoleId || process.env.CLIENT_ROLE_ID;
     if (member && !member.roles.cache.has(clientRoleId)) {
       await member.roles.add(clientRoleId);
       console.log(`[WEBHOOK] Cargo de cliente adicionado para ${member.user.tag}`);
@@ -187,6 +187,21 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
           .setTimestamp()
       ]
     });
+  }
+
+  if (channel.deletable) {
+    setTimeout(() => {
+      channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xf1c40f)
+            .setTitle("🛒 Carrinho fechado automaticamente")
+            .setDescription("Este canal de carrinho será fechado automaticamente em 45 segundos.")
+            .setTimestamp()
+        ]
+      }).catch(() => null);
+      channel.delete("Carrinho fechado automaticamente após pagamento confirmado").catch(() => null);
+    }, 45000);
   }
 
   await logVenda(client, config, {
