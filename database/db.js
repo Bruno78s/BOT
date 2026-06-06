@@ -490,10 +490,19 @@ async function insertSupabase(sql, params = []) {
           }
 
           console.warn("[SUPABASE] falling back from upsert to update due missing unique constraint", { qTable, conflictColumns, matchKey });
-          const { error: updateError } = await supabase.from(qTable).update(row).match(matchKey);
+          const { data: updatedRows, error: updateError } = await supabase.from(qTable).update(row).match(matchKey);
           if (updateError) {
             console.error("[SUPABASE] fallback update error", { sql, params, qTable, row, conflictColumns, matchKey, updateError });
             throw updateError;
+          }
+
+          if (!updatedRows || updatedRows.length === 0) {
+            console.warn("[SUPABASE] fallback update affected no rows, inserting row instead", { qTable, conflictColumns, matchKey });
+            const { error: insertError } = await supabase.from(qTable).insert(row);
+            if (insertError) {
+              console.error("[SUPABASE] fallback insert error", { sql, params, qTable, row, conflictColumns, matchKey, insertError });
+              throw insertError;
+            }
           }
           return null;
         }
