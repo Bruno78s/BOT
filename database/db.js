@@ -1,16 +1,16 @@
 const { getSupabase, isSupabaseEnabled } = require("../utils/supabase");
 
-function ensureSupabase() {
-  if (!isSupabaseEnabled()) {
-    console.warn("[SUPABASE] Supabase não configurado. Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE no .env.");
-    return null;
-  }
-
 function transformDotNumberToJson(sql) {
   // Transform occurrences like `counters.0` => `counters->>'0'`
   // Matches identifiers starting with a letter/underscore to avoid touching numeric literals.
   return sql.replace(/\b([a-zA-Z_][\w]*)\.(\d+)\b/g, (m, col, idx) => `${col}->>'${idx}'`);
 }
+
+function ensureSupabase() {
+  if (!isSupabaseEnabled()) {
+    console.warn("[SUPABASE] Supabase não configurado. Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE no .env.");
+    return null;
+  }
 
   const supabase = getSupabase();
   if (!supabase) {
@@ -547,7 +547,7 @@ async function query(sql, params = []) {
     return [];
   }
 
-  throw new Error(`SQL não suportado pelo wrapper Supabase: ${queryString}`);
+  throw new Error(`SQL não suportado pelo wrapper Supabase: ${sql}`);
 }
 
 async function get(queryString, params = []) {
