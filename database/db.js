@@ -156,6 +156,13 @@ function parseSelectQuery(sql, params = []) {
   };
 }
 
+function qualifyTableName(table) {
+  // Use explicit public schema to avoid collisions with auth.users in Supabase
+  const cleaned = table.trim();
+  if (cleaned.includes('.')) return cleaned;
+  return `public.${cleaned}`;
+}
+
 function parseInsertQuery(sql, params) {
   const normalized = sql.replace(/\s+/g, " ").trim();
   const match = normalized.match(/insert\s+into\s+(\w+)\s*\(([^)]+)\)\s*values\s*\(([^)]+)\)(?:\s+on\s+conflict\s*\(([^)]+)\)\s*do\s+update\s+set\s+(.+))?/i);
@@ -386,10 +393,11 @@ async function selectSupabase(sql, params = []) {
   if (!parsed) return null;
 
   const { table, select, filters, order, limit, groupBy } = parsed;
+  const qTable = qualifyTableName(table);
   
   // Select correct columns upfront (don't call .select() twice)
   const selectCols = (!hasAggregateSelect(select) && !groupBy && select !== "*") ? select : "*";
-  let builder = supabase.from(table).select(selectCols);
+  let builder = supabase.from(qTable).select(selectCols);
 
   let filterConditions = [];
   if (filters && filters.length) {
@@ -447,13 +455,14 @@ async function insertSupabase(sql, params = []) {
   if (!parsed) return null;
 
   const { table, row, conflictColumns } = parsed;
+  const qTable = qualifyTableName(table);
   if (conflictColumns && conflictColumns.length > 0) {
-    const { error } = await supabase.from(table).upsert(row, { onConflict: conflictColumns.join(",") });
+    const { error } = await supabase.from(qTable).upsert(row, { onConflict: conflictColumns.join(",") });
     if (error) throw error;
     return null;
   }
 
-  const { error } = await supabase.from(table).insert(row);
+  const { error } = await supabase.from(qTable).insert(row);
   if (error) throw error;
   return null;
 }
@@ -465,13 +474,14 @@ async function updateSupabase(sql, params = []) {
   if (!parsed) return null;
 
   const { table, set, expressions, where } = parsed;
+  const qTable = qualifyTableName(table);
   if (expressions.length === 0) {
-    const { error } = await supabase.from(table).update(set).match(where);
+    const { error } = await supabase.from(qTable).update(set).match(where);
     if (error) throw error;
     return null;
   }
 
-  let builder = supabase.from(table).select("*");
+  let builder = supabase.from(qTable).select("*");
   builder = applyFilters(builder, where);
   const { data, error: selectError } = await builder;
   if (selectError) throw selectError;
@@ -487,7 +497,7 @@ async function updateSupabase(sql, params = []) {
       }
     }
     const key = row.id ? { id: row.id } : where;
-    const { error: updateError } = await supabase.from(table).update(updated).match(key);
+    const { error: updateError } = await supabase.from(qTable).update(updated).match(key);
     if (updateError) throw updateError;
   }
 
@@ -501,7 +511,8 @@ async function deleteSupabase(sql, params = []) {
   if (!parsed) return null;
 
   const { table, where } = parsed;
-  const { error } = await supabase.from(table).delete().match(where);
+  const qTable = qualifyTableName(table);
+  const { error } = await supabase.from(qTable).delete().match(where);
   if (error) throw error;
   return null;
 }
