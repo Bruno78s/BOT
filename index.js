@@ -14,8 +14,8 @@ const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
 
-if (!token || !clientId) {
-  throw new Error("Variaveis DISCORD_TOKEN e CLIENT_ID sao obrigatorias.");
+if (!token || !clientId || !guildId) {
+  throw new Error("Variaveis DISCORD_TOKEN, CLIENT_ID e GUILD_ID sao obrigatorias.");
 }
 
 const client = new Client({

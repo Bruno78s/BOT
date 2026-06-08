@@ -412,9 +412,19 @@ async function handleCartButtons(interaction, config) {
   if (customId === "ticket_cancel_purchase") {
     await interaction.deferReply({ ephemeral: true });
     const ticket = await listTicketByChannel(interaction.channel.id);
-    if (!ticket || ticket.user_id !== interaction.user.id) {
+    const settings = await getSettings(interaction.guild.id) || {};
+    const isSupportMember = settings.support_role_id && interaction.member.roles.cache.has(settings.support_role_id);
+
+    if (!ticket) {
       await interaction.editReply({
-        embeds: [dangerEmbed(config, "Sem permissão", "Apenas o cliente deste carrinho pode cancelar a compra.")]
+        embeds: [dangerEmbed(config, "Carrinho não encontrado", "Não foi possível localizar este carrinho no banco de dados.")]
+      });
+      return true;
+    }
+
+    if (ticket.user_id !== interaction.user.id && !isSupportMember) {
+      await interaction.editReply({
+        embeds: [dangerEmbed(config, "Sem permissão", "Apenas o cliente deste carrinho ou um membro da equipe de suporte pode cancelar a compra.")]
       });
       return true;
     }

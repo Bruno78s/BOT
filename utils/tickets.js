@@ -112,7 +112,16 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
   const formatted = formatTicketNumber(number);
   const safeUserName = member.user.username.toLowerCase().replace(/[^a-z0-9-]/gi, "-").slice(0, 18);
   const channelName = type === "sales" ? `🛒・${safeUserName}` : type === "delivery" ? `📦・${safeUserName}` : `📩・${reason || "suporte"}・${safeUserName}`;
-  const categoryId = type === "sales" ? (settings.sales_category_id || config.salesCategoryId) : type === "delivery" ? (settings.delivery_category_id || config.deliveryCategoryId) : (settings.support_category_id || config.ticketCategoryId);
+  const categoryId = type === "sales"
+    ? (settings.sales_category_id || config.salesCategoryId)
+    : type === "delivery"
+      ? (settings.delivery_category_id || config.deliveryCategoryId || config.ticketCategoryId)
+      : (settings.support_category_id || config.ticketCategoryId);
+
+  if (!categoryId) {
+    throw new Error(`Categoria de canal não configurada para tipo de ticket: ${type}`);
+  }
+
   const overwrites = [
     {
       id: guild.roles.everyone,
