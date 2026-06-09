@@ -1,10 +1,10 @@
-﻿const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const { run } = require("../database/db");
 
 async function logToDb(guildId, level, message, meta = null) {
   const createdAt = Date.now();
   const metaText = meta ? JSON.stringify(meta) : null;
-  await run(
+  run(
     "INSERT INTO logs (guild_id, level, message, meta, created_at) VALUES (?, ?, ?, ?, ?)",
     [guildId, level, message, metaText, createdAt]
   );

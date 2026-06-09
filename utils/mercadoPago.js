@@ -63,7 +63,7 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
   const checkoutUrl = response.point_of_interaction?.transaction_data?.ticket_url || null;
   const copyPasteCode = response.point_of_interaction?.transaction_data?.qr_code || null;
 
-  await run(
+  run(
     "INSERT INTO payments (guild_id, channel_id, user_id, product_id, provider, provider_payment_id, preference_id, status, amount, checkout_url, created_at) VALUES (?, ?, ?, ?, 'mercadopago', ?, ?, 'pending', ?, ?, ?)",
     [guildId, channelId, userId, product.id, String(response.id), String(response.id), Number(product.price), checkoutUrl, Date.now()]
   );
@@ -111,7 +111,7 @@ async function createPreferencePayment({ guildId, channelId, userId, product, us
 
   const checkoutUrl = response.init_point || response.sandbox_init_point;
 
-  await run(
+  run(
     "INSERT INTO payments (guild_id, channel_id, user_id, product_id, provider, preference_id, status, amount, checkout_url, created_at) VALUES (?, ?, ?, ?, 'mercadopago', ?, 'pending', ?, ?, ?)",
     [guildId, channelId, userId, product.id, response.id, Number(product.price), checkoutUrl, Date.now()]
   );
@@ -138,14 +138,14 @@ async function getPaymentByProviderPaymentId(providerPaymentId) {
 }
 
 async function updatePaymentStatusByProviderId(providerPaymentId, status) {
-  await run(
+  run(
     "UPDATE payments SET status = ?, updated_at = ? WHERE provider_payment_id = ?",
     [status, Date.now(), String(providerPaymentId)]
   );
 }
 
 async function attachProviderPaymentIdByReference(channelId, providerPaymentId, status) {
-  await run(
+  run(
     "UPDATE payments SET provider_payment_id = ?, updated_at = ? WHERE channel_id = ? AND (provider_payment_id IS NULL OR provider_payment_id = '')",
     [String(providerPaymentId), Date.now(), channelId]
   );

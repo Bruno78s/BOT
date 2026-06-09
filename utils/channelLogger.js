@@ -38,21 +38,21 @@ async function editOrSend(client, channelKey, embed, storeKey, config = null) {
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel?.isTextBased()) return;
 
-  const stored = await get("SELECT message_id FROM panel_messages WHERE type = ? AND channel_id = ?", [storeKey, channelId]);
+  const stored = get("SELECT message_id FROM panel_messages WHERE type = ? AND channel_id = ?", [storeKey, channelId]);
   const logo = getLogo();
 
   if (stored?.message_id) {
     const msg = await channel.messages.fetch(stored.message_id).catch(() => null);
     if (msg) {
       await msg.edit({ embeds: [embed], files: [logo] }).catch(() => null);
-      await run("UPDATE panel_messages SET updated_at = ? WHERE type = ? AND channel_id = ?", [Date.now(), storeKey, channelId]);
+      run("UPDATE panel_messages SET updated_at = ? WHERE type = ? AND channel_id = ?", [Date.now(), storeKey, channelId]);
       return;
     }
   }
 
   const sent = await channel.send({ embeds: [embed], files: [logo] }).catch(() => null);
   if (sent) {
-    await run(
+    run(
       "INSERT INTO panel_messages (guild_id, type, channel_id, message_id, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(guild_id, type) DO UPDATE SET message_id = excluded.message_id, updated_at = excluded.updated_at",
       ["global", storeKey, channelId, sent.id, Date.now()]
     );
@@ -212,10 +212,10 @@ async function logVendaSite(client, config, { customerName, customerEmail, order
 }
 
 async function logRelatorio(client, config) {
-  const totalVendas = await get("SELECT COUNT(*) as c, SUM(amount) as total FROM payments WHERE status = 'approved'");
-  const vendasHoje = await get("SELECT COUNT(*) as c, SUM(amount) as total FROM payments WHERE status = 'approved' AND created_at > ?", [Date.now() - 86400000]);
-  const ticketsAbertos = await get("SELECT COUNT(*) as c FROM tickets WHERE status = 'open'");
-  const produtos = await all("SELECT * FROM settings LIMIT 1");
+  const totalVendas = get("SELECT COUNT(*) as c, SUM(amount) as total FROM payments WHERE status = 'approved'");
+  const vendasHoje = get("SELECT COUNT(*) as c, SUM(amount) as total FROM payments WHERE status = 'approved' AND created_at > ?", [Date.now() - 86400000]);
+  const ticketsAbertos = get("SELECT COUNT(*) as c FROM tickets WHERE status = 'open'");
+  const produtos = all("SELECT * FROM settings LIMIT 1");
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.relatorio)

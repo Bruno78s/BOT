@@ -37,8 +37,8 @@ async function handleAdminMenu(interaction, config) {
   }
 
   if (selectedValue === "admin_payments") {
-    const payments = await all("SELECT * FROM payments WHERE guild_id = ? ORDER BY created_at DESC LIMIT 25", [interaction.guild.id]);
-    const stats = await get(`
+    const payments = all("SELECT * FROM payments WHERE guild_id = ? ORDER BY created_at DESC LIMIT 25", [interaction.guild.id]);
+    const stats = get(`
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN status='approved' THEN amount ELSE 0 END) as receita,
@@ -302,7 +302,7 @@ async function handleAdminButtons(interaction, config) {
   }
 
   if (customId === "admin_invites_detailed") {
-    const allJoins = await all("SELECT * FROM invite_joins WHERE guild_id = ? ORDER BY joined_at DESC", [interaction.guild.id]);
+    const allJoins = all("SELECT * FROM invite_joins WHERE guild_id = ? ORDER BY joined_at DESC", [interaction.guild.id]);
     if (!allJoins || allJoins.length === 0) {
       return interaction.reply({ embeds: [dangerEmbed(config, "Nenhum dado", "Nenhum convite registrado ainda.")], ephemeral: true });
     }
@@ -422,7 +422,7 @@ async function handleAdminButtons(interaction, config) {
 
   if (customId.startsWith("toggle_coupon_")) {
     const couponId = customId.replace("toggle_coupon_", "");
-    const coupon = await get("SELECT * FROM coupons WHERE id = ? AND guild_id = ?", [couponId, interaction.guild.id]);
+    const coupon = get("SELECT * FROM coupons WHERE id = ? AND guild_id = ?", [couponId, interaction.guild.id]);
     if (!coupon) return interaction.reply({ content: "Cupom n\u00E3o encontrado", ephemeral: true });
 
     const { updateCoupon } = require("../utils/coupons");
@@ -437,7 +437,7 @@ async function handleAdminButtons(interaction, config) {
 
   if (customId.startsWith("delete_coupon_")) {
     const couponId = customId.replace("delete_coupon_", "");
-    const coupon = await get("SELECT * FROM coupons WHERE id = ? AND guild_id = ?", [couponId, interaction.guild.id]);
+    const coupon = get("SELECT * FROM coupons WHERE id = ? AND guild_id = ?", [couponId, interaction.guild.id]);
     if (!coupon) return interaction.reply({ content: "Cupom n\u00E3o encontrado", ephemeral: true });
 
     await deleteCoupon(couponId);
@@ -473,7 +473,7 @@ async function handleAdminSelectMenus(interaction, config) {
   if (customId === "invite_user_select") {
     const userId = values[0].replace("invite_user_", "");
     const stats = await getInviteStats(interaction.guild.id, userId);
-    const joins = await all("SELECT * FROM invite_joins WHERE guild_id = ? AND inviter_id = ? ORDER BY joined_at DESC", [interaction.guild.id, userId]);
+    const joins = all("SELECT * FROM invite_joins WHERE guild_id = ? AND inviter_id = ? ORDER BY joined_at DESC", [interaction.guild.id, userId]);
     const member = interaction.guild.members.cache.get(userId);
     const user = member?.user;
 
@@ -511,7 +511,7 @@ async function handleAdminSelectMenus(interaction, config) {
     }
     if (selectedValue.startsWith("edit_coupon_")) {
       const couponId = selectedValue.replace("edit_coupon_", "");
-      const coupon = await get("SELECT * FROM coupons WHERE id = ? AND guild_id = ?", [couponId, interaction.guild.id]);
+      const coupon = get("SELECT * FROM coupons WHERE id = ? AND guild_id = ?", [couponId, interaction.guild.id]);
       if (!coupon) return interaction.update({ content: "Cupom n\u00E3o encontrado", components: [] });
 
       const row = new ActionRowBuilder().addComponents(
@@ -546,7 +546,7 @@ async function handleAdminSelectMenus(interaction, config) {
 
   if (customId === "payment_menu") {
     const paymentId = values[0].replace("view_payment_", "");
-    const payment = await get("SELECT * FROM payments WHERE id = ?", [paymentId]);
+    const payment = get("SELECT * FROM payments WHERE id = ?", [paymentId]);
     if (!payment) return interaction.update({ content: "Pagamento n\u00E3o encontrado", components: [] });
 
     const product = config.products.find(p => p.id === payment.product_id);
@@ -571,7 +571,7 @@ async function handleAdminSelectMenus(interaction, config) {
   }
 
   if (customId === "back_to_payments") {
-    const payments = await all("SELECT * FROM payments WHERE guild_id = ? ORDER BY created_at DESC LIMIT 25", [interaction.guild.id]);
+    const payments = all("SELECT * FROM payments WHERE guild_id = ? ORDER BY created_at DESC LIMIT 25", [interaction.guild.id]);
     if (!payments || payments.length === 0) {
       const embed = new EmbedBuilder().setColor(config.colors.primary).setTitle(`${config.botName} | Pagamentos`).setDescription("Nenhum pagamento encontrado.");
       return interaction.update({ embeds: [embed], components: [] });

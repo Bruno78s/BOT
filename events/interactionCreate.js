@@ -1,4 +1,4 @@
-﻿const { routeInteraction } = require("../handlers");
+const { routeInteraction } = require("../handlers");
 
 module.exports = {
   name: "interactionCreate",

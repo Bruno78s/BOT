@@ -16,7 +16,7 @@ class StockPrediction {
   async analyzeProductSales(productId, days = 30) {
     const since = Date.now() - (days * 24 * 60 * 60 * 1000);
 
-    const sales = await all(`
+    const sales = all(`
       SELECT 
         DATE(created_at/1000, 'unixepoch') as date,
         COUNT(*) as count

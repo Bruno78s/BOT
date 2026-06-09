@@ -1,4 +1,4 @@
-ï»¿
+
 const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
 const { AttachmentBuilder } = require("discord.js");
 const path = require("path");
@@ -42,7 +42,7 @@ async function ensureTicketPanel(client, config) {
     .setThumbnail("attachment://logo.png")
     .setImage("attachment://banner.png")
     .setFooter({ 
-      text: `${config.botName} â€¢ Atendimento`, 
+      text: `${config.botName} • Atendimento`, 
       iconURL: "attachment://logo.png"
     })
     .setTimestamp();
@@ -54,12 +54,12 @@ async function ensureTicketPanel(client, config) {
       .addOptions([
         {
           label: "Suporte",
-          description: "DÃºvidas gerais e ajuda tÃ©cnica",
+          description: "Dúvidas gerais e ajuda técnica",
           value: "support"
         },
         {
-          label: "Problema com ServiÃ§o",
-          description: "Relatar falhas em um serviÃ§o comprado",
+          label: "Problema com Serviço",
+          description: "Relatar falhas em um serviço comprado",
           value: "service_issue"
         }
       ])

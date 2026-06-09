@@ -15,7 +15,7 @@ module.exports = {
     const lowStock = config.products.filter(p => p.stock > 0 && p.stock < 5).length;
     const outOfStock = config.products.filter(p => p.stock === 0).length;
 
-    const stats = await get(`
+    const stats = get(`
       SELECT 
         (SELECT COUNT(*) FROM payments WHERE status = 'approved') as total_sales,
         (SELECT COUNT(*) FROM tickets WHERE status = 'open') as open_tickets,

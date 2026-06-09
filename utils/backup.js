@@ -1,4 +1,4 @@
-Ôªøconst fs = require("fs");
+const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { all } = require("../database/db");
@@ -22,7 +22,7 @@ function ensureDir(dir) {
 function encrypt(input) {
   try {
     if (!ENCRYPTION_KEY) {
-      throw new Error('BACKUP_ENCRYPTION_KEY ou JWT_SECRET n√£o definido');
+      throw new Error('BACKUP_ENCRYPTION_KEY ou JWT_SECRET n„o definido');
     }
 
     const iv = crypto.randomBytes(IV_LENGTH);
@@ -44,7 +44,7 @@ function encrypt(input) {
 function decrypt(encryptedData, returnBuffer = false) {
   try {
     if (!ENCRYPTION_KEY) {
-      throw new Error('BACKUP_ENCRYPTION_KEY ou JWT_SECRET n√£o definido');
+      throw new Error('BACKUP_ENCRYPTION_KEY ou JWT_SECRET n„o definido');
     }
 
     const parts = encryptedData.split(':');
@@ -137,7 +137,7 @@ async function exportData() {
     };
 
     for (const table of tables) {
-      data[table] = await all(`SELECT * FROM ${table}`);
+      data[table] = all(`SELECT * FROM ${table}`);
     }
 
     return data;
@@ -147,7 +147,7 @@ async function exportData() {
   }
 }
 
-// Importar dados de JSON (ap√≥s reiniciar) - suporta criptografado
+// Importar dados de JSON (apÛs reiniciar) - suporta criptografado
 function importData() {
   // Tentar arquivo criptografado primeiro
   const encryptedPath = path.join(DATA_DIR, "exported-data.enc");
@@ -166,7 +166,7 @@ function importData() {
     }
   }
   
-  // Fallback para arquivo n√£o criptografado
+  // Fallback para arquivo n„o criptografado
   if (fs.existsSync(jsonPath)) {
     try {
       const data = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
@@ -177,7 +177,7 @@ function importData() {
     }
   }
   
-  return { success: false, message: "Nenhum arquivo de exporta√ß√£o encontrado" };
+  return { success: false, message: "Nenhum arquivo de exportaÁ„o encontrado" };
 }
 
 module.exports = {

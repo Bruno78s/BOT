@@ -1,8 +1,8 @@
-Ôªøfunction isAdmin(member, settings) {
-  // Verificar se √© dono do servidor
+function isAdmin(member, settings) {
+  // Verificar se È dono do servidor
   if (member.guild.ownerId === member.id) return true;
   
-  // Verificar permiss√£o de Administrator
+  // Verificar permiss„o de Administrator
   if (member.permissions.has("Administrator")) return true;
   
   // Verificar cargo de admin configurado

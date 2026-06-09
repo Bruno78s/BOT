@@ -28,7 +28,7 @@ class Dashboard {
     today.setHours(0, 0, 0, 0);
     const todayTimestamp = today.getTime();
 
-    const stats = await get(`
+    const stats = get(`
       SELECT 
         COUNT(*) as total_sales,
         COALESCE(SUM(amount), 0) as total_revenue,
@@ -63,7 +63,7 @@ class Dashboard {
 
     const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
-    const stats = await get(`
+    const stats = get(`
       SELECT 
         COUNT(*) as total_sales,
         COALESCE(SUM(amount), 0) as total_revenue
@@ -86,7 +86,7 @@ class Dashboard {
    * Top produtos vendidos
    */
   async getTopProducts(limit = 5) {
-    const products = await all(`
+    const products = all(`
       SELECT 
         product_id,
         COUNT(*) as sales_count,
@@ -105,7 +105,7 @@ class Dashboard {
    * Estatísticas de invites
    */
   async getInviteStats() {
-    const stats = await get(`
+    const stats = get(`
       SELECT 
         SUM(total) as total_invites,
         SUM(current) as active_invites,

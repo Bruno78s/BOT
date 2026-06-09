@@ -44,7 +44,7 @@ async function findUsedInvite(guild) {
 }
 
 async function ensureInviteStats(guildId, userId) {
-  await run(
+  run(
     "INSERT OR IGNORE INTO invite_stats (guild_id, user_id, updated_at) VALUES (?, ?, ?)",
     [guildId, userId, Date.now()]
   );
@@ -61,14 +61,14 @@ async function addInviteJoin(member, invite) {
   const inviteCode = invite?.code || null;
   const isFake = Date.now() - member.user.createdTimestamp < FAKE_ACCOUNT_AGE_MS ? 1 : 0;
 
-  await run(
+  run(
     "INSERT OR REPLACE INTO invite_joins (guild_id, user_id, inviter_id, invite_code, is_fake, joined_at, left_at) VALUES (?, ?, ?, ?, ?, ?, NULL)",
     [guildId, member.id, inviterId, inviteCode, isFake, Date.now()]
   );
 
   if (inviterId && inviterId !== member.id) {
     await ensureInviteStats(guildId, inviterId);
-    await run(
+    run(
       `UPDATE invite_stats
        SET total = total + 1,
            current = current + ?,
@@ -84,21 +84,21 @@ async function addInviteJoin(member, invite) {
 
 async function markMemberLeft(member) {
   const guildId = member.guild.id;
-  const joinRecord = await get(
+  const joinRecord = get(
     "SELECT * FROM invite_joins WHERE guild_id = ? AND user_id = ? AND left_at IS NULL",
     [guildId, member.id]
   );
 
   if (!joinRecord) return null;
 
-  await run(
+  run(
     "UPDATE invite_joins SET left_at = ? WHERE guild_id = ? AND user_id = ?",
     [Date.now(), guildId, member.id]
   );
 
   if (joinRecord.inviter_id) {
     await ensureInviteStats(guildId, joinRecord.inviter_id);
-    await run(
+    run(
       `UPDATE invite_stats
        SET current = CASE WHEN current > 0 THEN current - ? ELSE 0 END,
            left_count = left_count + 1,
@@ -113,7 +113,7 @@ async function markMemberLeft(member) {
 
 async function setRedeemedInvites(guildId, userId, amount) {
   await ensureInviteStats(guildId, userId);
-  await run(
+  run(
     "UPDATE invite_stats SET redeemed = ?, updated_at = ? WHERE guild_id = ? AND user_id = ?",
     [Math.max(0, Number(amount) || 0), Date.now(), guildId, userId]
   );

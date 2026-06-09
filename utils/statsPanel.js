@@ -10,7 +10,12 @@ async function ensureStatsPanel(client, config) {
   const channel = await client.channels.fetch(statsChannelId).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
-  const stored = await get("SELECT message_id FROM panel_messages WHERE guild_id = ? AND type = ?", [channel.guild.id, "stats"]).catch(() => null);
+  let stored = null;
+  try {
+    stored = get("SELECT message_id FROM panel_messages WHERE guild_id = ? AND type = ?", [channel.guild.id, "stats"]);
+  } catch (error) {
+    stored = null;
+  }
   let existingMessage = null;
   if (stored?.message_id) {
     existingMessage = await channel.messages.fetch(stored.message_id).catch(() => null);
@@ -118,10 +123,14 @@ async function ensureStatsPanel(client, config) {
       embeds: [embed],
       files: [logoAttachment]
     });
-    await run(
-      "INSERT INTO panel_messages (guild_id, type, channel_id, message_id, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(guild_id, type) DO UPDATE SET channel_id = excluded.channel_id, message_id = excluded.message_id, updated_at = excluded.updated_at",
-      [channel.guild.id, "stats", channel.id, existingMessage.id, Date.now()]
-    ).catch(() => null);
+    try {
+      run(
+        "INSERT INTO panel_messages (guild_id, type, channel_id, message_id, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(guild_id, type) DO UPDATE SET channel_id = excluded.channel_id, message_id = excluded.message_id, updated_at = excluded.updated_at",
+        [channel.guild.id, "stats", channel.id, existingMessage.id, Date.now()]
+      );
+    } catch (error) {
+      // Ignorar erro ao atualizar panel_messages
+    }
     return;
   }
 
@@ -130,10 +139,14 @@ async function ensureStatsPanel(client, config) {
     files: [logoAttachment]
   });
 
-  await run(
-    "INSERT INTO panel_messages (guild_id, type, channel_id, message_id, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(guild_id, type) DO UPDATE SET channel_id = excluded.channel_id, message_id = excluded.message_id, updated_at = excluded.updated_at",
-    [channel.guild.id, "stats", channel.id, message.id, Date.now()]
-  ).catch(() => null);
+  try {
+    run(
+      "INSERT INTO panel_messages (guild_id, type, channel_id, message_id, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(guild_id, type) DO UPDATE SET channel_id = excluded.channel_id, message_id = excluded.message_id, updated_at = excluded.updated_at",
+      [channel.guild.id, "stats", channel.id, message.id, Date.now()]
+    );
+  } catch (error) {
+    // Ignorar erro ao inserir panel_messages
+  }
 }
 
 module.exports = {

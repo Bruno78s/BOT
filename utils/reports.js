@@ -22,7 +22,7 @@ class ReportSystem {
     const yesterdayEnd = yesterdayStart + (24 * 60 * 60 * 1000);
 
     // Vendas do dia
-    const sales = await get(`
+    const sales = get(`
       SELECT 
         COUNT(*) as count,
         COALESCE(SUM(amount), 0) as revenue,
@@ -33,7 +33,7 @@ class ReportSystem {
     `, [yesterdayStart, yesterdayEnd]);
 
     // Produtos mais vendidos
-    const topProducts = await all(`
+    const topProducts = all(`
       SELECT product_id, COUNT(*) as count
       FROM payments 
       WHERE status = 'approved' AND created_at >= ? AND created_at < ?
@@ -43,7 +43,7 @@ class ReportSystem {
     `, [yesterdayStart, yesterdayEnd]);
 
     // Novos convites
-    const invites = await get(`
+    const invites = get(`
       SELECT COUNT(*) as count
       FROM invite_joins
       WHERE joined_at >= ? AND joined_at < ?
@@ -88,7 +88,7 @@ class ReportSystem {
     const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
     // Estatísticas da semana
-    const stats = await get(`
+    const stats = get(`
       SELECT 
         COUNT(*) as total_sales,
         COALESCE(SUM(amount), 0) as total_revenue,
@@ -100,7 +100,7 @@ class ReportSystem {
 
     // Comparar com semana anterior
     const twoWeeksAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
-    const lastWeek = await get(`
+    const lastWeek = get(`
       SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as revenue
       FROM payments 
       WHERE status = 'approved' AND created_at >= ? AND created_at < ?

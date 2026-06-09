@@ -3,7 +3,7 @@ const { get, run, all } = require("../database/db");
 async function createCoupon(guildId, code, discountType, discountValue, options = {}) {
   const { maxUses, minAmount, expiresAt, productId } = options;
   
-  await run(
+  run(
     "INSERT INTO coupons (guild_id, code, discount_type, discount_value, max_uses, min_amount, product_id, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [guildId, code.toUpperCase(), discountType, discountValue, maxUses || null, minAmount || null, productId || null, expiresAt || null, Date.now()]
   );
@@ -51,13 +51,13 @@ async function updateCoupon(id, updates) {
   if (fields.length === 0) return { success: false };
   
   values.push(id);
-  await run(`UPDATE coupons SET ${fields.join(", ")} WHERE id = ?`, values);
+  run(`UPDATE coupons SET ${fields.join(", ")} WHERE id = ?`, values);
   
   return { success: true };
 }
 
 async function deleteCoupon(id) {
-  await run("DELETE FROM coupons WHERE id = ?", [id]);
+  run("DELETE FROM coupons WHERE id = ?", [id]);
   return { success: true };
 }
 
@@ -92,7 +92,7 @@ async function validateCoupon(guildId, code, amount, productId = null) {
 }
 
 async function useCoupon(couponId) {
-  await run("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [couponId]);
+  run("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [couponId]);
 }
 
 function calculateDiscount(amount, coupon) {

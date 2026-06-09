@@ -1,4 +1,4 @@
-Ôªø
+
 
 
 
@@ -37,25 +37,25 @@ module.exports = {
 
     cron.schedule("0 4 * * *", async () => {
       const limit = Date.now() - config.limits.logRetentionDays * 24 * 60 * 60 * 1000;
-      await run("DELETE FROM logs WHERE created_at < ?", [limit]);
+      run("DELETE FROM logs WHERE created_at < ?", [limit]);
     });
 
-    // Melhoria 14: Relat√≥rios Autom√°ticos
+    // Melhoria 14: RelatÛrios Autom·ticos
     const reports = new ReportSystem(config);
     
-    // Relat√≥rio di√°rio √†s 9h
+    // RelatÛrio di·rio ‡s 9h
     cron.schedule("0 9 * * *", async () => {
       await logRelatorio(client, config);
-      console.log("[REPORTS] Relat√≥rio di√°rio enviado");
+      console.log("[REPORTS] RelatÛrio di·rio enviado");
     });
 
-    // Relat√≥rio de estoque √†s 8h (atualiza o mesmo)
+    // RelatÛrio de estoque ‡s 8h (atualiza o mesmo)
     cron.schedule("0 8 * * *", async () => {
       await logRelatorio(client, config);
-      console.log("[REPORTS] Relat√≥rio de estoque enviado");
+      console.log("[REPORTS] RelatÛrio de estoque enviado");
     });
 
-    // Melhoria 15 & 16: Previs√£o de Estoque e Restock Autom√°tico
+    // Melhoria 15 & 16: Previs„o de Estoque e Restock Autom·tico
     const autoRestock = new AutoRestock(config, client);
     
     // Verificar estoque a cada 6 horas
@@ -63,16 +63,16 @@ module.exports = {
       const prediction = new StockPrediction(config);
       const report = await prediction.generatePredictionReport();
       
-      console.log(`[STOCK] Previs√£o gerada: ${report.alert.summary.critical} cr√≠ticos, ${report.alert.summary.high} altos`);
+      console.log(`[STOCK] Previs„o gerada: ${report.alert.summary.critical} crÌticos, ${report.alert.summary.high} altos`);
       
       // Verificar produtos com estoque zerado/baixo e notificar no relatorio
       const lowStockProducts = config.products.filter(p => p.stock === 0 || p.stock < 3);
       if (lowStockProducts.length > 0) {
         await logRelatorio(client, config);
-        console.log(`[STOCK] ${lowStockProducts.length} produto(s) com estoque cr\u00edtico ‚Äî relat\u00f3rio atualizado`);
+        console.log(`[STOCK] ${lowStockProducts.length} produto(s) com estoque cr\u00edtico ó relat\u00f3rio atualizado`);
       }
 
-      // Executar restock autom√°tico se habilitado
+      // Executar restock autom·tico se habilitado
       if (process.env.AUTO_RESTOCK_ENABLED === 'true') {
         const restockResult = await autoRestock.runAutoRestock();
         if (restockResult.restocked.length > 0) {
@@ -95,12 +95,12 @@ module.exports = {
     const PIX_EXPIRY_MS = 30 * 60 * 1000;
     setInterval(async () => {
       try {
-        const expiredPayments = await all(
+        const expiredPayments = all(
           "SELECT * FROM payments WHERE status = 'pending' AND created_at < ?",
           [Date.now() - PIX_EXPIRY_MS]
         );
         for (const payment of expiredPayments) {
-          await run("UPDATE payments SET status = 'expired', updated_at = ? WHERE id = ?", [Date.now(), payment.id]);
+          run("UPDATE payments SET status = 'expired', updated_at = ? WHERE id = ?", [Date.now(), payment.id]);
           const channel = await client.channels.fetch(payment.channel_id).catch(() => null);
           if (channel?.send) {
             const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
@@ -179,17 +179,17 @@ module.exports = {
 
     await logSistema(client, config, "Bot Iniciado", {
       description: [
-        `> ü§ñ **Bot:** ${config.botName}`,
-        `> üë§ **Usu√°rio:** ${client.user.tag}`,
-        `> üåê **Servidores:** ${client.guilds.cache.size}`,
-        `> üìÖ **Iniciado em:** <t:${Math.floor(Date.now()/1000)}:F>`,
+        `> ?? **Bot:** ${config.botName}`,
+        `> ?? **Usu·rio:** ${client.user.tag}`,
+        `> ?? **Servidores:** ${client.guilds.cache.size}`,
+        `> ?? **Iniciado em:** <t:${Math.floor(Date.now()/1000)}:F>`,
         "",
-        "> ‚úÖ Todos os sistemas foram iniciados com sucesso.",
+        "> ? Todos os sistemas foram iniciados com sucesso.",
       ].join("\n"),
       fields: [
-        { name: "üîñ Vers√£o Node", value: process.version, inline: true },
-        { name: "‚è±Ô∏è Uptime", value: `0s`, inline: true },
-        { name: "üì¶ Produtos", value: `${config.products?.length || 0} cadastrados`, inline: true },
+        { name: "?? Vers„o Node", value: process.version, inline: true },
+        { name: "?? Uptime", value: `0s`, inline: true },
+        { name: "?? Produtos", value: `${config.products?.length || 0} cadastrados`, inline: true },
       ]
     });
     await logRelatorio(client, config);
