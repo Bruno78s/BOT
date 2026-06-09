@@ -205,9 +205,9 @@ async function handleAdminButtons(interaction, config) {
         .addOptions([
           { label: "📦 Produtos", description: "Gerenciar produtos", value: "admin_products" },
           { label: "💰 Pagamentos", description: "Ver pagamentos recentes", value: "admin_payments" },
-          { label: "🏷️ Cupons", description: "Gerenciar cupons de desconto", value: "admin_coupons" },
+          { label: "📝 Cupons", description: "Gerenciar cupons de desconto", value: "admin_coupons" },
           { label: "📨 Invites", description: "Ranking e ferramentas de invites", value: "admin_invites" },
-          { label: "⚙️ Configura\u00E7\u00F5es", description: "Configurar canais e pagamento", value: "admin_settings" }
+          { label: "🔧 Configuracoes", description: "Configurar canais e pagamento", value: "admin_settings" }
         ])
     );
 

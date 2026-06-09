@@ -154,7 +154,7 @@ class AutoRestock {
   getConfigEmbed() {
     return new EmbedBuilder()
       .setColor(this.config.colors.primary)
-      .setTitle('⚙️ Configuração de Restock Automático')
+      .setTitle('🔧 Configuracao de Restock Automatico')
       .addFields(
         {
           name: 'Status',

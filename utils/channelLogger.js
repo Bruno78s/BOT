@@ -63,7 +63,7 @@ async function logSistema(client, config, event, details = {}) {
   const embed = new EmbedBuilder()
     .setColor(COLORS.sistema)
     .setAuthor({ name: `${config.botName} • Sistema`, iconURL: "attachment://logo.png" })
-    .setTitle(`⚙️ ${event}`)
+    .setTitle(`🔧 ${event}`)
     .setThumbnail("attachment://logo.png")
     .setTimestamp()
     .setFooter({ text: `${config.botName} • sistema`, iconURL: "attachment://logo.png" });
@@ -84,9 +84,9 @@ async function logVenda(client, config, { userId, productName, amount, orderId, 
       { name: "👤 Cliente", value: `<@${userId}>`, inline: true },
       { name: "📦 Produto", value: productName, inline: true },
       { name: "💰 Valor", value: `R$ ${Number(amount).toFixed(2)}`, inline: true },
-      { name: "🔖 Pedido", value: `#${orderId}`, inline: true },
-      { name: "🆔 Pagamento", value: `\`${paymentId}\``, inline: true },
-      coupon ? { name: "🏷️ Cupom", value: coupon, inline: true } : null,
+      { name: "📋 Pedido", value: `\`${orderId}\``, inline: true },
+      { name: "📋 Pagamento", value: `\`${paymentId}\``, inline: true },
+      coupon ? { name: "📝 Cupom", value: coupon, inline: true } : null,
     ].filter(Boolean))
     .setThumbnail("attachment://logo.png")
     .setFooter({ text: `${config.botName} • Logs de Venda`, iconURL: "attachment://logo.png" })
@@ -99,7 +99,7 @@ async function logComprovante(client, config, { userId, productName, amount, ord
   const embed = new EmbedBuilder()
     .setColor(COLORS.comprovantes)
     .setAuthor({ name: `${config.botName} • Comprovante`, iconURL: "attachment://logo.png" })
-    .setTitle("🧾 Comprovante Registrado")
+    .setTitle("📄 Comprovante Registrado")
     .setDescription("O comprovante do pedido foi gerado e está disponível para conferência.")
     .addFields([
       { name: "👤 Cliente", value: `<@${userId}>`, inline: true },

@@ -40,7 +40,7 @@ async function sendClientDM(client, config, localPayment, product, orderId, paym
       .setDescription([
         `> 📦 **Produto:** ${product?.name || localPayment.product_id}`,
         `> 💰 **Valor:** ${formatPrice(localPayment.amount)}`,
-        `> 🔖 **Pedido:** #${orderId}`,
+        `> � **Pedido:** #${orderId}`,
         "",
         hasAutoDelivery
           ? "> 🚀 Seu produto foi entregue automaticamente! Confira abaixo:"
@@ -114,8 +114,8 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       `> 👤 **Cliente:** <@${localPayment.user_id}>`,
       `> 📦 **Produto:** ${product?.name || localPayment.product_id}`,
       `> 💰 **Valor:** ${formatPrice(localPayment.amount)}`,
-      `> 🔖 **Pedido:** #${orderId}`,
-      `> 🆔 **Pagamento:** \`${paymentId}\``,
+      `> � **Pedido:** #${orderId}`,
+      `> 📋 **Pagamento:** \`${paymentId}\``,
       "",
       "─────────────────────────────",
       "",
@@ -179,7 +179,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
             { name: "👤 Cliente", value: `<@${localPayment.user_id}>`, inline: true },
             { name: "📦 Produto", value: product?.name || localPayment.product_id, inline: true },
             { name: "💰 Valor", value: formatPrice(localPayment.amount), inline: true },
-            { name: "🔖 Pedido", value: `#${orderId}`, inline: true },
+            { name: "� Pedido", value: `#${orderId}`, inline: true },
             { name: "📦 Estoque", value: `${remainingStock >= 0 ? remainingStock : "?"} restantes`, inline: true },
             { name: "🚀 Entrega", value: deliveryType, inline: true },
           ])

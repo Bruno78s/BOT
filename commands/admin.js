@@ -46,11 +46,11 @@ module.exports = {
         .setCustomId("admin_menu")
         .setPlaceholder("Selecione uma opção...")
         .addOptions([
-          { label: "📦 Produtos", description: "Gerenciar estoque e preços", value: "admin_products" },
-          { label: "💰 Pagamentos", description: "Ver pedidos e transações", value: "admin_payments" },
-          { label: "🏷️ Cupons", description: "Criar cupons de desconto", value: "admin_coupons" },
+          { label: "📦 Produtos", description: "Gerenciar estoque e precos", value: "admin_products" },
+          { label: "💰 Pagamentos", description: "Ver pedidos e transacoes", value: "admin_payments" },
+          { label: "📝 Cupons", description: "Criar cupons de desconto", value: "admin_coupons" },
           { label: "📨 Invites", description: "Ranking de convites", value: "admin_invites" },
-          { label: "⚙️ Configurações", description: "Canais e IDs", value: "admin_settings" }
+          { label: "🔧 Configuracoes", description: "Canais e IDs", value: "admin_settings" }
         ])
     );
 
