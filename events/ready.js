@@ -18,8 +18,6 @@ const { ensureProductPanels } = require("../utils/productPanels");
 const { logSystemEvent } = require("../utils/advancedLogger");
 const { logSistema, logRelatorio } = require("../utils/channelLogger");
 const { cacheGuildInvites } = require("../utils/invites");
-const { syncToSupabase } = require("../utils/syncToSupabase");
-const { isSupabaseEnabled } = require("../utils/supabase");
 const Dashboard = require("../utils/dashboard");
 const ReportSystem = require("../utils/reports");
 const StockPrediction = require("../utils/stockPrediction");
@@ -36,19 +34,6 @@ module.exports = {
       await backupDatabaseEncrypted(); // Melhoria 12: Backup criptografado
       pruneBackups(config.limits.logRetentionDays);
     });
-
-    // Sincronizar com Supabase a cada 5 minutos
-    if (isSupabaseEnabled()) {
-      cron.schedule("*/5 * * * *", async () => {
-        const result = await syncToSupabase();
-        if (result.success) {
-          console.log(`[SYNC] ${result.message}`);
-        } else {
-          console.log(`[SYNC] ${result.message}`);
-        }
-      });
-      console.log("[SYNC] Sincronização com Supabase ativada (a cada 5 minutos)");
-    }
 
     cron.schedule("0 4 * * *", async () => {
       const limit = Date.now() - config.limits.logRetentionDays * 24 * 60 * 60 * 1000;
