@@ -63,7 +63,7 @@ async function logSistema(client, config, event, details = {}) {
   const embed = new EmbedBuilder()
     .setColor(COLORS.sistema)
     .setAuthor({ name: `${config.botName} • Sistema`, iconURL: "attachment://logo.png" })
-    .setTitle(`🔧 ${event}`)
+    .setTitle(`:wrench: ${event}`)
     .setThumbnail("attachment://logo.png")
     .setTimestamp()
     .setFooter({ text: `${config.botName} • sistema`, iconURL: "attachment://logo.png" });
