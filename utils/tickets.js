@@ -1,4 +1,4 @@
-const {
+Ôªøconst {
   ChannelType,
   PermissionFlagsBits,
   ActionRowBuilder,
@@ -68,7 +68,7 @@ async function canCreateTicket(guild, userId, type, config) {
       }
       return {
         ok: false,
-        reason: `VocÍ j· possui um ${label} aberto: <#${openSameTypeTicket.channel_id}>. Encerre ele antes de abrir outro.`
+        reason: `VocÔøΩ jÔøΩ possui um ${label} aberto: <#${openSameTypeTicket.channel_id}>. Encerre ele antes de abrir outro.`
       };
     } catch (error) {
       run(
@@ -84,7 +84,7 @@ async function canCreateTicket(guild, userId, type, config) {
     [guildId, userId]
   );
   
-  // Aplicar cooldown apenas se o ˙ltimo ticket foi do MESMO tipo
+  // Aplicar cooldown apenas se o ÔøΩltimo ticket foi do MESMO tipo
   const lastSameTypeTicket = get(
     "SELECT created_at FROM tickets WHERE guild_id = ? AND user_id = ? AND type = ? AND status = 'closed' ORDER BY created_at DESC LIMIT 1",
     [guildId, userId, type]
@@ -111,7 +111,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
   const number = await nextTicketNumber(guild.id, type);
   const formatted = formatTicketNumber(number);
   const safeUserName = member.user.username.toLowerCase().replace(/[^a-z0-9-]/gi, "-").slice(0, 18);
-  const channelName = type === "sales" ? `??∑${safeUserName}` : type === "delivery" ? `??∑${safeUserName}` : `??∑${reason || "suporte"}∑${safeUserName}`;
+  const channelName = type === "sales" ? `??ÔøΩ${safeUserName}` : type === "delivery" ? `??ÔøΩ${safeUserName}` : `??ÔøΩ${reason || "suporte"}ÔøΩ${safeUserName}`;
   const categoryId = type === "sales"
     ? (settings.sales_category_id || config.salesCategoryId)
     : type === "delivery"
@@ -119,7 +119,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
       : (settings.support_category_id || config.ticketCategoryId);
 
   if (!categoryId) {
-    throw new Error(`Categoria de canal n„o configurada para tipo de ticket: ${type}`);
+    throw new Error(`Categoria de canal nÔøΩo configurada para tipo de ticket: ${type}`);
   }
 
   const overwrites = [
@@ -154,9 +154,9 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
       [guild.id, channel.id, member.id, type, productId || null, number, Date.now()]
     );
     const insertTime = Date.now() - insertStartTime;
-    console.log(`[TICKETS] ? INSERT successful (${insertTime}ms): channel=${channel.id}, user=${member.id}, type=${type}, product_id=${productId || null}`);
+    console.log(`[TICKETS] ‚úÖ INSERT successful (${insertTime}ms): channel=${channel.id}, user=${member.id}, type=${type}, product_id=${productId || null}`);
   } catch (error) {
-    console.error(`[TICKETS] ? INSERT failed: ${error.message}`, { 
+    console.error(`[TICKETS] ‚ùå INSERT failed: ${error.message}`, { 
       guild_id: guild.id,
       channel_id: channel.id,
       user_id: member.id,
@@ -186,7 +186,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
     const product = productId ? config.products.find(p => p.id === productId) : null;
     const deliveryEmbed = infoEmbed(
       config,
-      `${config.botName} | Ticket de Entrega ï #${formatted}`,
+      `${config.botName} | Ticket de Entrega ÔøΩ #${formatted}`,
       "Ticket de entrega de produto. Aguarde a entrega pela equipe."
     ).addFields([
       {
@@ -209,7 +209,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
         value: payment?.provider_payment_id || payment?.preference_id || "N/A",
         inline: false
       }
-    ]).setFooter({ text: `${config.botName} ï Entrega` });
+    ]).setFooter({ text: `${config.botName} ÔøΩ Entrega` });
 
     const deliveryRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -251,13 +251,13 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
   } else {
     const supportEmbed = infoEmbed(
       config,
-      `${config.botName} | Atendimento ï #${formatted}`,
-      "Atendimento iniciado. Descreva sua solicitaÁ„o com detalhes."
+      `${config.botName} | Atendimento ÔøΩ #${formatted}`,
+      "Atendimento iniciado. Descreva sua solicitaÔøΩÔøΩo com detalhes."
     ).addFields({
-      name: "InstruÁıes",
-      value: `Motivo: **${reason || "suporte"}**\nInforme detalhes, anexos e qualquer informaÁ„o importante para agilizar o atendimento.`,
+      name: "InstruÔøΩÔøΩes",
+      value: `Motivo: **${reason || "suporte"}**\nInforme detalhes, anexos e qualquer informaÔøΩÔøΩo importante para agilizar o atendimento.`,
       inline: false
-    }).setFooter({ text: `${config.botName} ï Suporte` });
+    }).setFooter({ text: `${config.botName} ÔøΩ Suporte` });
 
     const supportRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -294,8 +294,8 @@ async function closeTicket(channel, userId, config, options = {}) {
   );
 
   if (!ticket) {
-    console.error(`[TICKETS] ? closeTicket: ticket not found for channel ${channel.id}`);
-    return { error: "Ticket n„o encontrado ou j· fechado." };
+    console.error(`[TICKETS] ‚ùå closeTicket: ticket not found for channel ${channel.id}`);
+    return { error: "Ticket nÔøΩo encontrado ou jÔøΩ fechado." };
   }
 
   try {
@@ -303,9 +303,9 @@ async function closeTicket(channel, userId, config, options = {}) {
       "UPDATE tickets SET status = 'closed', closed_at = ? WHERE id = ?",
       [Date.now(), ticket.id]
     );
-    console.log(`[TICKETS] ? Ticket closed: channel=${channel.id}, ticket_id=${ticket.id}`);
+    console.log(`[TICKETS] ‚úÖ Ticket closed: channel=${channel.id}, ticket_id=${ticket.id}`);
   } catch (error) {
-    console.error(`[TICKETS] ? Error closing ticket: ${error.message}`, { channel_id: channel.id, ticket_id: ticket.id });
+    console.error(`[TICKETS] ‚ùå Error closing ticket: ${error.message}`, { channel_id: channel.id, ticket_id: ticket.id });
   }
 
   if (options.requestRating) {
@@ -322,15 +322,15 @@ async function closeTicket(channel, userId, config, options = {}) {
       config,
       "Ticket encerrado",
       "Avalie o atendimento de 1 a 5 para concluir."
-    ).setFooter({ text: `${config.botName} ï Feedback` });
+    ).setFooter({ text: `${config.botName} ÔøΩ Feedback` });
 
     await channel.send({ embeds: [closeEmbed], components: [ratingRow] });
   } else {
     const closeEmbed = successEmbed(
       config,
       "Ticket encerrado",
-      "O canal ser· encerrado em instantes."
-    ).setFooter({ text: `${config.botName} ï Encerramento` });
+      "O canal serÔøΩ encerrado em instantes."
+    ).setFooter({ text: `${config.botName} ÔøΩ Encerramento` });
 
     await channel.send({ embeds: [closeEmbed] });
 
@@ -345,8 +345,8 @@ async function closeTicket(channel, userId, config, options = {}) {
 async function registerRating(channel, rating, config) {
   const ticket = get("SELECT * FROM tickets WHERE channel_id = ?", [channel.id]);
   if (!ticket) {
-    console.error(`[TICKETS] ? registerRating: ticket not found for channel ${channel.id}`);
-    return { error: "Ticket n„o encontrado." };
+    console.error(`[TICKETS] ‚ùå registerRating: ticket not found for channel ${channel.id}`);
+    return { error: "Ticket nÔøΩo encontrado." };
   }
 
   run("UPDATE tickets SET rating = ? WHERE id = ?", [rating, ticket.id]);
@@ -361,8 +361,8 @@ async function registerRating(channel, rating, config) {
   const ratingEmbed = warningEmbed(
     config,
     "? Obrigado!",
-    "Sua avaliaÁ„o foi registrada. O canal ser· encerrado em 5 segundos."
-  ).setFooter({ text: `${config.botName} ï Encerramento` });
+    "Sua avaliaÔøΩÔøΩo foi registrada. O canal serÔøΩ encerrado em 5 segundos."
+  ).setFooter({ text: `${config.botName} ÔøΩ Encerramento` });
 
   await channel.send({ embeds: [ratingEmbed] });
 
@@ -386,7 +386,7 @@ async function listTicketByChannel(channelId, retries = 8, delayMs = 350) {
     try {
       const ticket = get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
       if (ticket) {
-        if (attempt > 1) console.log(`[TICKETS] ? Found ticket on attempt ${attempt} after ${(attempt - 1) * delayMs}ms`);
+        if (attempt > 1) console.log(`[TICKETS] ‚úÖ Found ticket on attempt ${attempt} after ${(attempt - 1) * delayMs}ms`);
         return ticket;
       }
       if (attempt < retries) {
@@ -399,7 +399,7 @@ async function listTicketByChannel(channelId, retries = 8, delayMs = 350) {
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
-  console.error(`[TICKETS] ? Ticket not found for channel ${channelId} after ${retries} retries (waited ${(retries - 1) * delayMs}ms total)`);
+  console.error(`[TICKETS] ‚ùå Ticket not found for channel ${channelId} after ${retries} retries (waited ${(retries - 1) * delayMs}ms total)`);
   return null;
 }
 

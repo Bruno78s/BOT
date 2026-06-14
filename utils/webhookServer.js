@@ -302,6 +302,12 @@ function startWebhookServer(client, config) {
   });
 
   async function handleMercadoPagoWebhook(req, res) {
+    console.log("[WEBHOOK] ===========================================");
+    console.log("[WEBHOOK] Nova requisição recebida");
+    console.log("[WEBHOOK] Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("[WEBHOOK] Body:", JSON.stringify(req.body, null, 2));
+    console.log("[WEBHOOK] Query:", JSON.stringify(req.query, null, 2));
+    console.log("[WEBHOOK] IP:", req.ip);
     res.sendStatus(200);
 
     try {
@@ -362,7 +368,9 @@ function startWebhookServer(client, config) {
       }
     } catch (error) {
       console.error("[WEBHOOK] Erro no webhook Mercado Pago:", error);
+      console.error("[WEBHOOK] Stack:", error.stack);
     }
+    console.log("[WEBHOOK] ===========================================");
   }
 
   app.post("/mercadopago/webhook", handleMercadoPagoWebhook);

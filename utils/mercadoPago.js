@@ -38,13 +38,16 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
   const client = getClient();
   const payment = new Payment(client);
 
+  const webhookUrl = process.env.MERCADO_PAGO_WEBHOOK_URL;
+  console.log(`[MERCADO_PAGO] Criando pagamento PIX - Webhook URL: ${webhookUrl || "NÃO CONFIGURADO"}`);
+
   const response = await payment.create({
     body: {
       transaction_amount: Math.max(0.01, Math.round(Number(product.price) * 100) / 100),
       description: product.name,
       payment_method_id: "pix",
       external_reference: channelId,
-      notification_url: process.env.MERCADO_PAGO_WEBHOOK_URL,
+      notification_url: webhookUrl,
       payer: {
         email: getPayerEmail(userId),
         first_name: user?.username || "Cliente"
@@ -57,6 +60,8 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
       }
     }
   });
+
+  console.log(`[MERCADO_PAGO] Pagamento criado - ID: ${response.id}, Status: ${response.status}`);
 
   const qrCode = response.point_of_interaction?.transaction_data?.qr_code || null;
   const qrCodeBase64 = response.point_of_interaction?.transaction_data?.qr_code_base64 || null;
@@ -82,10 +87,13 @@ async function createPreferencePayment({ guildId, channelId, userId, product, us
   const client = getClient();
   const preference = new Preference(client);
 
+  const webhookUrl = process.env.MERCADO_PAGO_WEBHOOK_URL;
+  console.log(`[MERCADO_PAGO] Criando preference - Webhook URL: ${webhookUrl || "NÃO CONFIGURADO"}`);
+
   const response = await preference.create({
     body: {
       external_reference: channelId,
-      notification_url: process.env.MERCADO_PAGO_WEBHOOK_URL,
+      notification_url: webhookUrl,
       items: [
         {
           id: product.id,
@@ -108,6 +116,8 @@ async function createPreferencePayment({ guildId, channelId, userId, product, us
       }
     }
   });
+
+  console.log(`[MERCADO_PAGO] Preference criada - ID: ${response.id}`);
 
   const checkoutUrl = response.init_point || response.sandbox_init_point;
 

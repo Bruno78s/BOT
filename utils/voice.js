@@ -1,4 +1,4 @@
-const {
+ï»¿const {
   joinVoiceChannel,
   VoiceConnectionStatus,
   entersState
@@ -26,18 +26,18 @@ async function joinConfiguredVoice(client, config) {
       selfMute: false
     });
 
-    console.log(`?? Bot conectado ao canal de voz: ${channel.name}`);
+    console.log(`ðŸ”Š Bot conectado ao canal de voz: ${channel.name}`);
 
     voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
-      console.log("?? Bot desconectado do canal de voz, tentando reconectar...");
+      console.log("ðŸ”Œ Bot desconectado do canal de voz, tentando reconectar...");
       try {
         await Promise.race([
           entersState(voiceConnection, VoiceConnectionStatus.Signalling, 5000),
           entersState(voiceConnection, VoiceConnectionStatus.Connecting, 5000)
         ]);
-        console.log("? Reconexão bem-sucedida!");
+        console.log("? Reconexï¿½o bem-sucedida!");
       } catch {
-        console.log("? Falha na reconexão, tentando novamente em 5s...");
+        console.log("? Falha na reconexï¿½o, tentando novamente em 5s...");
         voiceConnection.destroy();
         
         if (reconnectTimer) clearTimeout(reconnectTimer);
@@ -48,7 +48,7 @@ async function joinConfiguredVoice(client, config) {
     });
 
     voiceConnection.on(VoiceConnectionStatus.Destroyed, () => {
-      console.log("?? Conexão de voz destruída, reconectando em 3s...");
+      console.log("?? Conexï¿½o de voz destruï¿½da, reconectando em 3s...");
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(() => {
         joinConfiguredVoice(client, config);
@@ -57,7 +57,7 @@ async function joinConfiguredVoice(client, config) {
 
     return voiceConnection;
   } catch (error) {
-    console.error("? Erro ao conectar no canal de voz:", error.message);
+    console.error("âŒ Erro ao conectar no canal de voz:", error.message);
     
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(() => {
@@ -71,7 +71,7 @@ async function joinConfiguredVoice(client, config) {
 function keepAlive(client, config) {
   setInterval(async () => {
     if (!voiceConnection || voiceConnection.state.status === VoiceConnectionStatus.Destroyed) {
-      console.log("?? Verificação periódica: reconectando ao canal de voz...");
+      console.log("?? Verificaï¿½ï¿½o periï¿½dica: reconectando ao canal de voz...");
       await joinConfiguredVoice(client, config);
     }
   }, 30 * 60 * 1000);
