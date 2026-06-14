@@ -73,7 +73,7 @@ async function handleProductSelect(interaction, config) {
     description: `Carrinho criado por ${interaction.user.tag}.`,
     fields: [
       { name: "Canal", value: `<#${result.channel.id}>`, inline: true },
-      { name: "Usu\u00E1rio", value: `<@${interaction.user.id}>`, inline: true },
+      { name: "Usuario", value: `<@${interaction.user.id}>`, inline: true },
       { name: "Produto", value: product.name, inline: true },
       { name: "Valor", value: formatPrice(product.price), inline: true }
     ]
@@ -116,7 +116,7 @@ async function handleSupportTicketSelect(interaction, config) {
     description: `Ticket criado por ${interaction.user.tag}.`,
     fields: [
       { name: "Canal", value: `<#${result.channel.id}>`, inline: true },
-      { name: "Usu\u00E1rio", value: `<@${interaction.user.id}>`, inline: true },
+      { name: "Usuario", value: `<@${interaction.user.id}>`, inline: true },
       { name: "Motivo", value: reason, inline: true }
     ]
   });
@@ -129,7 +129,7 @@ async function handlePaymentGatewaySelect(interaction, config) {
   const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
   if (!product) {
     return interaction.editReply({
-      embeds: [dangerEmbed(config, "Produto n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel identificar o produto deste carrinho.")],
+      embeds: [dangerEmbed(config, "Produto nao encontrado", "Nao foi possivel identificar o produto deste carrinho.")],
       components: []
     });
   }
@@ -160,7 +160,7 @@ async function handlePaymentGatewaySelect(interaction, config) {
     console.error(`Erro ao criar pagamento:`, error.response?.data || error);
     const errorDescription = error?.message || error?.error || error?.cause?.[0]?.description || error?.response?.data?.errors?.[0]?.description || "Erro desconhecido";
     return interaction.editReply({
-      embeds: [dangerEmbed(config, "Pagamento indispon\u00EDvel", `Erro ao processar pagamento via Mercado Pago.\n\nDetalhe: ${errorDescription}`)],
+      embeds: [dangerEmbed(config, "Pagamento indisponivel", `Erro ao processar pagamento via Mercado Pago.\n\nDetalhe: ${errorDescription}`)],
       components: []
     });
   }

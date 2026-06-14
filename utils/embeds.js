@@ -35,7 +35,7 @@ function dangerEmbed(config, title, description) {
 }
 
 function loadingEmbed(config, title = "Processando...", description = "Aguarde um momento.") {
-  return baseEmbed(config.colors.primary, title, description, "?");
+  return baseEmbed(config.colors.primary, title, description, "⏳");
 }
 
 module.exports = {

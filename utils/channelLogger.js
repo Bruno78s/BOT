@@ -157,7 +157,7 @@ async function logSeguranca(client, config, { evento, userId, detalhes }) {
   const embed = new EmbedBuilder()
     .setColor(COLORS.seguranca)
     .setAuthor({ name: `${config.botName} • Segurança`, iconURL: "attachment://logo.png" })
-    .setTitle(`� ${evento}`)
+    .setTitle(`🔔 ${evento}`)
     .setDescription("Evento de segurança registrado para análise. Verifique os detalhes abaixo.")
     .addFields([
       { name: "👤 Usuário", value: `<@${userId}>`, inline: true },
