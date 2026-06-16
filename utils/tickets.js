@@ -1,4 +1,4 @@
-﻿const {
+const {
   ChannelType,
   PermissionFlagsBits,
   ActionRowBuilder,
@@ -68,7 +68,7 @@ async function canCreateTicket(guild, userId, type, config) {
       }
       return {
         ok: false,
-        reason: `Voc� j� possui um ${label} aberto: <#${openSameTypeTicket.channel_id}>. Encerre ele antes de abrir outro.`
+        reason: `Você já possui um ${label} aberto: <#${openSameTypeTicket.channel_id}>. Encerre ele antes de abrir outro.`
       };
     } catch (error) {
       run(
@@ -84,7 +84,7 @@ async function canCreateTicket(guild, userId, type, config) {
     [guildId, userId]
   );
   
-  // Aplicar cooldown apenas se o �ltimo ticket foi do MESMO tipo
+  // Aplicar cooldown apenas se o último ticket foi do MESMO tipo
   const lastSameTypeTicket = get(
     "SELECT created_at FROM tickets WHERE guild_id = ? AND user_id = ? AND type = ? AND status = 'closed' ORDER BY created_at DESC LIMIT 1",
     [guildId, userId, type]
@@ -111,7 +111,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
   const number = await nextTicketNumber(guild.id, type);
   const formatted = formatTicketNumber(number);
   const safeUserName = member.user.username.toLowerCase().replace(/[^a-z0-9-]/gi, "-").slice(0, 18);
-  const channelName = type === "sales" ? `??�${safeUserName}` : type === "delivery" ? `??�${safeUserName}` : `??�${reason || "suporte"}�${safeUserName}`;
+  const channelName = type === "sales" ? `🛒-${safeUserName}` : type === "delivery" ? `📦-${safeUserName}` : `🎫-${reason || "suporte"}-${safeUserName}`;
   const categoryId = type === "sales"
     ? (settings.sales_category_id || config.salesCategoryId)
     : type === "delivery"
@@ -119,7 +119,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
       : (settings.support_category_id || config.ticketCategoryId);
 
   if (!categoryId) {
-    throw new Error(`Categoria de canal n�o configurada para tipo de ticket: ${type}`);
+    throw new Error(`Categoria de canal não configurada para tipo de ticket: ${type}`);
   }
 
   const overwrites = [
@@ -186,7 +186,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
     const product = productId ? config.products.find(p => p.id === productId) : null;
     const deliveryEmbed = infoEmbed(
       config,
-      `${config.botName} | Ticket de Entrega � #${formatted}`,
+      `${config.botName} | Ticket de Entrega - #${formatted}`,
       "Ticket de entrega de produto. Aguarde a entrega pela equipe."
     ).addFields([
       {
@@ -209,7 +209,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
         value: payment?.provider_payment_id || payment?.preference_id || "N/A",
         inline: false
       }
-    ]).setFooter({ text: `${config.botName} � Entrega` });
+    ]).setFooter({ text: `${config.botName} - Entrega` });
 
     const deliveryRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -251,13 +251,13 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
   } else {
     const supportEmbed = infoEmbed(
       config,
-      `${config.botName} | Atendimento � #${formatted}`,
-      "Atendimento iniciado. Descreva sua solicita��o com detalhes."
+      `${config.botName} | Atendimento - #${formatted}`,
+      "Atendimento iniciado. Descreva sua solicitação com detalhes."
     ).addFields({
-      name: "Instru��es",
-      value: `Motivo: **${reason || "suporte"}**\nInforme detalhes, anexos e qualquer informa��o importante para agilizar o atendimento.`,
+      name: "Instruções",
+      value: `Motivo: **${reason || "suporte"}**\nInforme detalhes, anexos e qualquer informação importante para agilizar o atendimento.`,
       inline: false
-    }).setFooter({ text: `${config.botName} � Suporte` });
+    }).setFooter({ text: `${config.botName} - Suporte` });
 
     const supportRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -295,7 +295,7 @@ async function closeTicket(channel, userId, config, options = {}) {
 
   if (!ticket) {
     console.error(`[TICKETS] ❌ closeTicket: ticket not found for channel ${channel.id}`);
-    return { error: "Ticket n�o encontrado ou j� fechado." };
+    return { error: "Ticket não encontrado ou já fechado." };
   }
 
   try {
@@ -322,15 +322,15 @@ async function closeTicket(channel, userId, config, options = {}) {
       config,
       "Ticket encerrado",
       "Avalie o atendimento de 1 a 5 para concluir."
-    ).setFooter({ text: `${config.botName} � Feedback` });
+    ).setFooter({ text: `${config.botName} - Feedback` });
 
     await channel.send({ embeds: [closeEmbed], components: [ratingRow] });
   } else {
     const closeEmbed = successEmbed(
       config,
       "Ticket encerrado",
-      "O canal ser� encerrado em instantes."
-    ).setFooter({ text: `${config.botName} � Encerramento` });
+      "O canal será encerrado em instantes."
+    ).setFooter({ text: `${config.botName} - Encerramento` });
 
     await channel.send({ embeds: [closeEmbed] });
 
@@ -346,7 +346,7 @@ async function registerRating(channel, rating, config) {
   const ticket = get("SELECT * FROM tickets WHERE channel_id = ?", [channel.id]);
   if (!ticket) {
     console.error(`[TICKETS] ❌ registerRating: ticket not found for channel ${channel.id}`);
-    return { error: "Ticket n�o encontrado." };
+    return { error: "Ticket não encontrado." };
   }
 
   run("UPDATE tickets SET rating = ? WHERE id = ?", [rating, ticket.id]);
@@ -360,9 +360,9 @@ async function registerRating(channel, rating, config) {
 
   const ratingEmbed = warningEmbed(
     config,
-    "? Obrigado!",
-    "Sua avalia��o foi registrada. O canal ser� encerrado em 5 segundos."
-  ).setFooter({ text: `${config.botName} � Encerramento` });
+    "Obrigado!",
+    "Sua avaliação foi registrada. O canal será encerrado em 5 segundos."
+  ).setFooter({ text: `${config.botName} - Encerramento` });
 
   await channel.send({ embeds: [ratingEmbed] });
 

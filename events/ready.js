@@ -40,22 +40,22 @@ module.exports = {
       run("DELETE FROM logs WHERE created_at < ?", [limit]);
     });
 
-    // Melhoria 14: RelatÛrios Autom·ticos
+    // Melhoria 14: Relat√≥rios Autom√°ticos
     const reports = new ReportSystem(config);
     
-    // RelatÛrio di·rio ‡s 9h
+    // Relat√≥rio di√°rio √†s 9h
     cron.schedule("0 9 * * *", async () => {
       await logRelatorio(client, config);
-      console.log("[REPORTS] RelatÛrio di·rio enviado");
+      console.log("[REPORTS] Relat√≥rio di√°rio enviado");
     });
 
-    // RelatÛrio de estoque ‡s 8h (atualiza o mesmo)
+    // Relat√≥rio de estoque √†s 8h (atualiza o mesmo)
     cron.schedule("0 8 * * *", async () => {
       await logRelatorio(client, config);
-      console.log("[REPORTS] RelatÛrio de estoque enviado");
+      console.log("[REPORTS] Relat√≥rio de estoque enviado");
     });
 
-    // Melhoria 15 & 16: Previs„o de Estoque e Restock Autom·tico
+    // Melhoria 15 & 16: Previs√£o de Estoque e Restock Autom√°tico
     const autoRestock = new AutoRestock(config, client);
     
     // Verificar estoque a cada 6 horas
@@ -63,16 +63,16 @@ module.exports = {
       const prediction = new StockPrediction(config);
       const report = await prediction.generatePredictionReport();
       
-      console.log(`[STOCK] Previs„o gerada: ${report.alert.summary.critical} crÌticos, ${report.alert.summary.high} altos`);
+      console.log(`[STOCK] Previs√£o gerada: ${report.alert.summary.critical} cr√≠ticos, ${report.alert.summary.high} altos`);
       
-      // Verificar produtos com estoque zerado/baixo e notificar no relatorio
+      // Verificar produtos com estoque zerado/baixo e notificar no relat√≥rio
       const lowStockProducts = config.products.filter(p => p.stock === 0 || p.stock < 3);
       if (lowStockProducts.length > 0) {
         await logRelatorio(client, config);
-        console.log(`[STOCK] ${lowStockProducts.length} produto(s) com estoque cr\u00edtico ó relat\u00f3rio atualizado`);
+        console.log(`[STOCK] ${lowStockProducts.length} produto(s) com estoque cr√≠tico - relat√≥rio atualizado`);
       }
 
-      // Executar restock autom·tico se habilitado
+      // Executar restock autom√°tico se habilitado
       if (process.env.AUTO_RESTOCK_ENABLED === 'true') {
         const restockResult = await autoRestock.runAutoRestock();
         if (restockResult.restocked.length > 0) {
@@ -179,17 +179,17 @@ module.exports = {
 
     await logSistema(client, config, "Bot Iniciado", {
       description: [
-        `> ?? **Bot:** ${config.botName}`,
-        `> ?? **Usu·rio:** ${client.user.tag}`,
-        `> ?? **Servidores:** ${client.guilds.cache.size}`,
-        `> ?? **Iniciado em:** <t:${Math.floor(Date.now()/1000)}:F>`,
+        `> ü§ñ **Bot:** ${config.botName}`,
+        `> üë§ **Usu√°rio:** ${client.user.tag}`,
+        `> üìä **Servidores:** ${client.guilds.cache.size}`,
+        `> ‚è∞ **Iniciado em:** <t:${Math.floor(Date.now()/1000)}:F>`,
         "",
-        "> ? Todos os sistemas foram iniciados com sucesso.",
+        "> ‚úÖ Todos os sistemas foram iniciados com sucesso.",
       ].join("\n"),
       fields: [
-        { name: "?? Vers„o Node", value: process.version, inline: true },
-        { name: "?? Uptime", value: `0s`, inline: true },
-        { name: "?? Produtos", value: `${config.products?.length || 0} cadastrados`, inline: true },
+        { name: "üì¶ Vers√£o Node", value: process.version, inline: true },
+        { name: "‚è±Ô∏è Uptime", value: `0s`, inline: true },
+        { name: "üõçÔ∏è Produtos", value: `${config.products?.length || 0} cadastrados`, inline: true },
       ]
     });
     await logRelatorio(client, config);
