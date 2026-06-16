@@ -139,7 +139,7 @@ async function handlePaymentGatewaySelect(interaction, config) {
   let finalPrice = product.price;
 
   if (ticket.coupon_id) {
-    coupon = get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
+    coupon = await get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
     if (coupon) {
       discount = calculateDiscount(product.price, coupon);
       finalPrice = Math.round((product.price - discount) * 100) / 100;
@@ -298,7 +298,7 @@ async function handleCouponModal(interaction, config) {
   });
 
   if (coupon) {
-    run("UPDATE tickets SET coupon_id = ? WHERE channel_id = ?", [coupon.id, interaction.channel.id]);
+    await run("UPDATE tickets SET coupon_id = ? WHERE channel_id = ?", [coupon.id, interaction.channel.id]);
   }
 }
 
@@ -370,7 +370,7 @@ async function handleCartButtons(interaction, config) {
 
     const acceptedAt = Date.now();
     const termsSnapshot = buildTermsSnapshot(interaction.user, product);
-    run(
+    await run(
       "UPDATE tickets SET terms_accepted_at = ?, terms_snapshot = ? WHERE channel_id = ?",
       [acceptedAt, termsSnapshot, interaction.channel.id]
     );
@@ -452,14 +452,14 @@ async function handleOrderButtons(interaction, config) {
 
   if (customId === "order_open_delivery_ticket") {
     await interaction.deferReply({ ephemeral: true });
-    const payment = get("SELECT * FROM payments WHERE channel_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 1", [interaction.channel.id]);
+    const payment = await get("SELECT * FROM payments WHERE channel_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 1", [interaction.channel.id]);
     if (!payment) {
       return interaction.editReply({
         embeds: [dangerEmbed(config, "Pedido n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel encontrar o pedido aprovado neste carrinho.")]
       });
     }
 
-    const existingDeliveryTicket = get("SELECT channel_id FROM tickets WHERE user_id = ? AND type = 'delivery' AND status = 'open' LIMIT 1", [interaction.user.id]);
+    const existingDeliveryTicket = await get("SELECT channel_id FROM tickets WHERE user_id = ? AND type = 'delivery' AND status = 'open' LIMIT 1", [interaction.user.id]);
     if (existingDeliveryTicket) {
       return interaction.editReply({
         embeds: [dangerEmbed(config, "Ticket j\u00E1 existe", "Voc\u00EA j\u00E1 possui um ticket de entrega aberto: <#" + existingDeliveryTicket.channel_id + ">")]
@@ -489,7 +489,7 @@ async function handleOrderButtons(interaction, config) {
 
   if (customId === "order_copy_summary") {
     await interaction.deferReply({ ephemeral: true });
-    const payment = get("SELECT * FROM payments WHERE channel_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 1", [interaction.channel.id]);
+    const payment = await get("SELECT * FROM payments WHERE channel_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 1", [interaction.channel.id]);
     if (!payment) {
       return interaction.editReply({
         embeds: [dangerEmbed(config, "Pedido n\u00E3o encontrado", "N\u00E3o foi poss\u00EDvel encontrar o pedido aprovado neste carrinho.")]

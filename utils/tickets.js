@@ -111,7 +111,11 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
   const number = await nextTicketNumber(guild.id, type);
   const formatted = formatTicketNumber(number);
   const safeUserName = member.user.username.toLowerCase().replace(/[^a-z0-9-]/gi, "-").slice(0, 18);
-  const channelName = type === "sales" ? `🛒-${safeUserName}` : type === "delivery" ? `📦-${safeUserName}` : `🎫-${reason || "suporte"}-${safeUserName}`;
+  const channelName = type === "sales" 
+    ? `🛒・${member.user.username}` 
+    : type === "delivery" 
+      ? `📦・${member.user.username}` 
+      : `🎫・${reason || "suporte"}・${member.user.username}`;
   const categoryId = type === "sales"
     ? (settings.sales_category_id || config.salesCategoryId)
     : type === "delivery"
