@@ -12,17 +12,17 @@ const schema = require("fs").readFileSync(path.join(__dirname, "schema.sql"), "u
 db.exec(schema);
 
 // Query functions
-async function get(sql, params = []) {
+function get(sql, params = []) {
   const stmt = db.prepare(sql);
   return stmt.get(...params);
 }
 
-async function all(sql, params = []) {
+function all(sql, params = []) {
   const stmt = db.prepare(sql);
   return stmt.all(...params);
 }
 
-async function run(sql, params = []) {
+function run(sql, params = []) {
   const stmt = db.prepare(sql);
   const result = stmt.run(...params);
   return { lastID: result.lastInsertRowid, changes: result.changes };

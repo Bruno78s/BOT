@@ -78,6 +78,9 @@ async function sendClientDM(client, config, localPayment, product, orderId, paym
 }
 
 async function confirmApprovedPayment(client, config, paymentData, localPayment) {
+  // #region debug-point D:confirm-approved-entry
+  (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"D",location:"utils/webhookServer.js:confirmApprovedPayment",msg:"[DEBUG] confirmApprovedPayment entered",data:{providerPaymentId:String(paymentData?.id||""),localPaymentId:localPayment?.id||null,channelId:localPayment?.channel_id||null,userId:localPayment?.user_id||null,productId:localPayment?.product_id||null},ts:Date.now()})}).catch(()=>{})})();
+  // #endregion
   console.log("[WEBHOOK] confirmApprovedPayment chamado para canal:", localPayment.channel_id);
   const channel = await client.channels.fetch(localPayment.channel_id).catch(() => null);
   if (!channel?.send) {
@@ -308,6 +311,9 @@ function startWebhookServer(client, config) {
     console.log("[WEBHOOK] Body:", JSON.stringify(req.body, null, 2));
     console.log("[WEBHOOK] Query:", JSON.stringify(req.query, null, 2));
     console.log("[WEBHOOK] IP:", req.ip);
+    // #region debug-point A:webhook-entry
+    (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"A",location:"utils/webhookServer.js:handleMercadoPagoWebhook:entry",msg:"[DEBUG] webhook received",data:{path:req.path||null,ip:req.ip||null,bodyType:req.body?.type||null,queryTopic:req.query?.topic||null,bodyDataId:req.body?.data?.id||null,queryId:req.query?.id||req.query?.["data.id"]||null,xRequestId:req.headers["x-request-id"]||null},ts:Date.now()})}).catch(()=>{})})();
+    // #endregion
     res.sendStatus(200);
 
     try {
@@ -319,6 +325,9 @@ function startWebhookServer(client, config) {
       const paymentId = req.body?.data?.id || req.query?.id || req.query?.["data.id"];
       const topic = req.body?.type || req.query?.topic;
       console.log(`[WEBHOOK] Recebido: paymentId=${paymentId}, topic=${topic}, ip=${req.ip}`);
+      // #region debug-point B:webhook-routing
+      (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"B",location:"utils/webhookServer.js:handleMercadoPagoWebhook:routing",msg:"[DEBUG] webhook parsed identifiers",data:{paymentId:paymentId?String(paymentId):null,topic:topic||null,query:req.query||{},bodyType:req.body?.type||null},ts:Date.now()})}).catch(()=>{})})();
+      // #endregion
 
       if (!paymentId || (topic && topic !== "payment")) {
         console.log("[WEBHOOK] Ignorado: paymentId ou topic inválido");
@@ -329,6 +338,9 @@ function startWebhookServer(client, config) {
       console.log(`[WEBHOOK] Status MP: ${paymentData.status}, ref: ${paymentData.external_reference}`);
 
       const channelId = paymentData.external_reference || paymentData.metadata?.channel_id;
+      // #region debug-point B:webhook-fetch-payment
+      (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"B",location:"utils/webhookServer.js:handleMercadoPagoWebhook:fetchPayment",msg:"[DEBUG] mercado pago payment fetched",data:{paymentId:String(paymentData?.id||paymentId||""),status:paymentData?.status||null,externalReference:paymentData?.external_reference||null,metadataChannelId:paymentData?.metadata?.channel_id||null,channelId:channelId||null},ts:Date.now()})}).catch(()=>{})})();
+      // #endregion
       if (!channelId) {
         console.log("[WEBHOOK] Sem channelId/external_reference, ignorando");
         return;
@@ -345,8 +357,15 @@ function startWebhookServer(client, config) {
 
       if (!localPayment) {
         console.log(`[WEBHOOK] Pagamento ${paymentData.id} não encontrado no DB local`);
+        // #region debug-point C:local-payment-miss
+        (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"C",location:"utils/webhookServer.js:handleMercadoPagoWebhook:localMiss",msg:"[DEBUG] local payment not found after attach",data:{providerPaymentId:String(paymentData?.id||""),channelId:channelId||null,status:paymentData?.status||null},ts:Date.now()})}).catch(()=>{})})();
+        // #endregion
         return;
       }
+
+      // #region debug-point C:local-payment-found
+      (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"C",location:"utils/webhookServer.js:handleMercadoPagoWebhook:localFound",msg:"[DEBUG] local payment found",data:{localPaymentId:localPayment?.id||null,providerPaymentId:String(paymentData?.id||""),localStatus:localPayment?.status||null,channelId:localPayment?.channel_id||null,userId:localPayment?.user_id||null},ts:Date.now()})}).catch(()=>{})})();
+      // #endregion
 
       if (paymentData.status === "approved" && localPayment.status === "approved") {
         console.log("[WEBHOOK] Pagamento já confirmado anteriormente, ignorando duplicata:", paymentData.id);
@@ -364,6 +383,9 @@ function startWebhookServer(client, config) {
             await confirmApprovedPayment(client, config, paymentData, localPayment);
             break;
           } catch (err) {
+            // #region debug-point D:confirm-approved-error
+            (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"D",location:"utils/webhookServer.js:handleMercadoPagoWebhook:confirmError",msg:"[DEBUG] confirmApprovedPayment failed",data:{providerPaymentId:String(paymentData?.id||""),localPaymentId:localPayment?.id||null,retry:retries+1,error:err?.message||String(err)},ts:Date.now()})}).catch(()=>{})})();
+            // #endregion
             retries++;
             console.error(`[WEBHOOK] Tentativa ${retries}/${maxRetries} falhou:`, err.message);
             if (retries < maxRetries) await new Promise(r => setTimeout(r, 2000 * retries));
