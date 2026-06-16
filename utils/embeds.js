@@ -1,10 +1,10 @@
 const { EmbedBuilder } = require("discord.js");
 
 const ICONS = {
-  info: "??",
-  success: "?",
-  warning: "??",
-  danger: "?"
+  info: "ℹ️",
+  success: "✅",
+  warning: "⚠️",
+  danger: "❌"
 };
 
 function baseEmbed(color, title, description, icon = null) {

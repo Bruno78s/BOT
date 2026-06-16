@@ -169,7 +169,7 @@ async function handlePaymentGatewaySelect(interaction, config) {
     await useCoupon(coupon.id);
   }
 
-  const localPaymentRecord = getPendingPaymentByChannel(interaction.channel.id);
+  const localPaymentRecord = await getPendingPaymentByChannel(interaction.channel.id);
   await logPedido(interaction.client, config, {
     userId: interaction.user.id,
     productName: product.name,
