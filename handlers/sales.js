@@ -25,6 +25,15 @@ const { getSettings } = require("../utils/settings");
 const { createReceiptAttachment } = require("../utils/receipt");
 const { sendPurchaseAuditLog } = require("./shared");
 
+const PIX_EXPIRY_MS = 15 * 60 * 1000;
+
+function formatPixTimeout(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
 async function handleProductSelect(interaction, config) {
   await interaction.deferReply({ ephemeral: true });
   
@@ -186,12 +195,17 @@ async function handlePaymentGatewaySelect(interaction, config) {
     qrCodeAttached = true;
   }
 
+  const pixExpiresAt = Date.now() + PIX_EXPIRY_MS;
+  const pixTimeoutLabel = formatPixTimeout(PIX_EXPIRY_MS);
+
   const descLines = [
     `> \uD83D\uDC64 **Cliente:** <@${interaction.user.id}>`,
     `> \uD83D\uDCE6 **Produto:** ${product.name}`,
     coupon ? `> \uD83C\uDFF7\uFE0F **Desconto:** ${formatPrice(discount)} (cupom **${coupon.code.toUpperCase()}**)` : null,
     `> \uD83D\uDCB0 **Valor:** ${formatPrice(finalPrice)}`,
     checkout.checkoutUrl ? `> \uD83D\uDD17 **Link PIX:** [Clique aqui](${checkout.checkoutUrl})` : null,
+    `> \u23F1\uFE0F **Timeout do PIX:** ${pixTimeoutLabel}`,
+    `> \u23F0 **Expira em:** <t:${Math.floor(pixExpiresAt / 1000)}:R>`,
     "",
     "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
     "",
@@ -202,6 +216,7 @@ async function handlePaymentGatewaySelect(interaction, config) {
     "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
     "",
     "> \u23F3 **Status:** Aguardando pagamento via PIX...",
+    `> \u23F1\uFE0F **Tempo restante inicial:** ${pixTimeoutLabel}`,
     "> \u2705 A confirmação será **automática** assim que o pagamento for identificado.",
     "> 📬 Após isso, seu pedido seguirá para entrega ou ticket de atendimento.",
   ].filter(Boolean).join("\n");

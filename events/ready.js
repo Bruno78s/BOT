@@ -91,8 +91,8 @@ module.exports = {
       ensureStatsPanel(client, config).catch(() => null);
     }, 30000);
 
-    // Expirar pagamentos PIX pendentes a cada 5 minutos (expiram em 30 min)
-    const PIX_EXPIRY_MS = 30 * 60 * 1000;
+    // Expirar pagamentos PIX pendentes a cada 5 minutos (expiram em 15 min)
+    const PIX_EXPIRY_MS = 15 * 60 * 1000;
     setInterval(async () => {
       try {
         const expiredPayments = all(
@@ -127,7 +127,7 @@ module.exports = {
                   .setColor(0xe74c3c)
                   .setTitle("\u23F0 PIX Expirado")
                   .setDescription([
-                    "> Seu PIX expirou sem confirma\u00e7\u00e3o de pagamento.",
+                    "> Seu PIX expirou após **15m 00s** sem confirmação de pagamento.",
                     "> Clique abaixo para gerar um novo ou cancelar a compra.",
                   ].join("\n"))
                   .setFooter({ text: `${config.botName} \u2022 Pagamento Expirado` })
