@@ -8,19 +8,19 @@ const {
 const { all, get, run } = require("../database/db");
 const { infoEmbed, successEmbed, warningEmbed } = require("./embeds");
 const { logTicketCriado, logFeedback } = require("./channelLogger");
-const { buildTermsEmbed } = require("./salesFlow");
+const { buildTermsEmbed, formatPrice } = require("./salesFlow");
 
 function formatTicketNumber(number) {
   return String(number).padStart(3, "0");
 }
 
 async function ensureCounter(guildId, type) {
-  const existing = get(
+  const existing = await get(
     "SELECT last_number FROM counters WHERE guild_id = ? AND type = ?",
     [guildId, type]
   );
   if (!existing) {
-    run(
+    await run(
       "INSERT INTO counters (guild_id, type, last_number) VALUES (?, ?, 0)",
       [guildId, type]
     );
@@ -32,7 +32,7 @@ async function ensureCounter(guildId, type) {
 async function nextTicketNumber(guildId, type) {
   const last = await ensureCounter(guildId, type);
   const next = last + 1;
-  run(
+  await run(
     "UPDATE counters SET last_number = ? WHERE guild_id = ? AND type = ?",
     [next, guildId, type]
   );
@@ -41,7 +41,7 @@ async function nextTicketNumber(guildId, type) {
 
 async function canCreateTicket(guild, userId, type, config) {
   const guildId = guild.id;
-  const openTickets = get(
+  const openTickets = await get(
     "SELECT COUNT(*) as total FROM tickets WHERE guild_id = ? AND status = 'open'",
     [guildId]
   );
@@ -50,7 +50,7 @@ async function canCreateTicket(guild, userId, type, config) {
     return { ok: false, reason: "Limite de tickets simultaneos atingido." };
   }
 
-  const openSameTypeTicket = get(
+  const openSameTypeTicket = await get(
     "SELECT channel_id FROM tickets WHERE guild_id = ? AND user_id = ? AND type = ? AND status = 'open' LIMIT 1",
     [guildId, userId, type]
   );
@@ -60,7 +60,7 @@ async function canCreateTicket(guild, userId, type, config) {
     try {
       const channel = await guild.channels.fetch(openSameTypeTicket.channel_id).catch(() => null);
       if (!channel) {
-        run(
+        await run(
           "UPDATE tickets SET status = 'closed', closed_at = ? WHERE channel_id = ?",
           [Date.now(), openSameTypeTicket.channel_id]
         );
@@ -71,7 +71,7 @@ async function canCreateTicket(guild, userId, type, config) {
         reason: `Você já possui um ${label} aberto: <#${openSameTypeTicket.channel_id}>. Encerre ele antes de abrir outro.`
       };
     } catch (error) {
-      run(
+      await run(
         "UPDATE tickets SET status = 'closed', closed_at = ? WHERE channel_id = ?",
         [Date.now(), openSameTypeTicket.channel_id]
       );
@@ -79,13 +79,13 @@ async function canCreateTicket(guild, userId, type, config) {
     }
   }
 
-  const user = get(
+  const user = await get(
     "SELECT last_ticket_at FROM users WHERE guild_id = ? AND user_id = ?",
     [guildId, userId]
   );
   
   // Aplicar cooldown apenas se o último ticket foi do MESMO tipo
-  const lastSameTypeTicket = get(
+  const lastSameTypeTicket = await get(
     "SELECT created_at FROM tickets WHERE guild_id = ? AND user_id = ? AND type = ? AND status = 'closed' ORDER BY created_at DESC LIMIT 1",
     [guildId, userId, type]
   );
@@ -149,7 +149,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
 
   const insertStartTime = Date.now();
   try {
-    run(
+    await run(
       "INSERT INTO tickets (guild_id, channel_id, user_id, type, product_id, number, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'open', ?)",
       [guild.id, channel.id, member.id, type, productId || null, number, Date.now()]
     );
@@ -172,7 +172,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
   // Wait for Supabase replication before returning
   await new Promise(resolve => setTimeout(resolve, 150));
 
-  run(
+  await run(
     "INSERT INTO users (guild_id, user_id, last_ticket_at) VALUES (?, ?, ?) ON CONFLICT(guild_id, user_id) DO UPDATE SET last_ticket_at = excluded.last_ticket_at",
     [guild.id, member.id, Date.now()]
   );
@@ -182,7 +182,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
     : null;
 
   if (type === "delivery") {
-    const payment = get("SELECT * FROM payments WHERE id = ?", [paymentId]);
+    const payment = await get("SELECT * FROM payments WHERE id = ?", [paymentId]);
     const product = productId ? config.products.find(p => p.id === productId) : null;
     const deliveryEmbed = infoEmbed(
       config,
@@ -288,7 +288,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
 }
 
 async function closeTicket(channel, userId, config, options = {}) {
-  const ticket = get(
+  const ticket = await get(
     "SELECT * FROM tickets WHERE channel_id = ? AND status = 'open'",
     [channel.id]
   );
@@ -299,7 +299,7 @@ async function closeTicket(channel, userId, config, options = {}) {
   }
 
   try {
-    run(
+    await run(
       "UPDATE tickets SET status = 'closed', closed_at = ? WHERE id = ?",
       [Date.now(), ticket.id]
     );
@@ -343,13 +343,13 @@ async function closeTicket(channel, userId, config, options = {}) {
 }
 
 async function registerRating(channel, rating, config) {
-  const ticket = get("SELECT * FROM tickets WHERE channel_id = ?", [channel.id]);
+  const ticket = await get("SELECT * FROM tickets WHERE channel_id = ?", [channel.id]);
   if (!ticket) {
     console.error(`[TICKETS] ❌ registerRating: ticket not found for channel ${channel.id}`);
     return { error: "Ticket não encontrado." };
   }
 
-  run("UPDATE tickets SET rating = ? WHERE id = ?", [rating, ticket.id]);
+  await run("UPDATE tickets SET rating = ? WHERE id = ?", [rating, ticket.id]);
 
   await logFeedback(channel.client, config, {
     userId: ticket.user_id,
@@ -374,7 +374,7 @@ async function registerRating(channel, rating, config) {
 }
 
 async function countOpenTickets(guildId) {
-  const result = get(
+  const result = await get(
     "SELECT COUNT(*) as total FROM tickets WHERE guild_id = ? AND status = 'open'",
     [guildId]
   );
@@ -384,7 +384,7 @@ async function countOpenTickets(guildId) {
 async function listTicketByChannel(channelId, retries = 8, delayMs = 350) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const ticket = get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
+      const ticket = await get("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
       if (ticket) {
         if (attempt > 1) console.log(`[TICKETS] ✅ Found ticket on attempt ${attempt} after ${(attempt - 1) * delayMs}ms`);
         return ticket;
@@ -404,7 +404,7 @@ async function listTicketByChannel(channelId, retries = 8, delayMs = 350) {
 }
 
 async function listTicketByUser(guildId, userId) {
-  return all(
+  return await all(
     "SELECT * FROM tickets WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC",
     [guildId, userId]
   );
