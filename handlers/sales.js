@@ -402,7 +402,7 @@ async function handleCartButtons(interaction, config) {
     });
 
     await interaction.editReply({
-      content: "✅ Termos aceitos! Escolha a ação abaixo.",
+      content: "✅ Termos aceitos! Escolha a ação acima.",
       embeds: [],
       components: []
     });
