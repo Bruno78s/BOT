@@ -31,7 +31,95 @@ function formatPixTimeout(ms) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  return `${minutes}m ${seconds}s`;
+}
+
+function formatPixDeadline(timestamp) {
+  return new Date(timestamp).toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
+function buildPixDescription({ interaction, product, coupon, discount, finalPrice, checkout, pixCountdownLabel, pixDeadlineLabel }) {
+  return [
+    `> 👤 **Cliente:** <@${interaction.user.id}>`,
+    `> 📦 **Produto:** ${product.name}`,
+    coupon ? `> 🏷️ **Desconto:** ${formatPrice(discount)} (cupom **${coupon.code.toUpperCase()}**)` : null,
+    `> 💰 **Valor:** ${formatPrice(finalPrice)}`,
+    checkout.checkoutUrl ? `> 🔗 **Link PIX:** [Clique aqui](${checkout.checkoutUrl})` : null,
+    `> ⏱️ **Timeout do PIX:** ${pixCountdownLabel}`,
+    `> ⏰ **Válido até:** ${pixDeadlineLabel}`,
+    "",
+    "─────────────────────────────",
+    "",
+    checkout.copyPasteCode
+      ? `📋 **Copia e Cola PIX:**\n\`\`\`\n${checkout.copyPasteCode}\n\`\`\``
+      : null,
+    "",
+    "─────────────────────────────",
+    "",
+    "> ⏳ **Status:** Aguardando pagamento via PIX...",
+    `> ⏱️ **Tempo restante:** ${pixCountdownLabel}`,
+    "> ✅ A confirmação será **automática** assim que o pagamento for identificado.",
+    "> 📬 Após isso, seu pedido seguirá para entrega ou ticket de atendimento.",
+  ].filter(Boolean).join("\n");
+}
+
+function buildPixEmbed({ interaction, config, description, qrCodeAttached }) {
+  const embed = new EmbedBuilder()
+    .setColor(0x00b4d8)
+    .setAuthor({ name: `${config.botName} • Pagamento`, iconURL: interaction.client.user.displayAvatarURL() })
+    .setTitle("💳 Pagamento via PIX")
+    .setDescription(description)
+    .setFooter({ text: `${config.botName} • Pagamento 100% seguro.`, iconURL: interaction.client.user.displayAvatarURL() })
+    .setTimestamp();
+
+  if (qrCodeAttached) {
+    embed.setImage("attachment://pix-qrcode.png");
+  }
+
+  return embed;
+}
+
+function startPixCountdown({ message, interaction, config, product, coupon, discount, finalPrice, checkout, paymentId, pixExpiresAt, qrCodeAttached, row }) {
+  const updateCountdown = async () => {
+    const remainingMs = Math.max(0, pixExpiresAt - Date.now());
+    const countdownLabel = formatPixTimeout(remainingMs);
+    const pixDeadlineLabel = formatPixDeadline(pixExpiresAt);
+    const payment = await get("SELECT status FROM payments WHERE id = ?", [paymentId]);
+
+    if (!message.editable || !payment || payment.status !== "pending" || remainingMs <= 0) {
+      clearInterval(intervalId);
+      return;
+    }
+
+    const description = buildPixDescription({
+      interaction,
+      product,
+      coupon,
+      discount,
+      finalPrice,
+      checkout,
+      pixCountdownLabel: countdownLabel,
+      pixDeadlineLabel
+    });
+
+    await message.edit({
+      embeds: [buildPixEmbed({ interaction, config, description, qrCodeAttached })],
+      components: [row]
+    }).catch(() => {
+      clearInterval(intervalId);
+    });
+  };
+
+  const intervalId = setInterval(() => {
+    updateCountdown().catch(() => {
+      clearInterval(intervalId);
+    });
+  }, 1000);
 }
 
 async function handleProductSelect(interaction, config) {
@@ -197,41 +285,18 @@ async function handlePaymentGatewaySelect(interaction, config) {
 
   const pixExpiresAt = Date.now() + PIX_EXPIRY_MS;
   const pixTimeoutLabel = formatPixTimeout(PIX_EXPIRY_MS);
-
-  const descLines = [
-    `> \uD83D\uDC64 **Cliente:** <@${interaction.user.id}>`,
-    `> \uD83D\uDCE6 **Produto:** ${product.name}`,
-    coupon ? `> \uD83C\uDFF7\uFE0F **Desconto:** ${formatPrice(discount)} (cupom **${coupon.code.toUpperCase()}**)` : null,
-    `> \uD83D\uDCB0 **Valor:** ${formatPrice(finalPrice)}`,
-    checkout.checkoutUrl ? `> \uD83D\uDD17 **Link PIX:** [Clique aqui](${checkout.checkoutUrl})` : null,
-    `> \u23F1\uFE0F **Timeout do PIX:** ${pixTimeoutLabel}`,
-    `> \u23F0 **Expira em:** <t:${Math.floor(pixExpiresAt / 1000)}:R>`,
-    "",
-    "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
-    "",
-    checkout.copyPasteCode
-      ? `\uD83D\uDCCB **Copia e Cola PIX:**\n\`\`\`\n${checkout.copyPasteCode}\n\`\`\``
-      : null,
-    "",
-    "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
-    "",
-    "> \u23F3 **Status:** Aguardando pagamento via PIX...",
-    `> \u23F1\uFE0F **Tempo restante inicial:** ${pixTimeoutLabel}`,
-    "> \u2705 A confirmação será **automática** assim que o pagamento for identificado.",
-    "> 📬 Após isso, seu pedido seguirá para entrega ou ticket de atendimento.",
-  ].filter(Boolean).join("\n");
-
-  const paymentEmbed = new EmbedBuilder()
-    .setColor(0x00b4d8)
-    .setAuthor({ name: `${config.botName} \u2022 Pagamento`, iconURL: interaction.client.user.displayAvatarURL() })
-    .setTitle("\uD83D\uDCB3 Pagamento via PIX")
-    .setDescription(descLines)
-    .setFooter({ text: `${config.botName} \u2022 Pagamento 100% seguro.`, iconURL: interaction.client.user.displayAvatarURL() })
-    .setTimestamp();
-
-  if (qrCodeAttached) {
-    paymentEmbed.setImage("attachment://pix-qrcode.png");
-  }
+  const pixDeadlineLabel = formatPixDeadline(pixExpiresAt);
+  const description = buildPixDescription({
+    interaction,
+    product,
+    coupon,
+    discount,
+    finalPrice,
+    checkout,
+    pixCountdownLabel: pixTimeoutLabel,
+    pixDeadlineLabel
+  });
+  const paymentEmbed = buildPixEmbed({ interaction, config, description, qrCodeAttached });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -258,11 +323,28 @@ async function handlePaymentGatewaySelect(interaction, config) {
 
   await interaction.editReply({ content: "✅ PIX gerado! Veja abaixo. Comprovante em anexo.", ephemeral: true });
 
-  await interaction.channel.send({
+  const paymentMessage = await interaction.channel.send({
     embeds: [paymentEmbed],
     components: [row],
     files
   });
+
+  if (localPaymentRecord?.id) {
+    startPixCountdown({
+      message: paymentMessage,
+      interaction,
+      config,
+      product,
+      coupon,
+      discount,
+      finalPrice,
+      checkout,
+      paymentId: localPaymentRecord.id,
+      pixExpiresAt,
+      qrCodeAttached,
+      row
+    });
+  }
 }
 
 
