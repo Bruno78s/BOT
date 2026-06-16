@@ -1,7 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { fetchPayment, attachProviderPaymentIdByReference, getPaymentByProviderPaymentId, updatePaymentStatusByProviderId } = require("./mercadoPago");
+const { fetchPayment, attachProviderPaymentIdByReference, getPaymentByProviderPaymentId, updatePaymentStatusByProviderId, getPendingPaymentByChannel } = require("./mercadoPago");
 const { formatPrice, readConfigFile, writeConfigFile } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
 const { logVenda, logComprovante, logPedido, logVendaSite } = require("./channelLogger");
@@ -336,6 +336,13 @@ function startWebhookServer(client, config) {
 
       await attachProviderPaymentIdByReference(channelId, paymentData.id, paymentData.status);
       let localPayment = await getPaymentByProviderPaymentId(paymentData.id);
+      
+      // Fallback: se não encontrar por provider_payment_id, tenta encontrar por channel_id e status pending
+      if (!localPayment) {
+        console.log(`[WEBHOOK] Pagamento não encontrado por provider_payment_id, tentando por channel_id=${channelId}`);
+        localPayment = await getPendingPaymentByChannel(channelId);
+      }
+
       if (!localPayment) {
         console.log(`[WEBHOOK] Pagamento ${paymentData.id} não encontrado no DB local`);
         return;
