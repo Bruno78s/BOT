@@ -60,10 +60,6 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
       }
     }
   });
-
-  // #region debug-point E:create-pix-payment
-  (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"E",location:"utils/mercadoPago.js:createPixPayment:created",msg:"[DEBUG] pix payment created",data:{guildId:String(guildId),channelId:String(channelId),userId:String(userId),productId:product?.id||null,providerPaymentId:String(response?.id||""),status:response?.status||null,externalReference:response?.external_reference||null,notificationUrl:webhookUrl||null},ts:Date.now()})}).catch(()=>{})})();
-  // #endregion
   console.log(`[MERCADO_PAGO] Pagamento criado - ID: ${response.id}, Status: ${response.status}`);
 
   const qrCode = response.point_of_interaction?.transaction_data?.qr_code || null;
@@ -75,10 +71,6 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
     "INSERT INTO payments (guild_id, channel_id, user_id, product_id, provider, provider_payment_id, preference_id, status, amount, checkout_url, created_at) VALUES (?, ?, ?, ?, 'mercadopago', ?, ?, 'pending', ?, ?, ?)",
     [guildId, channelId, userId, product.id, String(response.id), String(response.id), Number(product.price), checkoutUrl, Date.now()]
   );
-
-  // #region debug-point C:pix-payment-db-insert
-  (()=>{const fs=require("fs"),p=".dbg/payment-webhook-confirmation.env";let u="http://127.0.0.1:7777/event",s="payment-webhook-confirmation";try{const e=fs.readFileSync(p,"utf8");u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:s,runId:process.env.DEBUG_RUN_ID||"pre-fix",hypothesisId:"C",location:"utils/mercadoPago.js:createPixPayment:dbInsert",msg:"[DEBUG] local pending payment inserted",data:{channelId:String(channelId),userId:String(userId),productId:product?.id||null,providerPaymentId:String(response?.id||""),amount:Number(product?.price||0)},ts:Date.now()})}).catch(()=>{})})();
-  // #endregion
 
   return {
     method: "pix",

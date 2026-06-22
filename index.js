@@ -5,8 +5,10 @@ const dotenv = require("dotenv");
 const { loadConfig } = require("./utils/config");
 const { startWebhookServer } = require("./utils/webhookServer");
 const { exportData, importData } = require("./utils/backup");
+const { validateEnv } = require("./utils/envValidation");
 
 dotenv.config();
+validateEnv();
 
 const config = loadConfig();
 
@@ -75,9 +77,29 @@ async function registerCommands() {
   await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commandsData });
 }
 
-registerCommands()
-  .then(() => console.log("Comandos registrados"))
-  .catch((error) => console.error("Falha ao registrar comandos", error));
+async function shutdownWithBackup(exitCode = 0) {
+  console.log("[BACKUP] Exportando dados antes de desligar...");
+  await exportData().catch((error) => {
+    console.error("[BACKUP] Falha ao exportar dados:", error);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  process.exit(exitCode);
+}
+
+async function start() {
+  try {
+    await registerCommands();
+    console.log("Comandos registrados");
+    await client.login(token);
+  } catch (error) {
+    if (error?.code === "TokenInvalid" || error?.status === 401) {
+      console.error("[ERRO] Token do Discord invalido. Gere um novo token no Discord Developer Portal e atualize DISCORD_TOKEN no .env.");
+    } else {
+      console.error("[ERRO] Falha ao iniciar o bot:", error);
+    }
+    await shutdownWithBackup(1);
+  }
+}
 
 process.on("unhandledRejection", (error) => {
   console.error("[ERRO] Rejeição não tratada:", error);
@@ -85,24 +107,16 @@ process.on("unhandledRejection", (error) => {
 
 process.on("uncaughtException", async (error) => {
   console.error("[ERRO] Exceção não capturada:", error);
-  await exportData();
-  process.exit(1);
+  await shutdownWithBackup(1);
 });
 
 // Exportar dados antes de desligar
 process.on("SIGINT", async () => {
-  console.log("[BACKUP] Exportando dados antes de desligar...");
-  await exportData();
-  process.exit(0);
+  await shutdownWithBackup(0);
 });
 
 process.on("SIGTERM", async () => {
-  console.log("[BACKUP] Exportando dados antes de desligar...");
-  await exportData();
-  process.exit(0);
+  await shutdownWithBackup(0);
 });
 
-client.login(token).catch((error) => {
-  console.error("[ERRO] Falha ao conectar ao Discord:", error);
-  process.exit(1);
-});
+start();

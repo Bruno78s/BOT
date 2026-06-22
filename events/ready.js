@@ -22,6 +22,22 @@ const Dashboard = require("../utils/dashboard");
 const ReportSystem = require("../utils/reports");
 const StockPrediction = require("../utils/stockPrediction");
 const AutoRestock = require("../utils/autoRestock");
+const { startCustomerRoleSync } = require("../utils/customerRoleSync");
+const { startStatusPanel } = require("../utils/statusPanel");
+
+function resolvePresenceType(typeKey) {
+  const normalized = String(typeKey || "").trim().toLowerCase();
+  const aliases = {
+    playing: "Playing",
+    streaming: "Streaming",
+    listening: "Listening",
+    watching: "Watching",
+    custom: "Custom",
+    competing: "Competing"
+  };
+
+  return ActivityType[aliases[normalized] || typeKey] || ActivityType.Watching;
+}
 
 module.exports = {
   name: "ready",
@@ -86,6 +102,9 @@ module.exports = {
     setInterval(async () => {
       dashboard.clearCache();
     }, 120000); // Limpar cache a cada 2 minutos
+
+    startCustomerRoleSync(client);
+    startStatusPanel(client, config);
 
     setInterval(() => {
       ensureStatsPanel(client, config).catch(() => null);
@@ -155,7 +174,7 @@ module.exports = {
 
     const presenceMessage = process.env.BOT_PRESENCE_MESSAGE || config.botPresence?.message || `a loja ${config.botName}`;
     const presenceTypeKey = process.env.BOT_PRESENCE_TYPE || config.botPresence?.type || "WATCHING";
-    const presenceType = ActivityType[presenceTypeKey] || ActivityType.Watching;
+    const presenceType = resolvePresenceType(presenceTypeKey);
 
     try {
       await client.user.setPresence({
