@@ -33,7 +33,7 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   startWebhookServer(client, config);
   
   // Importar dados salvos após reiniciar

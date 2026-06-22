@@ -29,9 +29,12 @@ function resolvePresenceType(typeKey) {
   const normalized = String(typeKey || "").trim().toLowerCase();
   const aliases = {
     playing: "Playing",
+    jogando: "Playing",
     streaming: "Streaming",
     listening: "Listening",
+    ouvindo: "Listening",
     watching: "Watching",
+    assistindo: "Watching",
     custom: "Custom",
     competing: "Competing"
   };
@@ -39,8 +42,41 @@ function resolvePresenceType(typeKey) {
   return ActivityType[aliases[normalized] || typeKey] || ActivityType.Watching;
 }
 
+function getPresenceActivities(config) {
+  const rawList = process.env.BOT_PRESENCE_ACTIVITIES || "";
+  const items = rawList
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => {
+      const separatorIndex = item.indexOf(":");
+      if (separatorIndex === -1) {
+        return { name: item, type: ActivityType.Watching };
+      }
+
+      const typeKey = item.slice(0, separatorIndex).trim();
+      const name = item.slice(separatorIndex + 1).trim();
+      return name ? { name, type: resolvePresenceType(typeKey) } : null;
+    })
+    .filter(Boolean);
+
+  if (items.length > 0) return items;
+
+  const presenceMessage = process.env.BOT_PRESENCE_MESSAGE || config.botPresence?.message || `a loja ${config.botName}`;
+  const presenceTypeKey = process.env.BOT_PRESENCE_TYPE || config.botPresence?.type || "WATCHING";
+  return [{ name: presenceMessage, type: resolvePresenceType(presenceTypeKey) }];
+}
+
+async function applyPresence(client, activities, index = 0) {
+  const activity = activities[index % activities.length];
+  await client.user.setPresence({
+    activities: [activity],
+    status: "online"
+  });
+}
+
 module.exports = {
-  name: "ready",
+  name: "clientReady",
   once: true,
   async execute(client, config) {
     await Promise.all(client.guilds.cache.map((guild) => cacheGuildInvites(guild).catch(() => null)));
@@ -172,29 +208,24 @@ module.exports = {
     await ensureRulesPanel(client, config);
     await ensureProductPanels(client, config);
 
-    const presenceMessage = process.env.BOT_PRESENCE_MESSAGE || config.botPresence?.message || `a loja ${config.botName}`;
-    const presenceTypeKey = process.env.BOT_PRESENCE_TYPE || config.botPresence?.type || "WATCHING";
-    const presenceType = resolvePresenceType(presenceTypeKey);
+    const presenceActivities = getPresenceActivities(config);
+    const presenceRotateMs = Math.max(Number(process.env.BOT_PRESENCE_ROTATE_INTERVAL_MS || 60000), 30000);
+    let presenceIndex = 0;
 
     try {
-      await client.user.setPresence({
-        activities: [{ name: presenceMessage, type: presenceType }],
-        status: "online"
-      });
+      await applyPresence(client, presenceActivities, presenceIndex);
     } catch (err) {
       // ignore presence errors
     }
 
     setInterval(async () => {
       try {
-        await client.user.setPresence({
-          activities: [{ name: presenceMessage, type: presenceType }],
-          status: "online"
-        });
+        presenceIndex++;
+        await applyPresence(client, presenceActivities, presenceIndex);
       } catch (err) {
         // ignore presence errors
       }
-    }, 10 * 60 * 1000);
+    }, presenceRotateMs);
 
     await logSistema(client, config, "Bot Iniciado", {
       description: [
