@@ -48,11 +48,11 @@ function buildAdminHome(config) {
       .setCustomId("admin_menu")
       .setPlaceholder("Selecione uma opcao...")
       .addOptions([
-        { label: "Produtos", description: "Gerenciar estoque, precos e entrega", value: "admin_products" },
-        { label: "Pagamentos", description: "Ver pedidos e transacoes", value: "admin_payments" },
-        { label: "Cupons", description: "Criar e gerenciar cupons", value: "admin_coupons" },
-        { label: "Invites", description: "Ranking e ferramentas de convites", value: "admin_invites" },
-        { label: "Operacoes", description: "Status, sync, presenca e configuracoes", value: "admin_settings" }
+        { label: "📦 Produtos", description: "Gerenciar estoque, precos e entrega", value: "admin_products" },
+        { label: "💰 Pagamentos", description: "Ver pedidos e transacoes", value: "admin_payments" },
+        { label: "📝 Cupons", description: "Criar e gerenciar cupons", value: "admin_coupons" },
+        { label: "📨 Invites", description: "Ranking e ferramentas de convites", value: "admin_invites" },
+        { label: "⚙️ Operacoes", description: "Status, sync, presenca e configuracoes", value: "admin_settings" }
       ])
   );
 

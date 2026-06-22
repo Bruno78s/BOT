@@ -154,38 +154,38 @@ async function handleAdminMenu(interaction, config) {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("admin_edit_channels")
-        .setLabel("Editar Canais")
+        .setLabel("📺 Editar Canais")
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId("admin_status_refresh")
-        .setLabel("Atualizar Status")
+        .setLabel("📊 Atualizar Status")
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId("admin_customer_sync")
-        .setLabel("Sync Cliente")
+        .setLabel("👤 Sync Cliente")
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId("admin_presence_edit")
-        .setLabel("Editar Presenca")
+        .setLabel("🎮 Editar Presenca")
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId("admin_health_view")
-        .setLabel("Saude")
+        .setLabel("🩺 Saude")
         .setStyle(ButtonStyle.Secondary),
     );
 
     const restartRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("admin_env_check")
-        .setLabel("Checar .env")
+        .setLabel("🔐 Checar .env")
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId("admin_sync_history")
-        .setLabel("Historico Sync")
+        .setLabel("🕘 Historico Sync")
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId("admin_restart_bot")
-        .setLabel("Reiniciar Bot")
+        .setLabel("🔄 Reiniciar Bot")
         .setStyle(ButtonStyle.Danger)
     );
 
@@ -211,15 +211,15 @@ async function showInvitesPanel(interaction, config) {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("admin_invites_view_user")
-      .setLabel("Ver Invites de Usu\u00E1rio")
+      .setLabel("👤 Ver Invites")
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("admin_invites_detailed")
-      .setLabel("Informa\u00E7\u00F5es Completas")
+      .setLabel("📋 Informacoes")
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId("admin_invites_set")
-      .setLabel("Definir/Resetar")
+      .setLabel("🔧 Definir/Resetar")
       .setStyle(ButtonStyle.Secondary)
   );
 
@@ -539,8 +539,8 @@ async function handleAdminButtons(interaction, config) {
       .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("admin_restart_confirm").setLabel("Confirmar Rein\u00EDcio").setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId("admin_restart_cancel").setLabel("Cancelar").setStyle(ButtonStyle.Secondary)
+      new ButtonBuilder().setCustomId("admin_restart_confirm").setLabel("🔄 Confirmar Reinicio").setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId("admin_restart_cancel").setLabel("❌ Cancelar").setStyle(ButtonStyle.Secondary)
     );
 
     return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
@@ -689,7 +689,7 @@ async function handleAdminSelectMenus(interaction, config) {
     }).join("\n");
 
     embed.addFields({ name: "Hist\u00F3rico Recente", value: recentJoins || "Nenhuma entrada registrada" });
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("admin_invites").setLabel("Voltar").setStyle(ButtonStyle.Secondary));
+    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("admin_invites").setLabel("⬅️ Voltar").setStyle(ButtonStyle.Secondary));
     return interaction.update({ embeds: [embed], components: [row] });
   }
 
@@ -704,8 +704,8 @@ async function handleAdminSelectMenus(interaction, config) {
       if (!coupon) return interaction.update({ content: "Cupom n\u00E3o encontrado", components: [] });
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`toggle_coupon_${couponId}`).setLabel(coupon.enabled ? "Desativar" : "Ativar").setStyle(coupon.enabled ? ButtonStyle.Secondary : ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`delete_coupon_${couponId}`).setLabel("Deletar").setStyle(ButtonStyle.Danger)
+        new ButtonBuilder().setCustomId(`toggle_coupon_${couponId}`).setLabel(coupon.enabled ? "⏸️ Desativar" : "✅ Ativar").setStyle(coupon.enabled ? ButtonStyle.Secondary : ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`delete_coupon_${couponId}`).setLabel("🗑️ Deletar").setStyle(ButtonStyle.Danger)
       );
 
       return interaction.update({
@@ -755,7 +755,7 @@ async function handleAdminSelectMenus(interaction, config) {
         `> **Data:** ${new Date(payment.created_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'})}`
       ].join("\n"));
 
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("back_to_payments").setLabel("Voltar").setStyle(ButtonStyle.Secondary));
+    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("back_to_payments").setLabel("⬅️ Voltar").setStyle(ButtonStyle.Secondary));
     return interaction.update({ embeds: [embed], components: [row] });
   }
 
@@ -797,10 +797,10 @@ async function handleAdminSelectMenus(interaction, config) {
       if (!product) return interaction.update({ content: "Produto n\u00E3o encontrado", components: [] });
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`edit_product_price_${productId}`).setLabel("Editar Pre\u00E7o/Estoque").setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`edit_product_delivery_${productId}`).setLabel("Editar Entrega").setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`delete_product_${productId}`).setLabel("Deletar Produto").setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId("admin_products_back").setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+        new ButtonBuilder().setCustomId(`edit_product_price_${productId}`).setLabel("💰 Editar Preco/Estoque").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`edit_product_delivery_${productId}`).setLabel("📦 Editar Entrega").setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`delete_product_${productId}`).setLabel("🗑️ Deletar Produto").setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId("admin_products_back").setLabel("⬅️ Voltar").setStyle(ButtonStyle.Secondary)
       );
 
       const deliveryStatus = product.deliveryUrl ? `\u2705 Entrega autom\u00E1tica: [Link](${product.deliveryUrl})` : "\u274C Sem entrega autom\u00E1tica (abre ticket)";
