@@ -1,9 +1,11 @@
 const { routeInteraction } = require("../handlers");
+const { patchInteractionResponses } = require("../utils/interactionCompatibility");
 
 module.exports = {
   name: "interactionCreate",
   async execute(interaction, config) {
     try {
+      patchInteractionResponses(interaction);
       await routeInteraction(interaction, config);
     } catch (error) {
       console.error('[INTERACTION ERROR]', error);

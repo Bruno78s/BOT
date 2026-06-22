@@ -221,7 +221,7 @@ module.exports = {
     setInterval(async () => {
       try {
         presenceIndex++;
-        await applyPresence(client, presenceActivities, presenceIndex);
+        await applyPresence(client, getPresenceActivities(config), presenceIndex);
       } catch (err) {
         // ignore presence errors
       }

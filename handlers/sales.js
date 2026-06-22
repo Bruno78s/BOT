@@ -84,6 +84,23 @@ function buildPixEmbed({ interaction, config, description, qrCodeAttached }) {
   return embed;
 }
 
+function buildPaymentFallbackRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("select_payment_gateway_menu")
+      .setLabel("Tentar PIX novamente")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId("cart_manual_payment")
+      .setLabel("Pagamento manual")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("ticket_cancel_purchase")
+      .setLabel("Cancelar")
+      .setStyle(ButtonStyle.Danger)
+  );
+}
+
 function startPixCountdown({ message, interaction, config, product, coupon, discount, finalPrice, checkout, paymentId, pixExpiresAt, qrCodeAttached, row }) {
   const updateCountdown = async () => {
     const remainingMs = Math.max(0, pixExpiresAt - Date.now());
@@ -257,8 +274,8 @@ async function handlePaymentGatewaySelect(interaction, config) {
     console.error(`Erro ao criar pagamento:`, error.response?.data || error);
     const errorDescription = error?.message || error?.error || error?.cause?.[0]?.description || error?.response?.data?.errors?.[0]?.description || "Erro desconhecido";
     return interaction.editReply({
-      embeds: [dangerEmbed(config, "Pagamento indisponivel", `Erro ao processar pagamento via Mercado Pago.\n\nDetalhe: ${errorDescription}`)],
-      components: []
+      embeds: [dangerEmbed(config, "Pagamento indisponivel", `Nao foi possivel gerar o pagamento automatico agora.\n\nDetalhe: ${errorDescription}\n\nVoce pode tentar novamente ou solicitar pagamento manual com a equipe.`)],
+      components: [buildPaymentFallbackRow()]
     });
   }
 
@@ -434,6 +451,45 @@ async function handleCartButtons(interaction, config) {
       }
       return true;
     }
+  }
+
+  if (customId === "cart_manual_payment") {
+    await interaction.deferReply({ ephemeral: true });
+    const ticket = await listTicketByChannel(interaction.channel.id);
+    const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
+    if (!ticket || !product) {
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Carrinho nao encontrado", "Nao foi possivel identificar este carrinho.")]
+      });
+    }
+
+    const deliveryChannelId = product.category === "sites" ? config.deliveryChannels?.sites : config.deliveryChannels?.bots;
+    const staffChannel = deliveryChannelId ? await interaction.client.channels.fetch(deliveryChannelId).catch(() => null) : null;
+    const manualEmbed = new EmbedBuilder()
+      .setColor(config.colors.warning)
+      .setTitle(`${config.botName} | Pagamento Manual Solicitado`)
+      .setDescription([
+        `Cliente: <@${interaction.user.id}>`,
+        `Produto: **${product.name}**`,
+        `Valor: **${formatPrice(product.price)}**`,
+        `Carrinho: <#${interaction.channel.id}>`,
+        "",
+        "A equipe deve combinar o pagamento manual e confirmar a entrega pelo carrinho."
+      ].join("\n"))
+      .setTimestamp();
+
+    if (staffChannel?.send) {
+      await staffChannel.send({ embeds: [manualEmbed] }).catch(() => null);
+    }
+
+    await interaction.channel.send({
+      content: `<@${interaction.user.id}>`,
+      embeds: [infoEmbed(config, "Pagamento manual solicitado", "A equipe foi avisada. Aguarde instrucoes neste carrinho.")]
+    });
+
+    return interaction.editReply({
+      embeds: [successEmbed(config, "Equipe avisada", "Solicitacao de pagamento manual enviada.")]
+    });
   }
 
   if (customId === "cart_read_terms") {

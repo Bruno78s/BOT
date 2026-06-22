@@ -12,8 +12,22 @@ const syncState = {
   lastPendingCount: 0,
   lastProcessedCount: 0,
   lastSuccessCount: 0,
-  lastErrorCount: 0
+  lastErrorCount: 0,
+  history: []
 };
+
+function pushHistory(entry) {
+  syncState.history.unshift({
+    at: Date.now(),
+    pending: syncState.lastPendingCount,
+    processed: syncState.lastProcessedCount,
+    success: syncState.lastSuccessCount,
+    errors: syncState.lastErrorCount,
+    error: syncState.lastError,
+    ...entry
+  });
+  syncState.history = syncState.history.slice(0, 10);
+}
 
 function getConfig() {
   const siteUrl = (process.env.BZNX_SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, "");
@@ -129,6 +143,7 @@ async function runCustomerRoleSync(client) {
     if (items.length === 0) {
       syncState.lastSuccessAt = Date.now();
       syncState.lastError = null;
+      pushHistory({ result: "empty" });
       console.log("[CUSTOMER ROLE] Nenhum cliente pendente para sincronizar.");
       return;
     }
@@ -142,8 +157,10 @@ async function runCustomerRoleSync(client) {
     }
     syncState.lastSuccessAt = Date.now();
     syncState.lastError = syncState.lastErrorCount ? `${syncState.lastErrorCount} item(ns) com erro no ultimo ciclo` : null;
+    pushHistory({ result: syncState.lastErrorCount ? "partial" : "success" });
   } catch (error) {
     syncState.lastError = normalizeError(error);
+    pushHistory({ result: "error", error: syncState.lastError });
     console.error("[CUSTOMER ROLE] Erro na sincronizacao:", syncState.lastError);
   }
 }

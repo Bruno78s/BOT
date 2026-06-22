@@ -19,6 +19,12 @@ const { readConfigFile, writeConfigFile, formatPrice } = require("../utils/sales
 const { listCoupons, createCoupon, deleteCoupon, validateCoupon, calculateDiscount } = require("../utils/coupons");
 const { getInviteStats, getInviteLeaderboard, getRedeemableInvites, setRedeemedInvites } = require("../utils/invites");
 const { parsePriceInput, getCurrentProducts, buildProductAdminView, buildProductBackRow, buildMainMenuBackRow } = require("./shared");
+const { buildAdminHome } = require("../utils/adminPanel");
+const { ensureStatusPanel } = require("../utils/statusPanel");
+const { runCustomerRoleSync, getCustomerRoleSyncStatus } = require("../utils/customerRoleSync");
+const { validateEnv } = require("../utils/envValidation");
+const fs = require("fs");
+const path = require("path");
 
 async function handleAdminMenu(interaction, config) {
   const settings = await getSettings(interaction.guild.id);
@@ -136,11 +142,13 @@ async function handleAdminMenu(interaction, config) {
   if (selectedValue === "admin_settings") {
     const embed = new EmbedBuilder()
       .setColor(config.colors.primary)
-      .setTitle(`${config.botName} | Configura\u00E7\u00F5es`)
+      .setTitle(`${config.botName} | Operacoes`)
       .setDescription([
-        "> Escolha qual \u00E1rea deseja configurar.",
+        "> Escolha uma acao operacional do bot.",
         "",
-        "> **Canais:** atendimento, entregas, feedbacks e estat\u00EDsticas.",
+        "> **Status:** atualiza o painel de status.",
+        "> **Sync Cliente:** busca pendencias do site e aplica o cargo Cliente.",
+        "> **Presenca:** altera as mensagens rotativas exibidas no perfil do bot.",
       ].join("\n"));
 
     const row = new ActionRowBuilder().addComponents(
@@ -148,9 +156,33 @@ async function handleAdminMenu(interaction, config) {
         .setCustomId("admin_edit_channels")
         .setLabel("Editar Canais")
         .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId("admin_status_refresh")
+        .setLabel("Atualizar Status")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("admin_customer_sync")
+        .setLabel("Sync Cliente")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId("admin_presence_edit")
+        .setLabel("Editar Presenca")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("admin_health_view")
+        .setLabel("Saude")
+        .setStyle(ButtonStyle.Secondary),
     );
 
     const restartRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("admin_env_check")
+        .setLabel("Checar .env")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("admin_sync_history")
+        .setLabel("Historico Sync")
+        .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId("admin_restart_bot")
         .setLabel("Reiniciar Bot")
@@ -194,29 +226,116 @@ async function showInvitesPanel(interaction, config) {
   return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
 }
 
+function setEnvValue(content, key, value) {
+  const line = `${key}=${value}`;
+  const pattern = new RegExp(`^${key}=.*$`, "m");
+  if (pattern.test(content)) return content.replace(pattern, line);
+  return `${content.trimEnd()}\n${line}\n`;
+}
+
+function updatePresenceEnv(activities, intervalMs) {
+  const envPath = path.join(__dirname, "..", ".env");
+  let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+  content = setEnvValue(content, "BOT_PRESENCE_ACTIVITIES", activities);
+  content = setEnvValue(content, "BOT_PRESENCE_ROTATE_INTERVAL_MS", String(intervalMs));
+  fs.writeFileSync(envPath, content);
+  process.env.BOT_PRESENCE_ACTIVITIES = activities;
+  process.env.BOT_PRESENCE_ROTATE_INTERVAL_MS = String(intervalMs);
+}
+
+function buildSyncStatusText() {
+  const status = getCustomerRoleSyncStatus();
+  return [
+    `Status: **${status.enabled ? (status.running ? "rodando" : "ativo") : "desativado"}**`,
+    `Pendentes recebidos: **${status.lastPendingCount || 0}**`,
+    `Processados: **${status.lastProcessedCount || 0}**`,
+    `Sucessos/erros: **${status.lastSuccessCount || 0}/${status.lastErrorCount || 0}**`,
+    `Ultimo erro: **${status.lastError || "nenhum"}**`
+  ].join("\n");
+}
+
+function applyConfigRuntime(config, configData) {
+  Object.assign(config, configData);
+}
+
+function formatAdminTimestamp(value) {
+  return value ? `<t:${Math.floor(value / 1000)}:R>` : "Nunca";
+}
+
+function buildHealthEmbed(interaction, config) {
+  const env = validateEnv();
+  const sync = getCustomerRoleSyncStatus();
+  const dbStats = get(`
+    SELECT
+      (SELECT COUNT(*) FROM payments) as payments,
+      (SELECT COUNT(*) FROM payments WHERE status = 'pending') as pending_payments,
+      (SELECT COUNT(*) FROM tickets WHERE status = 'open') as open_tickets,
+      (SELECT COUNT(*) FROM logs) as logs
+  `) || {};
+
+  return new EmbedBuilder()
+    .setColor(env.warnings.length || sync.lastError ? config.colors.warning : config.colors.success)
+    .setTitle(`${config.botName} | Saude Operacional`)
+    .addFields([
+      {
+        name: "Discord",
+        value: [
+          `Ping: **${Math.round(interaction.client.ws.ping)}ms**`,
+          `Uptime: **${Math.floor((interaction.client.uptime || 0) / 60000)}min**`,
+          `Servidores: **${interaction.client.guilds.cache.size}**`
+        ].join("\n"),
+        inline: true
+      },
+      {
+        name: "Banco Local",
+        value: [
+          `Pagamentos: **${dbStats.payments || 0}**`,
+          `Pendentes: **${dbStats.pending_payments || 0}**`,
+          `Tickets abertos: **${dbStats.open_tickets || 0}**`,
+          `Logs: **${dbStats.logs || 0}**`
+        ].join("\n"),
+        inline: true
+      },
+      {
+        name: "Integracao Site",
+        value: [
+          `Sync: **${sync.enabled ? "ativo" : "desativado"}**`,
+          `Ultima execucao: **${formatAdminTimestamp(sync.lastRunAt)}**`,
+          `Ultimo erro: **${sync.lastError || "nenhum"}**`
+        ].join("\n"),
+        inline: false
+      },
+      {
+        name: ".env",
+        value: env.warnings.length ? env.warnings.map((warning) => `- ${warning}`).join("\n").slice(0, 1024) : "Obrigatorias OK. Nenhum aviso.",
+        inline: false
+      }
+    ])
+    .setTimestamp();
+}
+
+function buildSyncHistoryEmbed(config) {
+  const sync = getCustomerRoleSyncStatus();
+  const lines = sync.history?.length
+    ? sync.history.map((entry, index) => [
+        `**${index + 1}.** ${formatAdminTimestamp(entry.at)} - ${entry.result}`,
+        `Pendentes: ${entry.pending || 0} | Processados: ${entry.processed || 0} | OK/Erro: ${entry.success || 0}/${entry.errors || 0}`,
+        entry.error ? `Erro: ${String(entry.error).slice(0, 120)}` : null
+      ].filter(Boolean).join("\n")).join("\n\n")
+    : "Nenhum ciclo registrado desde que o bot iniciou.";
+
+  return new EmbedBuilder()
+    .setColor(sync.lastError ? config.colors.warning : config.colors.primary)
+    .setTitle(`${config.botName} | Historico do Sync Cliente`)
+    .setDescription(lines.slice(0, 4000))
+    .setTimestamp();
+}
+
 async function handleAdminButtons(interaction, config) {
   const { customId } = interaction;
 
   if (customId === "admin_main_back") {
-    const adminMenuRow = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId("admin_menu")
-        .setPlaceholder("Selecione uma op\u00E7\u00E3o")
-        .addOptions([
-          { label: "📦 Produtos", description: "Gerenciar produtos", value: "admin_products" },
-          { label: "💰 Pagamentos", description: "Ver pagamentos recentes", value: "admin_payments" },
-          { label: "📝 Cupons", description: "Gerenciar cupons de desconto", value: "admin_coupons" },
-          { label: "📨 Invites", description: "Ranking e ferramentas de invites", value: "admin_invites" },
-          { label: "🔧 Configuracoes", description: "Configurar canais e pagamento", value: "admin_settings" }
-        ])
-    );
-
-    const embed = new EmbedBuilder()
-      .setColor(config.colors.primary)
-      .setTitle(`${config.botName} | Painel Admin`)
-      .setDescription("Selecione uma op\u00E7\u00E3o abaixo para gerenciar o servidor.");
-
-    return interaction.update({ embeds: [embed], components: [adminMenuRow] });
+    return interaction.update(buildAdminHome(config));
   }
 
   if (customId === "admin_products_back") {
@@ -275,6 +394,75 @@ async function handleAdminButtons(interaction, config) {
       ),
       new ActionRowBuilder().addComponents(
         new TextInputBuilder().setCustomId("stats_channel_id").setLabel("Canal de estat\u00EDsticas").setStyle(TextInputStyle.Short).setValue(String(config.statsChannelId || "")).setRequired(true)
+      )
+    );
+
+    return interaction.showModal(modal);
+  }
+
+  if (customId === "admin_status_refresh") {
+    await interaction.deferReply({ ephemeral: true });
+    await ensureStatusPanel(interaction.client, config);
+    return interaction.editReply({
+      embeds: [successEmbed(config, "Status atualizado", "O painel de status foi atualizado com os dados atuais.")]
+    });
+  }
+
+  if (customId === "admin_customer_sync") {
+    await interaction.deferReply({ ephemeral: true });
+    await runCustomerRoleSync(interaction.client);
+    await ensureStatusPanel(interaction.client, config).catch(() => null);
+    return interaction.editReply({
+      embeds: [successEmbed(config, "Sync Cliente concluido", buildSyncStatusText())]
+    });
+  }
+
+  if (customId === "admin_env_check") {
+    const result = validateEnv();
+    const description = result.warnings.length
+      ? `Variaveis obrigatorias OK.\n\nAvisos:\n${result.warnings.map((warning) => `- ${warning}`).join("\n")}`
+      : "Variaveis obrigatorias OK. Nenhum aviso encontrado.";
+    return interaction.reply({
+      embeds: [successEmbed(config, ".env verificado", description)],
+      ephemeral: true
+    });
+  }
+
+  if (customId === "admin_health_view") {
+    return interaction.reply({
+      embeds: [buildHealthEmbed(interaction, config)],
+      ephemeral: true
+    });
+  }
+
+  if (customId === "admin_sync_history") {
+    return interaction.reply({
+      embeds: [buildSyncHistoryEmbed(config)],
+      ephemeral: true
+    });
+  }
+
+  if (customId === "admin_presence_edit") {
+    const modal = new ModalBuilder()
+      .setCustomId("admin_presence_modal")
+      .setTitle("Editar Presenca");
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId("presence_activities")
+          .setLabel("Presencas rotativas")
+          .setStyle(TextInputStyle.Paragraph)
+          .setValue(process.env.BOT_PRESENCE_ACTIVITIES || "WATCHING:Melhor preco e aqui!;PLAYING:BznX Store")
+          .setRequired(true)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId("presence_interval")
+          .setLabel("Intervalo em ms")
+          .setStyle(TextInputStyle.Short)
+          .setValue(process.env.BOT_PRESENCE_ROTATE_INTERVAL_MS || "60000")
+          .setRequired(true)
       )
     );
 
@@ -407,9 +595,10 @@ async function handleAdminButtons(interaction, config) {
 
     configData.products.splice(productIndex, 1);
     writeConfigFile(configData);
+    applyConfigRuntime(config, configData);
 
     await interaction.reply({
-      embeds: [successEmbed(config, "Produto deletado", `Produto ${product.name} deletado com sucesso! O bot precisa ser reiniciado para aplicar as mudan\u00E7as. Clique em Voltar para editar outro produto.`)],
+      embeds: [successEmbed(config, "Produto deletado", `Produto ${product.name} deletado com sucesso! As mudancas ja foram aplicadas.`)],
       ephemeral: true
     });
     return;
@@ -656,6 +845,32 @@ async function handleAdminModals(interaction, config) {
     });
   }
 
+  if (customId === "admin_presence_modal") {
+    const activities = interaction.fields.getTextInputValue("presence_activities").trim();
+    const intervalMs = Number(interaction.fields.getTextInputValue("presence_interval").trim());
+
+    if (!activities || !Number.isFinite(intervalMs) || intervalMs < 30000) {
+      return interaction.reply({
+        embeds: [dangerEmbed(config, "Presenca invalida", "Informe atividades validas e intervalo minimo de 30000ms.")],
+        ephemeral: true
+      });
+    }
+
+    updatePresenceEnv(activities, intervalMs);
+    const firstActivity = activities.split(";").map((item) => item.trim()).filter(Boolean)[0] || activities;
+    const separatorIndex = firstActivity.indexOf(":");
+    const name = separatorIndex === -1 ? firstActivity : firstActivity.slice(separatorIndex + 1).trim();
+    await interaction.client.user.setPresence({
+      activities: [{ name: name || "BznX Store" }],
+      status: "online"
+    }).catch(() => null);
+
+    return interaction.reply({
+      embeds: [successEmbed(config, "Presenca atualizada", "As presencas rotativas foram salvas no .env e aplicadas em runtime.")],
+      ephemeral: true
+    });
+  }
+
   if (customId === "add_product_modal") {
     const name = interaction.fields.getTextInputValue("product_name").trim();
     const priceStockRaw = interaction.fields.getTextInputValue("product_price_stock");
@@ -682,7 +897,7 @@ async function handleAdminModals(interaction, config) {
     const configData = readConfigFile();
     configData.products.push(newProduct);
     writeConfigFile(configData);
-    config.products.push({ ...newProduct });
+    applyConfigRuntime(config, configData);
 
     const deliveryInfo = deliveryUrl ? `\n\uD83D\uDCE6 Entrega autom\u00E1tica: \u2705` : `\n\uD83D\uDCE6 Entrega: Via ticket`;
     await interaction.reply({ embeds: [successEmbed(config, "Produto adicionado", `**${name}** criado com sucesso!\nPre\u00E7o: ${formatPrice(price)} | Estoque: ${stock}${deliveryInfo}`)], ephemeral: true });
@@ -701,7 +916,8 @@ async function handleAdminModals(interaction, config) {
     configData.feedbackChannelId = interaction.fields.getTextInputValue("feedback_channel_id");
     configData.statsChannelId = interaction.fields.getTextInputValue("stats_channel_id");
     writeConfigFile(configData);
-    await interaction.reply({ embeds: [successEmbed(config, "Canais atualizados", "Os canais principais foram salvos no config.json.")], ephemeral: true });
+    applyConfigRuntime(config, configData);
+    await interaction.reply({ embeds: [successEmbed(config, "Canais atualizados", "Os canais principais foram salvos e aplicados em runtime.")], ephemeral: true });
     return true;
   }
 
@@ -715,9 +931,7 @@ async function handleAdminModals(interaction, config) {
     if (deliveryUrl) { configData.products[productIndex].deliveryUrl = deliveryUrl; }
     else { delete configData.products[productIndex].deliveryUrl; }
     writeConfigFile(configData);
-
-    const memProduct = config.products.find(p => p.id === productId);
-    if (memProduct) { if (deliveryUrl) memProduct.deliveryUrl = deliveryUrl; else delete memProduct.deliveryUrl; }
+    applyConfigRuntime(config, configData);
 
     const status = deliveryUrl ? `\u2705 Entrega autom\u00E1tica configurada!\nLink: ${deliveryUrl}` : "\u274C Entrega autom\u00E1tica removida. O cliente abrir\u00E1 ticket de entrega.";
     await interaction.reply({ embeds: [successEmbed(config, "Entrega atualizada", `**${configData.products[productIndex].name}**\n\n${status}`)], ephemeral: true });
@@ -739,8 +953,9 @@ async function handleAdminModals(interaction, config) {
     configData.products[productIndex].price = price;
     configData.products[productIndex].stock = stock;
     writeConfigFile(configData);
+    applyConfigRuntime(config, configData);
 
-    await interaction.reply({ embeds: [successEmbed(config, "Produto atualizado", `Pre\u00E7o: ${formatPrice(price)}, Estoque: ${stock}. Clique em Voltar para editar outro produto.`)], ephemeral: true });
+    await interaction.reply({ embeds: [successEmbed(config, "Produto atualizado", `Pre\u00E7o: ${formatPrice(price)}, Estoque: ${stock}. Mudancas aplicadas sem reiniciar.`)], ephemeral: true });
     return true;
   }
 
