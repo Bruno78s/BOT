@@ -22,7 +22,6 @@ const { get, run } = require("../database/db");
 const { validateCoupon, calculateDiscount, useCoupon } = require("../utils/coupons");
 const { logPedido } = require("../utils/channelLogger");
 const { getSettings } = require("../utils/settings");
-const { createReceiptAttachment } = require("../utils/receipt");
 const { sendPurchaseAuditLog } = require("./shared");
 
 const PIX_EXPIRY_MS = 15 * 60 * 1000;
@@ -322,23 +321,7 @@ async function handlePaymentGatewaySelect(interaction, config) {
       .setStyle(ButtonStyle.Danger)
   );
 
-  const receiptFile = await createReceiptAttachment({
-    botName: config.botName,
-    guildId: interaction.guild.id,
-    channelId: interaction.channel.id,
-    user: interaction.user,
-    product,
-    amount: finalPrice,
-    paymentMethod: checkout.method === "pix" ? "PIX Mercado Pago" : "Mercado Pago",
-    checkoutUrl: checkout.checkoutUrl,
-    providerPaymentId: checkout.paymentId || checkout.preferenceId || String(localPaymentRecord?.id || ""),
-    coupon,
-    orderId: localPaymentRecord?.id || checkout.paymentId || checkout.preferenceId || Date.now()
-  });
-
-  files.push(receiptFile);
-
-  await interaction.editReply({ content: "✅ PIX gerado! Veja abaixo. Comprovante em anexo.", ephemeral: true });
+  await interaction.editReply({ content: "✅ PIX gerado! Veja abaixo.", ephemeral: true });
 
   const paymentMessage = await interaction.channel.send({
     embeds: [paymentEmbed],

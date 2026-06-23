@@ -6,6 +6,7 @@ const { formatPrice, readConfigFile, writeConfigFile } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
 const { logVenda, logComprovante, logPedido, logVendaSite } = require("./channelLogger");
 const { ensureProductPanels } = require("./productPanels");
+const { sendReceiptDM, sendReceiptToPrivateChannel } = require("./receipt");
 
 function decrementStock(config, productId) {
   try {
@@ -165,7 +166,26 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     console.log(`[WEBHOOK] Falha ao adicionar cargo de cliente:`, err.message);
   }
 
+  const receiptUser = await client.users.fetch(localPayment.user_id).catch(() => null);
+  const receiptData = {
+    guildId: channel.guild.id,
+    channelId: localPayment.channel_id,
+    user: receiptUser || { id: localPayment.user_id, tag: localPayment.user_id },
+    userId: localPayment.user_id,
+    product: product || { id: localPayment.product_id, name: localPayment.product_id },
+    amount: localPayment.amount,
+    paymentMethod: "PIX Mercado Pago",
+    checkoutUrl: localPayment.checkout_url,
+    providerPaymentId: paymentId,
+    coupon: null,
+    orderId
+  };
+
   await sendClientDM(client, config, localPayment, product, orderId, paymentId);
+  await sendReceiptToPrivateChannel(client, config, receiptData, "PAGO").catch((error) => {
+    console.error("[RECEIPT] Falha ao enviar comprovante aprovado:", error.message);
+  });
+  await sendReceiptDM(client, config, receiptData, "PAGO").catch(() => null);
 
   if (deliveryChannel?.send) {
     const deliveryType = hasAutoDelivery ? "✅ Automática (DM)" : "📋 Via Ticket";
