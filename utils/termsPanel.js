@@ -32,7 +32,7 @@ async function ensureTermsPanel(client, config) {
       "> A Bzn X Store oferece desenvolvimento de bots Discord e sites personalizados, bem como suporte técnico relacionado aos serviços contratados.",
       "",
       "> **3. Pagamentos**",
-      "> Todos os pagamentos são processados através de PIX. Os preços estão em Reais (BRL) e estão sujeitos a alteração mediante aviso prévio.",
+      "> Os pagamentos podem ser processados por PIX ou cartão. Os preços estão em Reais (BRL) e estão sujeitos a alteração mediante aviso prévio.",
       "",
       "> **4. Entrega e Prazos**",
       "> O prazo médio de entrega dos serviços é de até 24 horas úteis após a confirmação do pagamento. Atrasos podem ocorrer devido à complexidade do projeto ou fatores externos.",

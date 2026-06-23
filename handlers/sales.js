@@ -14,12 +14,12 @@ const {
 const { infoEmbed, successEmbed, dangerEmbed } = require("../utils/embeds");
 const { createTicket, listTicketByChannel } = require("../utils/tickets");
 const { logToDb } = require("../utils/logger");
-const { notifySale } = require("../utils/notifications");
 const { logTicketEvent } = require("../utils/advancedLogger");
 const { buildCartEmbed, buildTermsEmbed, formatPrice, buildTermsSnapshot } = require("../utils/salesFlow");
 const { createCheckoutPayment, getPendingPaymentByChannel } = require("../utils/mercadoPago");
+const { createCardCheckoutSession } = require("../utils/stripePayments");
 const { get, run } = require("../database/db");
-const { validateCoupon, calculateDiscount, useCoupon } = require("../utils/coupons");
+const { validateCoupon, calculateDiscount } = require("../utils/coupons");
 const { logPedido } = require("../utils/channelLogger");
 const { getSettings } = require("../utils/settings");
 const { sendPurchaseAuditLog } = require("./shared");
@@ -83,15 +83,62 @@ function buildPixEmbed({ interaction, config, description, qrCodeAttached }) {
   return embed;
 }
 
+function buildCardDescription({ interaction, product, coupon, discount, finalPrice, checkout }) {
+  return [
+    `> 👤 **Cliente:** <@${interaction.user.id}>`,
+    `> 📦 **Produto:** ${product.name}`,
+    coupon ? `> 🏷️ **Desconto:** ${formatPrice(discount)} (cupom **${coupon.code.toUpperCase()}**)` : null,
+    `> 💰 **Valor:** ${formatPrice(finalPrice)}`,
+    checkout.checkoutUrl ? `> 💳 **Pagamento com cartão:** [Clique aqui para pagar](${checkout.checkoutUrl})` : null,
+    "",
+    "─────────────────────────────",
+    "",
+    "> ⏳ **Status:** Aguardando pagamento com cartão...",
+    "> ✅ A confirmação será **automática** assim que o pagamento for aprovado.",
+    "> 📬 Após isso, seu pedido seguirá para entrega ou ticket de atendimento.",
+  ].filter(Boolean).join("\n");
+}
+
+function buildCardEmbed({ interaction, config, description }) {
+  return new EmbedBuilder()
+    .setColor(0x635bff)
+    .setAuthor({ name: `${config.botName} • Pagamento`, iconURL: interaction.client.user.displayAvatarURL() })
+    .setTitle("💳 Pagamento com Cartão")
+    .setDescription(description)
+    .setFooter({ text: `${config.botName} • Pagamento seguro.`, iconURL: interaction.client.user.displayAvatarURL() })
+    .setTimestamp();
+}
+
 function buildPaymentFallbackRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId("select_payment_gateway_menu")
+      .setCustomId("select_payment_pix")
       .setLabel("Tentar PIX novamente")
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
+      .setCustomId("select_payment_card")
+      .setLabel("Tentar Cartão")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
       .setCustomId("cart_manual_payment")
       .setLabel("Pagamento manual")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("ticket_cancel_purchase")
+      .setLabel("Cancelar")
+      .setStyle(ButtonStyle.Danger)
+  );
+}
+
+function buildPaymentMethodRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("select_payment_pix")
+      .setLabel("PIX")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId("select_payment_card")
+      .setLabel("Cartão")
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("ticket_cancel_purchase")
@@ -192,7 +239,6 @@ async function handleProductSelect(interaction, config) {
     ]
   });
 
-  await notifySale(interaction.client, config, product, interaction.guild, interaction.user.id);
 }
 
 async function handleSupportTicketSelect(interaction, config) {
@@ -235,7 +281,7 @@ async function handleSupportTicketSelect(interaction, config) {
   });
 }
 
-async function handlePaymentGatewaySelect(interaction, config) {
+async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
   await interaction.deferReply({ ephemeral: true });
 
   const ticket = await listTicketByChannel(interaction.channel.id);
@@ -262,12 +308,14 @@ async function handlePaymentGatewaySelect(interaction, config) {
   let checkout = null;
 
   try {
-    checkout = await createCheckoutPayment({
+    const createPayment = method === "card" ? createCardCheckoutSession : createCheckoutPayment;
+    checkout = await createPayment({
       guildId: interaction.guild.id,
       channelId: interaction.channel.id,
       userId: interaction.user.id,
       product: { ...product, price: finalPrice },
-      user: interaction.user
+      user: interaction.user,
+      couponId: coupon?.id || null
     });
   } catch (error) {
     console.error(`Erro ao criar pagamento:`, error.response?.data || error);
@@ -278,10 +326,6 @@ async function handlePaymentGatewaySelect(interaction, config) {
     });
   }
 
-  if (coupon) {
-    await useCoupon(coupon.id);
-  }
-
   const localPaymentRecord = await getPendingPaymentByChannel(interaction.channel.id);
   await logPedido(interaction.client, config, {
     userId: interaction.user.id,
@@ -290,6 +334,23 @@ async function handlePaymentGatewaySelect(interaction, config) {
     orderId: localPaymentRecord?.id || "?",
     channelId: interaction.channel.id,
   }).catch(() => null);
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("ticket_cancel_purchase")
+      .setLabel("\u274C Cancelar Pedido")
+      .setStyle(ButtonStyle.Danger)
+  );
+
+  if (method === "card") {
+    const description = buildCardDescription({ interaction, product, coupon, discount, finalPrice, checkout });
+    await interaction.editReply({ content: "✅ Link de pagamento com cartão gerado! Veja abaixo.", ephemeral: true });
+    await interaction.channel.send({
+      embeds: [buildCardEmbed({ interaction, config, description })],
+      components: [row]
+    });
+    return;
+  }
 
   const files = [];
   let qrCodeAttached = false;
@@ -313,13 +374,6 @@ async function handlePaymentGatewaySelect(interaction, config) {
     pixDeadlineLabel
   });
   const paymentEmbed = buildPixEmbed({ interaction, config, description, qrCodeAttached });
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("ticket_cancel_purchase")
-      .setLabel("\u274C Cancelar Pedido")
-      .setStyle(ButtonStyle.Danger)
-  );
 
   await interaction.editReply({ content: "✅ PIX gerado! Veja abaixo.", ephemeral: true });
 
@@ -378,20 +432,13 @@ async function handleCouponModal(interaction, config) {
     finalPrice = product.price - discount;
   }
 
-  const gatewayRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("select_payment_gateway_menu")
-      .setLabel("Gerar PIX")
-      .setStyle(ButtonStyle.Success)
-  );
-
   const description = coupon
     ? `Cupom **${coupon.code}** aplicado! Desconto de ${formatPrice(discount)}.`
     : "Nenhum cupom aplicado.";
 
   await interaction.editReply({
-    embeds: [infoEmbed(config, "Gerar Pagamento", `Clique no botão abaixo para gerar o pagamento de **${product.name}**.\n\n${description}\n\n**Total:** ${formatPrice(finalPrice)} (${coupon ? `De ${formatPrice(product.price)}` : ""})`)],
-    components: [gatewayRow]
+    embeds: [infoEmbed(config, "Escolher pagamento", `Escolha como deseja pagar **${product.name}**.\n\n${description}\n\n**Total:** ${formatPrice(finalPrice)} (${coupon ? `De ${formatPrice(product.price)}` : ""})`)],
+    components: [buildPaymentMethodRow()]
   });
 
   if (coupon) {
@@ -419,9 +466,10 @@ async function handleCartButtons(interaction, config) {
     return true;
   }
 
-  if (customId === "select_payment_gateway_menu") {
+  if (customId === "select_payment_gateway_menu" || customId === "select_payment_pix" || customId === "select_payment_card") {
     try {
-      await handlePaymentGatewaySelect(interaction, config);
+      const method = customId === "select_payment_card" ? "card" : "pix";
+      await handlePaymentGatewaySelect(interaction, config, method);
       return true;
 
     } catch (error) {
@@ -517,9 +565,13 @@ async function handleCartButtons(interaction, config) {
         .setLabel("Aplicar Cupom")
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setCustomId("select_payment_gateway_menu")
-        .setLabel("Fazer Pagamento")
+        .setCustomId("select_payment_pix")
+        .setLabel("PIX")
         .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId("select_payment_card")
+        .setLabel("Cartão")
+        .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId("ticket_cancel_purchase")
         .setLabel("Cancelar")
@@ -529,7 +581,7 @@ async function handleCartButtons(interaction, config) {
     const cartEmbed = buildCartEmbed(config, interaction.user, product);
     cartEmbed.setDescription(
       `Termos aceitos em **${new Date(acceptedAt).toLocaleString("pt-BR", {timeZone: "America/Sao_Paulo"})}**.\n\n` +
-      "Clique em **Fazer Pagamento** para gerar o PIX."
+      "Escolha **PIX** ou **Cartão** para gerar o pagamento."
     );
 
     await interaction.message.edit({
@@ -676,7 +728,7 @@ async function handleOrderButtons(interaction, config) {
     const pendingPayment = await getPendingPaymentByChannel(interaction.channel.id);
     if (pendingPayment) {
       return interaction.editReply({
-        embeds: [dangerEmbed(config, "Pagamento pendente", "Aguarde a confirma\u00E7\u00E3o autom\u00E1tica do PIX antes de finalizar a compra.")]
+        embeds: [dangerEmbed(config, "Pagamento pendente", "Aguarde a confirmação automática do pagamento antes de finalizar a compra.")]
       });
     }
 

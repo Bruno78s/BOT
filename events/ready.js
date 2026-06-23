@@ -24,6 +24,7 @@ const StockPrediction = require("../utils/stockPrediction");
 const AutoRestock = require("../utils/autoRestock");
 const { startCustomerRoleSync } = require("../utils/customerRoleSync");
 const { startStatusPanel } = require("../utils/statusPanel");
+const { processMercadoPagoPayment } = require("../utils/webhookServer");
 
 function resolvePresenceType(typeKey) {
   const normalized = String(typeKey || "").trim().toLowerCase();
@@ -154,10 +155,18 @@ module.exports = {
     setInterval(async () => {
       try {
         const expiredPayments = all(
-          "SELECT * FROM payments WHERE status = 'pending' AND created_at < ?",
+          "SELECT * FROM payments WHERE provider = 'mercadopago' AND status = 'pending' AND created_at < ?",
           [Date.now() - PIX_EXPIRY_MS]
         );
         for (const payment of expiredPayments) {
+          if (payment.provider === "mercadopago" && payment.provider_payment_id) {
+            const confirmed = await processMercadoPagoPayment(client, config, payment.provider_payment_id, "expiry-check");
+            if (confirmed) {
+              console.log(`[PIX] Pagamento #${payment.id} aprovado durante checagem de expiracao.`);
+              continue;
+            }
+          }
+
           run("UPDATE payments SET status = 'expired', updated_at = ? WHERE id = ?", [Date.now(), payment.id]);
           const channel = await client.channels.fetch(payment.channel_id).catch(() => null);
           if (channel?.send) {

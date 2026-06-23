@@ -11,6 +11,15 @@ db.pragma("journal_mode = WAL");
 const schema = require("fs").readFileSync(path.join(__dirname, "schema.sql"), "utf8");
 db.exec(schema);
 
+function ensureColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some((entry) => entry.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+ensureColumn("payments", "coupon_id", "INTEGER");
+
 // Query functions
 function get(sql, params = []) {
   const stmt = db.prepare(sql);

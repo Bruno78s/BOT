@@ -1,5 +1,5 @@
 const { MercadoPagoConfig, Payment, Preference } = require("mercadopago");
-const { get, run } = require("../database/db");
+const { all, get, run } = require("../database/db");
 
 function getClient() {
   const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -21,20 +21,20 @@ function getPayerEmail(userId) {
   return (process.env.MERCADO_PAGO_PAYER_EMAIL || `cliente.${userId}@bznxstore.com`).trim();
 }
 
-async function createCheckoutPayment({ guildId, channelId, userId, product, user }) {
+async function createCheckoutPayment({ guildId, channelId, userId, product, user, couponId = null }) {
   try {
-    return await createPixPayment({ guildId, channelId, userId, product, user });
+    return await createPixPayment({ guildId, channelId, userId, product, user, couponId });
   } catch (error) {
     const description = error?.message || error?.error || error?.cause?.[0]?.description || "";
     if (!String(description).toLowerCase().includes("unauthorized use of live credentials")) {
       throw error;
     }
 
-    return createPreferencePayment({ guildId, channelId, userId, product, user, fallbackReason: description });
+    return createPreferencePayment({ guildId, channelId, userId, product, user, couponId, fallbackReason: description });
   }
 }
 
-async function createPixPayment({ guildId, channelId, userId, product, user }) {
+async function createPixPayment({ guildId, channelId, userId, product, user, couponId = null }) {
   const client = getClient();
   const payment = new Payment(client);
 
@@ -68,8 +68,8 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
   const copyPasteCode = response.point_of_interaction?.transaction_data?.qr_code || null;
 
   await run(
-    "INSERT INTO payments (guild_id, channel_id, user_id, product_id, provider, provider_payment_id, preference_id, status, amount, checkout_url, created_at) VALUES (?, ?, ?, ?, 'mercadopago', ?, ?, 'pending', ?, ?, ?)",
-    [guildId, channelId, userId, product.id, String(response.id), String(response.id), Number(product.price), checkoutUrl, Date.now()]
+    "INSERT INTO payments (guild_id, channel_id, user_id, product_id, provider, provider_payment_id, preference_id, coupon_id, status, amount, checkout_url, created_at) VALUES (?, ?, ?, ?, 'mercadopago', ?, ?, ?, 'pending', ?, ?, ?)",
+    [guildId, channelId, userId, product.id, String(response.id), String(response.id), couponId, Number(product.price), checkoutUrl, Date.now()]
   );
 
   return {
@@ -82,7 +82,7 @@ async function createPixPayment({ guildId, channelId, userId, product, user }) {
   };
 }
 
-async function createPreferencePayment({ guildId, channelId, userId, product, user, fallbackReason }) {
+async function createPreferencePayment({ guildId, channelId, userId, product, user, couponId = null, fallbackReason }) {
   const client = getClient();
   const preference = new Preference(client);
 
@@ -121,8 +121,8 @@ async function createPreferencePayment({ guildId, channelId, userId, product, us
   const checkoutUrl = response.init_point || response.sandbox_init_point;
 
   await run(
-    "INSERT INTO payments (guild_id, channel_id, user_id, product_id, provider, preference_id, status, amount, checkout_url, created_at) VALUES (?, ?, ?, ?, 'mercadopago', ?, 'pending', ?, ?, ?)",
-    [guildId, channelId, userId, product.id, response.id, Number(product.price), checkoutUrl, Date.now()]
+    "INSERT INTO payments (guild_id, channel_id, user_id, product_id, provider, preference_id, coupon_id, status, amount, checkout_url, created_at) VALUES (?, ?, ?, ?, 'mercadopago', ?, ?, 'pending', ?, ?, ?)",
+    [guildId, channelId, userId, product.id, response.id, couponId, Number(product.price), checkoutUrl, Date.now()]
   );
 
   return {
@@ -139,6 +139,14 @@ async function getPendingPaymentByChannel(channelId) {
   return get(
     "SELECT * FROM payments WHERE channel_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
     [channelId]
+  );
+}
+
+async function listPendingProviderPayments(limit = 25) {
+  const retryExpiredAfter = Date.now() - (48 * 60 * 60 * 1000);
+  return all(
+    "SELECT * FROM payments WHERE provider = 'mercadopago' AND provider_payment_id IS NOT NULL AND (status = 'pending' OR (status = 'expired' AND created_at >= ?)) ORDER BY created_at ASC LIMIT ?",
+    [retryExpiredAfter, limit]
   );
 }
 
@@ -170,6 +178,7 @@ async function fetchPayment(providerPaymentId) {
 module.exports = {
   createCheckoutPayment,
   getPendingPaymentByChannel,
+  listPendingProviderPayments,
   getPaymentByProviderPaymentId,
   updatePaymentStatusByProviderId,
   attachProviderPaymentIdByReference,

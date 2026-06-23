@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS payments (
   provider TEXT NOT NULL,
   provider_payment_id TEXT UNIQUE,
   preference_id TEXT,
+  coupon_id INTEGER,
   status TEXT NOT NULL,
   amount REAL NOT NULL,
   checkout_url TEXT,

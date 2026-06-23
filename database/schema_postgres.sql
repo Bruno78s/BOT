@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS payments (
   provider text NOT NULL,
   provider_payment_id text,
   preference_id text,
+  coupon_id bigint,
   status text NOT NULL,
   amount numeric NOT NULL,
   checkout_url text,

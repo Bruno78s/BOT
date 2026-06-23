@@ -1,12 +1,30 @@
 const express = require("express");
 const crypto = require("crypto");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { fetchPayment, attachProviderPaymentIdByReference, getPaymentByProviderPaymentId, updatePaymentStatusByProviderId, getPendingPaymentByChannel } = require("./mercadoPago");
+const {
+  fetchPayment,
+  attachProviderPaymentIdByReference,
+  getPaymentByProviderPaymentId,
+  getPendingPaymentByChannel,
+  listPendingProviderPayments,
+  updatePaymentStatusByProviderId
+} = require("./mercadoPago");
 const { formatPrice, readConfigFile, writeConfigFile } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
 const { logVenda, logComprovante, logPedido, logVendaSite } = require("./channelLogger");
 const { ensureProductPanels } = require("./productPanels");
 const { sendReceiptDM, sendReceiptToPrivateChannel } = require("./receipt");
+const { useCoupon } = require("./coupons");
+const { get } = require("../database/db");
+const {
+  constructStripeWebhookEvent,
+  fetchCardCheckoutSession,
+  getStripePaymentBySessionId,
+  listPendingStripePayments,
+  updateStripePaymentStatus
+} = require("./stripePayments");
+
+const processingPayments = new Set();
 
 function decrementStock(config, productId) {
   try {
@@ -83,12 +101,14 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   const channel = await client.channels.fetch(localPayment.channel_id).catch(() => null);
   if (!channel?.send) {
     console.log("[WEBHOOK] Erro: canal não encontrado ou não pode enviar mensagens");
-    return;
+    return false;
   }
 
   const product = config.products.find((item) => item.id === localPayment.product_id);
+  const coupon = localPayment.coupon_id ? get("SELECT * FROM coupons WHERE id = ?", [localPayment.coupon_id]) : null;
   const orderId = localPayment.id;
   const paymentId = paymentData.id;
+  const paymentMethodLabel = localPayment.provider === "stripe" ? "Cartão" : "PIX Mercado Pago";
   const deliveryChannelId = product?.category === "sites" ? config.deliveryChannels?.sites : config.deliveryChannels?.bots;
   const deliveryChannel = deliveryChannelId ? await client.channels.fetch(deliveryChannelId).catch(() => null) : null;
 
@@ -174,10 +194,10 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     userId: localPayment.user_id,
     product: product || { id: localPayment.product_id, name: localPayment.product_id },
     amount: localPayment.amount,
-    paymentMethod: "PIX Mercado Pago",
+    paymentMethod: paymentMethodLabel,
     checkoutUrl: localPayment.checkout_url,
     providerPaymentId: paymentId,
-    coupon: null,
+    coupon,
     orderId
   };
 
@@ -231,6 +251,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     orderId,
     paymentId,
     channelId: localPayment.channel_id,
+    coupon: coupon?.code ? coupon.code.toUpperCase() : null,
   });
 
   await logComprovante(client, config, {
@@ -243,7 +264,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   });
 
   await logTicketEvent(client, config, "Pagamento Aprovado", localPayment.channel_id, {
-    description: `Pagamento aprovado automaticamente via PIX.`,
+    description: `Pagamento aprovado automaticamente via ${paymentMethodLabel}.`,
     fields: [
       { name: "Cliente", value: `<@${localPayment.user_id}>`, inline: true },
       { name: "Produto", value: product?.name || localPayment.product_id, inline: true },
@@ -251,6 +272,8 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       { name: "ID do Pedido", value: `#${orderId}`, inline: true }
     ]
   });
+
+  return true;
 }
 
 function verifyWebhookSignature(req) {
@@ -302,9 +325,210 @@ setInterval(() => {
   }
 }, 60000);
 
+async function processMercadoPagoPayment(client, config, paymentId, source = "webhook") {
+  if (!paymentId) return false;
+  const paymentKey = String(paymentId);
+
+  if (processingPayments.has(paymentKey)) {
+    console.log(`[MERCADO_PAGO] Pagamento ${paymentKey} ja esta em processamento (${source}).`);
+    return false;
+  }
+
+  processingPayments.add(paymentKey);
+  try {
+    const paymentData = await fetchPayment(paymentKey);
+    console.log(`[MERCADO_PAGO] ${source}: status=${paymentData.status}, id=${paymentData.id}, ref=${paymentData.external_reference || "sem-ref"}`);
+
+    const channelId = paymentData.external_reference || paymentData.metadata?.channel_id;
+    if (!channelId) {
+      console.log(`[MERCADO_PAGO] ${source}: pagamento ${paymentData.id} sem external_reference/channel_id.`);
+      return false;
+    }
+
+    await attachProviderPaymentIdByReference(channelId, paymentData.id, paymentData.status);
+    let localPayment = await getPaymentByProviderPaymentId(paymentData.id);
+
+    if (!localPayment) {
+      console.log(`[MERCADO_PAGO] ${source}: pagamento nao encontrado por provider_payment_id, tentando channel_id=${channelId}.`);
+      localPayment = await getPendingPaymentByChannel(channelId);
+    }
+
+    if (!localPayment) {
+      console.log(`[MERCADO_PAGO] ${source}: pagamento ${paymentData.id} nao encontrado no banco local.`);
+      return false;
+    }
+
+    if (paymentData.status === "approved" && localPayment.status === "approved") {
+      console.log(`[MERCADO_PAGO] ${source}: pagamento ${paymentData.id} ja confirmado, ignorando duplicata.`);
+      return true;
+    }
+
+    if (paymentData.status !== "approved") {
+      const finalStatuses = new Set(["rejected", "cancelled", "canceled", "refunded", "charged_back"]);
+      if (finalStatuses.has(paymentData.status)) {
+        await updatePaymentStatusByProviderId(paymentData.id, paymentData.status);
+      }
+      console.log(`[MERCADO_PAGO] ${source}: pagamento ${paymentData.id} ainda esta como ${paymentData.status}.`);
+      return false;
+    }
+
+    localPayment.provider_payment_id = String(paymentData.id);
+
+    let retries = 0;
+    const maxRetries = 3;
+    while (retries < maxRetries) {
+      try {
+        const confirmed = await confirmApprovedPayment(client, config, paymentData, localPayment);
+        if (confirmed === false) throw new Error("confirmacao local nao concluida");
+        await updatePaymentStatusByProviderId(paymentData.id, "approved");
+        if (localPayment.coupon_id) {
+          await useCoupon(localPayment.coupon_id).catch((error) => console.error("[COUPON] Falha ao registrar uso:", error.message));
+        }
+        return true;
+      } catch (err) {
+        retries++;
+        console.error(`[MERCADO_PAGO] ${source}: tentativa ${retries}/${maxRetries} falhou:`, err.message);
+        if (retries < maxRetries) await new Promise((resolve) => setTimeout(resolve, 2000 * retries));
+      }
+    }
+
+    console.error(`[MERCADO_PAGO] ${source}: FALHA CRITICA ao confirmar pagamento ${paymentData.id} apos ${maxRetries} tentativas.`);
+    return false;
+  } finally {
+    processingPayments.delete(paymentKey);
+  }
+}
+
+async function processStripePayment(client, config, sessionId, source = "webhook") {
+  if (!sessionId) return false;
+  const paymentKey = `stripe:${sessionId}`;
+
+  if (processingPayments.has(paymentKey)) {
+    console.log(`[STRIPE] Sessao ${sessionId} ja esta em processamento (${source}).`);
+    return false;
+  }
+
+  processingPayments.add(paymentKey);
+  try {
+    const session = await fetchCardCheckoutSession(sessionId);
+    console.log(`[STRIPE] ${source}: session=${session.id}, status=${session.status}, payment_status=${session.payment_status}`);
+
+    let localPayment = await getStripePaymentBySessionId(session.id);
+    if (!localPayment) {
+      console.log(`[STRIPE] ${source}: sessao ${session.id} nao encontrada no banco local.`);
+      return false;
+    }
+
+    if (session.payment_status === "paid" && localPayment.status === "approved") {
+      console.log(`[STRIPE] ${source}: pagamento ${session.id} ja confirmado, ignorando duplicata.`);
+      return true;
+    }
+
+    const paymentIntentId = typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id || null;
+
+    if (session.payment_status !== "paid") {
+      if (session.status === "expired") {
+        await updateStripePaymentStatus(session.id, "expired", paymentIntentId);
+      }
+      console.log(`[STRIPE] ${source}: pagamento ${session.id} ainda nao esta pago.`);
+      return false;
+    }
+
+    localPayment.preference_id = paymentIntentId || localPayment.preference_id;
+
+    let retries = 0;
+    const maxRetries = 3;
+    while (retries < maxRetries) {
+      try {
+        const confirmed = await confirmApprovedPayment(
+          client,
+          config,
+          { id: session.id, status: "approved", payment_intent: paymentIntentId },
+          localPayment
+        );
+        if (confirmed === false) throw new Error("confirmacao local nao concluida");
+        await updateStripePaymentStatus(session.id, "approved", paymentIntentId);
+        if (localPayment.coupon_id) {
+          await useCoupon(localPayment.coupon_id).catch((error) => console.error("[COUPON] Falha ao registrar uso:", error.message));
+        }
+        return true;
+      } catch (err) {
+        retries++;
+        console.error(`[STRIPE] ${source}: tentativa ${retries}/${maxRetries} falhou:`, err.message);
+        if (retries < maxRetries) await new Promise((resolve) => setTimeout(resolve, 2000 * retries));
+      }
+    }
+
+    console.error(`[STRIPE] ${source}: FALHA CRITICA ao confirmar pagamento ${session.id} apos ${maxRetries} tentativas.`);
+    return false;
+  } finally {
+    processingPayments.delete(paymentKey);
+  }
+}
+
+function startPendingPaymentWatcher(client, config) {
+  const intervalMs = Math.max(Number(process.env.MERCADO_PAGO_PENDING_CHECK_INTERVAL_MS || 30000), 15000);
+
+  const runCheck = async () => {
+    try {
+      const pendingPayments = await listPendingProviderPayments(25);
+      if (pendingPayments.length) {
+        console.log(`[MERCADO_PAGO] Verificando ${pendingPayments.length} pagamento(s) pendente(s).`);
+      }
+      for (const payment of pendingPayments) {
+        await processMercadoPagoPayment(client, config, payment.provider_payment_id, "polling");
+      }
+
+      const pendingStripePayments = await listPendingStripePayments(25);
+      if (pendingStripePayments.length) {
+        console.log(`[STRIPE] Verificando ${pendingStripePayments.length} pagamento(s) pendente(s).`);
+      }
+      for (const payment of pendingStripePayments) {
+        await processStripePayment(client, config, payment.provider_payment_id, "polling");
+      }
+    } catch (error) {
+      console.error("[MERCADO_PAGO] Erro ao verificar pagamentos pendentes:", error.message);
+    }
+  };
+
+  runCheck();
+  const timer = setInterval(runCheck, intervalMs);
+  if (timer.unref) timer.unref();
+  console.log(`[MERCADO_PAGO] Verificador de pagamentos pendentes iniciado a cada ${Math.round(intervalMs / 1000)}s.`);
+  return timer;
+}
+
 function startWebhookServer(client, config) {
   const port = Number(process.env.WEBHOOK_PORT || 3000);
   const app = express();
+
+  async function handleStripeWebhook(req, res) {
+    try {
+      const event = constructStripeWebhookEvent(req.body, req.headers["stripe-signature"]);
+      res.sendStatus(200);
+
+      const object = event.data?.object;
+      const sessionId = object?.object === "checkout.session" ? object.id : null;
+      if (!sessionId) {
+        console.log(`[STRIPE] Evento ignorado: ${event.type}`);
+        return;
+      }
+
+      if (!["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(event.type)) {
+        console.log(`[STRIPE] Evento recebido sem confirmacao final: ${event.type}`);
+        return;
+      }
+
+      await processStripePayment(client, config, sessionId, "webhook");
+    } catch (error) {
+      console.error("[STRIPE] Erro no webhook:", error.message);
+      if (!res.headersSent) res.sendStatus(400);
+    }
+  }
+
+  app.post("/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
 
   app.use(express.json());
 
@@ -345,54 +569,9 @@ function startWebhookServer(client, config) {
         return;
       }
 
-      const paymentData = await fetchPayment(paymentId);
-      console.log(`[WEBHOOK] Status MP: ${paymentData.status}, ref: ${paymentData.external_reference}`);
+      await processMercadoPagoPayment(client, config, paymentId, "webhook");
+      return;
 
-      const channelId = paymentData.external_reference || paymentData.metadata?.channel_id;
-      if (!channelId) {
-        console.log("[WEBHOOK] Sem channelId/external_reference, ignorando");
-        return;
-      }
-
-      await attachProviderPaymentIdByReference(channelId, paymentData.id, paymentData.status);
-      let localPayment = await getPaymentByProviderPaymentId(paymentData.id);
-      
-      // Fallback: se não encontrar por provider_payment_id, tenta encontrar por channel_id e status pending
-      if (!localPayment) {
-        console.log(`[WEBHOOK] Pagamento não encontrado por provider_payment_id, tentando por channel_id=${channelId}`);
-        localPayment = await getPendingPaymentByChannel(channelId);
-      }
-
-      if (!localPayment) {
-        console.log(`[WEBHOOK] Pagamento ${paymentData.id} não encontrado no DB local`);
-        return;
-      }
-
-      if (paymentData.status === "approved" && localPayment.status === "approved") {
-        console.log("[WEBHOOK] Pagamento já confirmado anteriormente, ignorando duplicata:", paymentData.id);
-        return;
-      }
-
-      await updatePaymentStatusByProviderId(paymentData.id, paymentData.status);
-      localPayment = await getPaymentByProviderPaymentId(paymentData.id);
-
-      if (paymentData.status === "approved") {
-        let retries = 0;
-        const maxRetries = 3;
-        while (retries < maxRetries) {
-          try {
-            await confirmApprovedPayment(client, config, paymentData, localPayment);
-            break;
-          } catch (err) {
-            retries++;
-            console.error(`[WEBHOOK] Tentativa ${retries}/${maxRetries} falhou:`, err.message);
-            if (retries < maxRetries) await new Promise(r => setTimeout(r, 2000 * retries));
-          }
-        }
-        if (retries >= maxRetries) {
-          console.error(`[WEBHOOK] FALHA CRÍTICA: não foi possível confirmar pagamento ${paymentData.id} após ${maxRetries} tentativas`);
-        }
-      }
     } catch (error) {
       console.error("[WEBHOOK] Erro no webhook Mercado Pago:", error);
       console.error("[WEBHOOK] Stack:", error.stack);
@@ -416,6 +595,7 @@ function startWebhookServer(client, config) {
   const server = app.listen(port, () => {
     console.log(`Webhook Mercado Pago ativo na porta ${port}`);
   });
+  startPendingPaymentWatcher(client, config);
 
   server.on("error", (error) => {
     if (error.code === "EADDRINUSE") {
@@ -428,5 +608,6 @@ function startWebhookServer(client, config) {
 }
 
 module.exports = {
+  processMercadoPagoPayment,
   startWebhookServer
 };
