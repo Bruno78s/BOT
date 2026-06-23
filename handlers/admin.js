@@ -21,6 +21,7 @@ const { getInviteStats, getInviteLeaderboard, getRedeemableInvites, setRedeemedI
 const { parsePriceInput, getCurrentProducts, buildProductAdminView, buildProductBackRow, buildMainMenuBackRow } = require("./shared");
 const { buildAdminHome } = require("../utils/adminPanel");
 const { ensureStatusPanel } = require("../utils/statusPanel");
+const { ensureProductPanels } = require("../utils/productPanels");
 const { runCustomerRoleSync, getCustomerRoleSyncStatus } = require("../utils/customerRoleSync");
 const { validateEnv } = require("../utils/envValidation");
 const fs = require("fs");
@@ -256,6 +257,15 @@ function buildSyncStatusText() {
 
 function applyConfigRuntime(config, configData) {
   Object.assign(config, configData);
+}
+
+async function refreshRuntimePanels(interaction, config) {
+  await Promise.all([
+    ensureProductPanels(interaction.client, config).catch((error) => {
+      console.error("[ADMIN] Falha ao atualizar painéis de produtos:", error.message);
+    }),
+    ensureStatusPanel(interaction.client, config).catch(() => null)
+  ]);
 }
 
 function formatAdminTimestamp(value) {
@@ -596,6 +606,7 @@ async function handleAdminButtons(interaction, config) {
     configData.products.splice(productIndex, 1);
     writeConfigFile(configData);
     applyConfigRuntime(config, configData);
+    refreshRuntimePanels(interaction, config);
 
     await interaction.reply({
       embeds: [successEmbed(config, "Produto deletado", `Produto ${product.name} deletado com sucesso! As mudancas ja foram aplicadas.`)],
@@ -898,6 +909,7 @@ async function handleAdminModals(interaction, config) {
     configData.products.push(newProduct);
     writeConfigFile(configData);
     applyConfigRuntime(config, configData);
+    refreshRuntimePanels(interaction, config);
 
     const deliveryInfo = deliveryUrl ? `\n\uD83D\uDCE6 Entrega autom\u00E1tica: \u2705` : `\n\uD83D\uDCE6 Entrega: Via ticket`;
     await interaction.reply({ embeds: [successEmbed(config, "Produto adicionado", `**${name}** criado com sucesso!\nPre\u00E7o: ${formatPrice(price)} | Estoque: ${stock}${deliveryInfo}`)], ephemeral: true });
@@ -917,6 +929,7 @@ async function handleAdminModals(interaction, config) {
     configData.statsChannelId = interaction.fields.getTextInputValue("stats_channel_id");
     writeConfigFile(configData);
     applyConfigRuntime(config, configData);
+    refreshRuntimePanels(interaction, config);
     await interaction.reply({ embeds: [successEmbed(config, "Canais atualizados", "Os canais principais foram salvos e aplicados em runtime.")], ephemeral: true });
     return true;
   }
@@ -932,6 +945,7 @@ async function handleAdminModals(interaction, config) {
     else { delete configData.products[productIndex].deliveryUrl; }
     writeConfigFile(configData);
     applyConfigRuntime(config, configData);
+    refreshRuntimePanels(interaction, config);
 
     const status = deliveryUrl ? `\u2705 Entrega autom\u00E1tica configurada!\nLink: ${deliveryUrl}` : "\u274C Entrega autom\u00E1tica removida. O cliente abrir\u00E1 ticket de entrega.";
     await interaction.reply({ embeds: [successEmbed(config, "Entrega atualizada", `**${configData.products[productIndex].name}**\n\n${status}`)], ephemeral: true });
@@ -954,6 +968,7 @@ async function handleAdminModals(interaction, config) {
     configData.products[productIndex].stock = stock;
     writeConfigFile(configData);
     applyConfigRuntime(config, configData);
+    refreshRuntimePanels(interaction, config);
 
     await interaction.reply({ embeds: [successEmbed(config, "Produto atualizado", `Pre\u00E7o: ${formatPrice(price)}, Estoque: ${stock}. Mudancas aplicadas sem reiniciar.`)], ephemeral: true });
     return true;

@@ -58,69 +58,69 @@ function buildProductEmbed(config, group, products) {
   });
 
   const titleName = group === "site" ? "Sites" : sorted[0]?.name?.replace(/\s+(Basic|Premium|Platinum|Premium\+|Diamond)$/i, "") || group;
-  const tierEmojis = { basic: "\uD83D\uDD35", premium: "\uD83D\uDFE1", platinum: "\u26AA", "premium-plus": "\uD83D\uDFE3", diamond: "\uD83D\uDD37" };
+  const tierEmojis = { basic: "🔵", premium: "🟡", platinum: "⚪", "premium-plus": "🟣", diamond: "🔷" };
 
   const lines = sorted.map((product) => {
     const tier = formatTier(product.tier);
-    const emoji = tierEmojis[product.tier] || "\uD83D\uDFE2";
+    const emoji = tierEmojis[product.tier] || "🟢";
     const stockText = product.stock === 0
-      ? "\u274C Esgotado"
+      ? "❌ Esgotado"
       : product.stock < 5
-      ? `\u26A0\uFE0F ${product.stock} restante(s)`
-      : "\u2705 Em estoque";
+      ? `⚠️ ${product.stock} restante(s)`
+      : "✅ Em estoque";
     return [
-      `${emoji} **${tier}** \u2014 ${formatPrice(product.price)}`,
-      `> ${product.description || "Sem descri\u00E7\u00E3o."}`,
+      `${emoji} **${tier}** — ${formatPrice(product.price)}`,
+      `> ${product.description || "Sem descrição."}`,
       `> ${stockText}`,
     ].join("\n");
   });
 
   return new EmbedBuilder()
     .setColor(config.colors.primary)
-    .setTitle(`\uD83D\uDECD\uFE0F ${titleName}`)
+    .setTitle(`🛍️ ${titleName}`)
     .setDescription([
       "> Escolha o plano ideal para o seu projeto.",
       "",
       ...lines,
       "",
-      "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
-      "\uD83D\uDCE6 Selecione um plano abaixo para abrir seu carrinho."
+      "─────────────────────────────",
+      "📦 Selecione um plano abaixo para abrir seu carrinho."
     ].join("\n\n"))
-    .setFooter({ text: `${config.botName} \u2022 Produtos` })
+    .setFooter({ text: `${config.botName} • Produtos` })
     .setTimestamp();
 }
 
 function buildCartEmbed(config, user, product) {
-  const tierEmojis = { basic: "\uD83D\uDD35", premium: "\uD83D\uDFE1", platinum: "\u26AA", "premium-plus": "\uD83D\uDFE3", diamond: "\uD83D\uDD37" };
-  const tierEmoji = tierEmojis[product.tier] || "\uD83D\uDC20";
+  const tierEmojis = { basic: "🔵", premium: "🟡", platinum: "⚪", "premium-plus": "🟣", diamond: "🔷" };
+  const tierEmoji = tierEmojis[product.tier] || "🟢";
   return new EmbedBuilder()
     .setColor(0x00b4d8)
-    .setTitle("\uD83D\uDED2 Resumo do Carrinho")
+    .setTitle("🛒 Resumo do Carrinho")
     .setDescription("> Revise os dados do pedido e aceite os termos para continuar.")
     .addFields([
-      { name: "\uD83D\uDC64 Cliente", value: `${user}`, inline: true },
+      { name: "👤 Cliente", value: `${user}`, inline: true },
       { name: `${tierEmoji} Produto`, value: product.name, inline: true },
-      { name: "\uD83D\uDCB0 Valor", value: formatPrice(product.price), inline: true },
-      { name: "\uD83C\uDFAB Plano", value: formatTier(product.tier), inline: true },
-      { name: "\uD83D\uDCE6 Categoria", value: (product.category || "produto").toUpperCase(), inline: true },
-      { name: "\uD83D\uDCC5 Data", value: `<t:${Math.floor(Date.now() / 1000)}:d>`, inline: true },
+      { name: "💰 Valor", value: formatPrice(product.price), inline: true },
+      { name: "🎫 Plano", value: formatTier(product.tier), inline: true },
+      { name: "📦 Categoria", value: (product.category || "produto").toUpperCase(), inline: true },
+      { name: "📅 Data", value: `<t:${Math.floor(Date.now() / 1000)}:d>`, inline: true },
     ])
-    .setFooter({ text: `${config.botName} \u2022 Carrinho` })
+    .setFooter({ text: `${config.botName} • Carrinho` })
     .setTimestamp();
 }
 
 function buildTermsEmbed(config, user, product) {
   return new EmbedBuilder()
     .setColor(0xf39c12)
-    .setTitle("\uD83D\uDCDC Termos de Servi\u00E7o")
-    .setDescription(`Ol\u00E1 ${user}! Leia os termos abaixo antes de prosseguir.`)
+    .setTitle("📜 Termos de Serviço")
+    .setDescription(`Olá ${user}! Leia os termos abaixo antes de prosseguir.`)
     .addFields([
-      { name: "\uD83D\uDCB3 1. Pagamento", value: "O pedido s\u00F3 ser\u00E1 processado ap\u00F3s a confirma\u00E7\u00E3o do pagamento.", inline: false },
-      { name: "\uD83D\uDE9A 2. Entrega", value: "O prazo pode variar conforme o produto e a demanda da equipe.", inline: false },
-      { name: "\uD83D\uDEE1\uFE0F 3. Suporte", value: "O suporte cobre d\u00FAvidas e ajustes b\u00E1sicos do servi\u00E7o contratado.", inline: false },
-      { name: "\uD83D\uDCE6 Produto Selecionado", value: `**${product.name}** \u2022 ${formatTier(product.tier)} \u2022 **${formatPrice(product.price)}**`, inline: false },
+      { name: "💳 1. Pagamento", value: "O pedido só será processado após a confirmação do pagamento.", inline: false },
+      { name: "🚚 2. Entrega", value: "O prazo pode variar conforme o produto e a demanda da equipe.", inline: false },
+      { name: "🛡️ 3. Suporte", value: "O suporte cobre dúvidas e ajustes básicos do serviço contratado.", inline: false },
+      { name: "📦 Produto Selecionado", value: `**${product.name}** • ${formatTier(product.tier)} • **${formatPrice(product.price)}**`, inline: false },
     ])
-    .setFooter({ text: `${config.botName} \u2022 Ao aceitar, voc\u00EA concorda com os termos acima.` })
+    .setFooter({ text: `${config.botName} • Ao aceitar, você concorda com os termos acima.` })
     .setTimestamp();
 }
 
@@ -129,21 +129,18 @@ function buildSupportEmbed(config) {
     .setColor(config.colors.primary)
     .setTitle(`${config.botName} | Central de Atendimento`)
     .setDescription([
-      "Utilize este painel para abrir um atendimento com a equipe.",
+      "👋 Utilize este painel para abrir um atendimento com a equipe.",
       "",
       "**Antes de abrir um ticket:**",
       "• informe o motivo com clareza",
       "• aguarde o retorno da equipe",
       "",
-      "Selecione abaixo o tipo de atendimento desejado."
+      "🎫 Selecione abaixo o tipo de atendimento desejado."
     ].join("\n"))
     .setFooter({ text: `${config.botName} • Atendimento` })
     .setTimestamp();
 }
 
-/**
- * Cria snapshot dos termos aceitos para registro
- */
 function buildTermsSnapshot(user, product) {
   return JSON.stringify({
     userId: user.id,

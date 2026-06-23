@@ -1,4 +1,4 @@
-const { ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } = require("discord.js");
+const { ActionRowBuilder, EmbedBuilder, StringSelectMenuBuilder } = require("discord.js");
 const { get, run } = require("../database/db");
 
 function getAdminStats(config) {
@@ -30,29 +30,29 @@ function buildAdminHome(config) {
     .setColor(config.colors.primary)
     .setTitle(`${config.botName} | Painel Administrativo`)
     .setDescription([
-      "**Estatisticas**",
-      `Vendas hoje: **${stats.todaySales}**`,
-      `Total vendas: **${stats.totalSales}**`,
-      `Tickets abertos: **${stats.openTickets}**`,
+      "📊 **Estatísticas**",
+      `• Vendas hoje: **${stats.todaySales}**`,
+      `• Total de vendas: **${stats.totalSales}**`,
+      `• Tickets abertos: **${stats.openTickets}**`,
       "",
-      "**Produtos**",
-      `Total: **${stats.totalProducts}**`,
-      `Estoque baixo: **${stats.lowStock}**`,
-      `Sem estoque: **${stats.outOfStock}**`
+      "📦 **Produtos**",
+      `• Total: **${stats.totalProducts}**`,
+      `• Estoque baixo: **${stats.lowStock}**`,
+      `• Sem estoque: **${stats.outOfStock}**`
     ].join("\n"))
-    .setFooter({ text: "BznX | Admin" })
+    .setFooter({ text: "BznX • Admin" })
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId("admin_menu")
-      .setPlaceholder("Selecione uma opcao...")
+      .setPlaceholder("⚙️ Selecione uma opção...")
       .addOptions([
-        { label: "📦 Produtos", description: "Gerenciar estoque, precos e entrega", value: "admin_products" },
-        { label: "💰 Pagamentos", description: "Ver pedidos e transacoes", value: "admin_payments" },
+        { label: "📦 Produtos", description: "Gerenciar estoque, preços e entrega", value: "admin_products" },
+        { label: "💰 Pagamentos", description: "Ver pedidos e transações", value: "admin_payments" },
         { label: "📝 Cupons", description: "Criar e gerenciar cupons", value: "admin_coupons" },
         { label: "📨 Invites", description: "Ranking e ferramentas de convites", value: "admin_invites" },
-        { label: "⚙️ Operacoes", description: "Status, sync, presenca e configuracoes", value: "admin_settings" }
+        { label: "⚙️ Operações", description: "Status, sync, presença e configurações", value: "admin_settings" }
       ])
   );
 

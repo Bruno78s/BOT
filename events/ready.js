@@ -128,6 +128,9 @@ module.exports = {
       if (process.env.AUTO_RESTOCK_ENABLED === 'true') {
         const restockResult = await autoRestock.runAutoRestock();
         if (restockResult.restocked.length > 0) {
+          await ensureProductPanels(client, config).catch((err) =>
+            console.log("[STOCK] Erro ao atualizar painéis após restock:", err.message)
+          );
           await logRelatorio(client, config);
         }
       }

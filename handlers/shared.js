@@ -69,7 +69,7 @@ function buildProductBackRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("admin_products_back")
-      .setLabel("Voltar para produtos")
+      .setLabel("📦 Voltar para produtos")
       .setStyle(ButtonStyle.Secondary)
   );
 }
@@ -78,7 +78,7 @@ function buildMainMenuBackRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("admin_main_back")
-      .setLabel("Voltar ao Menu Principal")
+      .setLabel("⬅️ Voltar ao Menu Principal")
       .setStyle(ButtonStyle.Secondary)
   );
 }
