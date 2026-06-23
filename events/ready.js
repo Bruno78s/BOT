@@ -179,7 +179,7 @@ module.exports = {
             const expiredRow = new ActionRowBuilder().addComponents(
               new ButtonBuilder()
                 .setCustomId("select_payment_gateway_menu")
-                .setLabel("Gerar Novo PIX")
+                .setLabel("Escolher pagamento")
                 .setStyle(ButtonStyle.Primary),
               new ButtonBuilder()
                 .setCustomId("ticket_cancel_purchase")

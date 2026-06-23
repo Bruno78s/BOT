@@ -147,6 +147,39 @@ function buildPaymentMethodRow() {
   );
 }
 
+async function showPaymentMethodChoice(interaction, config) {
+  await interaction.deferReply({ ephemeral: true });
+
+  const ticket = await listTicketByChannel(interaction.channel.id);
+  const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
+  if (!product) {
+    return interaction.editReply({
+      embeds: [dangerEmbed(config, "Produto não encontrado", "Não foi possível identificar o produto deste carrinho.")]
+    });
+  }
+
+  let coupon = null;
+  let discount = 0;
+  let finalPrice = product.price;
+
+  if (ticket.coupon_id) {
+    coupon = await get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
+    if (coupon) {
+      discount = calculateDiscount(product.price, coupon);
+      finalPrice = Math.round((product.price - discount) * 100) / 100;
+    }
+  }
+
+  const description = coupon
+    ? `Cupom **${coupon.code.toUpperCase()}** aplicado! Desconto de ${formatPrice(discount)}.`
+    : "Nenhum cupom aplicado.";
+
+  return interaction.editReply({
+    embeds: [infoEmbed(config, "Escolher pagamento", `Escolha como deseja pagar **${product.name}**.\n\n${description}\n\n**Total:** ${formatPrice(finalPrice)}${coupon ? ` (de ${formatPrice(product.price)})` : ""}`)],
+    components: [buildPaymentMethodRow()]
+  });
+}
+
 function startPixCountdown({ message, interaction, config, product, coupon, discount, finalPrice, checkout, paymentId, pixExpiresAt, qrCodeAttached, row }) {
   const updateCountdown = async () => {
     const remainingMs = Math.max(0, pixExpiresAt - Date.now());
@@ -466,7 +499,24 @@ async function handleCartButtons(interaction, config) {
     return true;
   }
 
-  if (customId === "select_payment_gateway_menu" || customId === "select_payment_pix" || customId === "select_payment_card") {
+  if (customId === "select_payment_gateway_menu") {
+    try {
+      await showPaymentMethodChoice(interaction, config);
+      return true;
+
+    } catch (error) {
+      console.error("[DEBUG] Erro ao abrir escolha de pagamento:", error);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.deferReply({ ephemeral: true });
+      }
+      if (interaction.deferred) {
+        await interaction.editReply({ content: "\u274C Erro ao abrir op\u00E7\u00F5es de pagamento. Tente novamente." });
+      }
+      return true;
+    }
+  }
+
+  if (customId === "select_payment_pix" || customId === "select_payment_card") {
     try {
       const method = customId === "select_payment_card" ? "card" : "pix";
       await handlePaymentGatewaySelect(interaction, config, method);

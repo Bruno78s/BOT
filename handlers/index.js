@@ -52,9 +52,10 @@ async function routeInteraction(interaction, config) {
       return;
     }
 
-    // Payment gateway selection
+    // Legacy payment gateway selection
     if (customId === "select_payment_gateway") {
-      await handlePaymentGatewaySelect(interaction, config);
+      const selectedMethod = interaction.values?.[0]?.includes("card") ? "card" : "pix";
+      await handlePaymentGatewaySelect(interaction, config, selectedMethod);
       return;
     }
 
