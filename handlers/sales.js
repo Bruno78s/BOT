@@ -329,7 +329,9 @@ async function handleSupportTicketSelect(interaction, config) {
   
   const reasonMap = {
     support: "suporte",
-    service_issue: "problema-servico"
+    service_issue: "problema-servico",
+    billing: "financeiro",
+    partnership: "parceria"
   };
   const reason = reasonMap[interaction.values[0]] || "suporte";
   const settings = await getSettings(interaction.guild.id) || {};

@@ -1,7 +1,4 @@
-/**
- * Handler de Tickets — fechar, avaliar, assumir
- */
-const {
+﻿const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -28,9 +25,8 @@ async function handleTicketButtons(interaction, config) {
       });
     }
 
-    const channel = interaction.channel;
-    await channel.send({
-      content: `🎫 **Ticket assumido por ${member.user.tag}**`
+    await interaction.channel.send({
+      content: `🙋 **Ticket assumido por ${member.user.tag}**`
     });
 
     await interaction.editReply({
@@ -45,11 +41,12 @@ async function handleTicketButtons(interaction, config) {
       new ButtonBuilder()
         .setCustomId("ticket_close_confirm")
         .setLabel("Confirmar fechamento")
+        .setEmoji("🔒")
         .setStyle(ButtonStyle.Danger)
     );
 
     await interaction.editReply({
-      embeds: [infoEmbed(config, "<a:atencaocc:1472985634678505603> Confirma\u00E7\u00E3o <a:atencaocc:1472985634678505603>", "Deseja realmente fechar este ticket?")],
+      embeds: [infoEmbed(config, "🔒 Confirmação", "Deseja realmente fechar este ticket?")],
       components: [row]
     });
     return true;
@@ -66,7 +63,7 @@ async function handleTicketButtons(interaction, config) {
         embeds: [dangerEmbed(config, "Aviso", "Este ticket não está registrado ou já foi fechado. O canal será removido em 5 segundos.")]
       });
       await interaction.channel.send({
-        embeds: [successEmbed(config, "🔴 Fechamento", "Este canal será encerrado em 5 segundos...")]
+        embeds: [successEmbed(config, "🔒 Fechamento", "Este canal será encerrado em 5 segundos...")]
       });
       setTimeout(() => {
         interaction.channel.delete("Ticket não encontrado no registro").catch(() => null);
@@ -80,7 +77,7 @@ async function handleTicketButtons(interaction, config) {
     });
     if (result.error) {
       await interaction.channel.send({
-        embeds: [successEmbed(config, "🔴 Fechamento", "Este canal será encerrado em 5 segundos...")]
+        embeds: [successEmbed(config, "🔒 Fechamento", "Este canal será encerrado em 5 segundos...")]
       });
       setTimeout(() => {
         interaction.channel.delete("Ticket fechado manualmente").catch(() => null);
@@ -113,13 +110,13 @@ async function handleTicketButtons(interaction, config) {
       title: `${config.botName} | Ticket fechado`,
       fields: [
         { name: "Canal", value: `<#${interaction.channel.id}>`, inline: true },
-        { name: "Usuario", value: `<@${result.ticket.user_id}>`, inline: true },
+        { name: "Usuário", value: `<@${result.ticket.user_id}>`, inline: true },
         { name: "Staff", value: `<@${interaction.user.id}>`, inline: true },
-        { name: "Dura\u00E7\u00E3o", value: durationText, inline: true },
-        { name: "Avalia\u00E7\u00E3o", value: shouldRequestRating ? "Aguardando usu\u00E1rio" : "N\u00E3o solicitada", inline: true },
-        { name: "Transcri\u00E7\u00E3o", value: "N\u00E3o dispon\u00EDvel", inline: true }
+        { name: "Duração", value: durationText, inline: true },
+        { name: "Avaliação", value: shouldRequestRating ? "Aguardando usuário" : "Não solicitada", inline: true },
+        { name: "Transcrição", value: "Não disponível", inline: true }
       ],
-      footer: "BznX Store \u2022 Logs"
+      footer: "BznX Store • Logs"
     });
 
     await logTicketEvent(
@@ -131,9 +128,9 @@ async function handleTicketButtons(interaction, config) {
         description: `Ticket fechado por ${interaction.user.tag}.`,
         fields: [
           { name: "Canal", value: `<#${interaction.channel.id}>`, inline: true },
-          { name: "Usu\u00E1rio", value: `<@${result.ticket.user_id}>`, inline: true },
+          { name: "Usuário", value: `<@${result.ticket.user_id}>`, inline: true },
           { name: "Staff", value: `<@${interaction.user.id}>`, inline: true },
-          { name: "Dura\u00E7\u00E3o", value: durationText, inline: true }
+          { name: "Duração", value: durationText, inline: true }
         ]
       }
     );
@@ -151,25 +148,25 @@ async function handleTicketButtons(interaction, config) {
     }
 
     await interaction.reply({
-      embeds: [successEmbed(config, "Avalia\u00E7\u00E3o recebida", `Nota registrada: ${rating} estrelas.`)],
+      embeds: [successEmbed(config, "Avaliação recebida", `Nota registrada: ${rating} estrelas.`)],
       ephemeral: true
     });
 
     const settings = await getSettings(interaction.guild.id);
     const logChannel = settings ? interaction.guild.channels.cache.get(settings.log_channel_id) : null;
-    await logToDb(interaction.guild.id, "info", "Avalia\u00E7\u00E3o registrada", {
+    await logToDb(interaction.guild.id, "info", "Avaliação registrada", {
       channelId: interaction.channel.id,
       userId: result.ticket.user_id,
       rating
     });
-    await logToChannel(logChannel, config, "info", "Avalia\u00E7\u00E3o recebida.", {
+    await logToChannel(logChannel, config, "info", "Avaliação recebida.", {
       title: `${config.botName} | Feedback`,
       fields: [
         { name: "Canal", value: `<#${interaction.channel.id}>`, inline: true },
-        { name: "Usu\u00E1rio", value: `<@${result.ticket.user_id}>`, inline: true },
+        { name: "Usuário", value: `<@${result.ticket.user_id}>`, inline: true },
         { name: "Nota", value: formatStars(rating), inline: true }
       ],
-      footer: "BznX Store \u2022 Logs"
+      footer: "BznX Store • Logs"
     });
 
     await logFeedbackEvent(
