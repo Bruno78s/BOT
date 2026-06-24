@@ -17,7 +17,7 @@ const { ensureRulesPanel } = require("../utils/rulesPanel");
 const { ensureProductPanels } = require("../utils/productPanels");
 const { logSystemEvent } = require("../utils/advancedLogger");
 const { logSistema, logRelatorio } = require("../utils/channelLogger");
-const { cacheGuildInvites } = require("../utils/invites");
+const { cacheGuildInvites, validatePendingInvites } = require("../utils/invites");
 const Dashboard = require("../utils/dashboard");
 const ReportSystem = require("../utils/reports");
 const StockPrediction = require("../utils/stockPrediction");
@@ -145,6 +145,18 @@ module.exports = {
 
     startCustomerRoleSync(client);
     startStatusPanel(client, config);
+
+    setInterval(async () => {
+      for (const guild of client.guilds.cache.values()) {
+        const validated = await validatePendingInvites(guild, config).catch((error) => {
+          console.error("[INVITES] Erro ao validar convites pendentes:", error.message);
+          return [];
+        });
+        if (validated.length > 0) {
+          console.log(`[INVITES] ${validated.length} convite(s) validado(s) no servidor ${guild.name}.`);
+        }
+      }
+    }, 60 * 1000);
 
     setInterval(() => {
       ensureStatsPanel(client, config).catch(() => null);

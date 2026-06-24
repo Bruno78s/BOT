@@ -46,11 +46,16 @@ client.once("clientReady", async () => {
 const commandsPath = path.join(__dirname, "commands");
 const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith(".js"));
 const commandsData = [];
+const allowedCommands = new Set(["admin", "clear"]);
 
 for (const file of commandFiles) {
   const filePath = path.join(commandsPath, file);
   const command = require(filePath);
   if (command?.data) {
+    if (!allowedCommands.has(command.data.name)) {
+      console.warn(`[COMMANDS] Ignorando comando fora da lista permitida: /${command.data.name}`);
+      continue;
+    }
     client.commands.set(command.data.name, command);
     commandsData.push(command.data.toJSON());
   }
@@ -71,9 +76,11 @@ for (const file of eventFiles) {
 
 async function registerCommands() {
   const rest = new REST({ version: "10" }).setToken(token);
-  console.log("Limpando comandos antigos...");
+  console.log("Limpando comandos antigos do servidor...");
   await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
-  console.log("Registrando comandos atuais...");
+  console.log("Limpando comandos globais antigos...");
+  await rest.put(Routes.applicationCommands(clientId), { body: [] });
+  console.log("Registrando comandos atuais: /admin e /clear...");
   await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commandsData });
 }
 

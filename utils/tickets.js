@@ -281,12 +281,14 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
     });
   }
 
-  await logTicketCriado(channel.client, config, {
-    userId: member.id,
-    type,
-    channelId: channel.id,
-    reason: reason || null,
-  }).catch(() => null);
+  if (type !== "sales") {
+    await logTicketCriado(channel.client, config, {
+      userId: member.id,
+      type,
+      channelId: channel.id,
+      reason: reason || null,
+    }).catch(() => null);
+  }
 
   return { channel };
 }

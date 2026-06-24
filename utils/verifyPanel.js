@@ -1,14 +1,16 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { EmbedBuilder } = require("discord.js");
-const { AttachmentBuilder } = require("discord.js");
+const { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require("discord.js");
 const path = require("path");
 
+function getMinAccountAgeDays(config) {
+  return Number(process.env.VERIFICATION_MIN_ACCOUNT_AGE_DAYS || config.verification?.minAccountAgeDays || 7);
+}
+
 async function ensureVerifyPanel(client, config) {
-  const { channelId, unverifiedRoleId, verifiedRoleId } = config.verification;
+  const { channelId } = config.verification;
   if (!channelId) return;
 
   const channel = await client.channels.fetch(channelId).catch(() => null);
-  if (!channel || !channel.isTextBased()) return;
+  if (!channel?.isTextBased()) return;
 
   const recent = await channel.messages.fetch({ limit: 20 }).catch(() => null);
   let existingMessage = null;
@@ -22,13 +24,13 @@ async function ensureVerifyPanel(client, config) {
 
   const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
   const bannerPath = path.join(__dirname, "..", "public", "banner-bznx.png");
-
   const logoAttachment = new AttachmentBuilder(logoPath, { name: "logo.png" });
   const bannerAttachment = new AttachmentBuilder(bannerPath, { name: "banner.png" });
+  const minAccountAgeDays = getMinAccountAgeDays(config);
 
   const embed = new EmbedBuilder()
     .setColor(config.colors.primary)
-    .setTitle(`Portal de Verificação`)
+    .setTitle("🛡️ Portal de Verificação")
     .setDescription([
       `Bem-vindo ao **${config.botName}**.`,
       "",
@@ -38,10 +40,11 @@ async function ensureVerifyPanel(client, config) {
       "• validade básica da conta Discord",
       "• tempo mínimo de criação da conta",
       "• sinais de automação ou conta suspeita",
+      "• histórico inicial de entrada por convite",
       "",
       "**Requisitos:**",
       "• Conta Discord ativa",
-      "• Tempo de criação superior a 7 dias",
+      `• Tempo de criação superior a ${minAccountAgeDays} dias`,
       "",
       "Após a aprovação, seus canais serão liberados automaticamente."
     ].join("\n"))
@@ -56,24 +59,23 @@ async function ensureVerifyPanel(client, config) {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("verify_button")
-      .setLabel("Iniciar Verificação")
+      .setLabel("Verificar conta")
+      .setEmoji("✅")
       .setStyle(ButtonStyle.Success)
   );
 
+  const payload = {
+    embeds: [embed],
+    components: [row],
+    files: [logoAttachment, bannerAttachment]
+  };
+
   if (existingMessage) {
-    await existingMessage.edit({ 
-      embeds: [embed], 
-      components: [row],
-      files: [logoAttachment, bannerAttachment]
-    });
+    await existingMessage.edit(payload);
     return;
   }
 
-  await channel.send({ 
-    embeds: [embed], 
-    components: [row],
-    files: [logoAttachment, bannerAttachment]
-  });
+  await channel.send(payload);
 }
 
 module.exports = {

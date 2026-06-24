@@ -202,14 +202,15 @@ async function handleAdminMenu(interaction, config) {
 async function showInvitesPanel(interaction, config) {
   const leaderboard = await getInviteLeaderboard(interaction.guild.id, 10);
   const ranking = leaderboard.length
-      ? leaderboard.map((row, index) => `${index + 1}. <@${row.user_id}> \u2022 Dispon\u00EDveis: **${getRedeemableInvites(row)}** \u2022 Total: **${row.total || 0}** \u2022 Fake: **${row.fake || 0}** \u2022 Saiu: **${row.left_count || 0}**`).join("\n")
+      ? leaderboard.map((row, index) => `${index + 1}. <@${row.user_id}> • Disponíveis: **${getRedeemableInvites(row)}** • Válidos: **${row.current || 0}** • Em análise: **${row.pending || 0}** • Fake: **${row.fake || 0}** • Inválidos: **${row.invalid || 0}**`).join("\n")
     : "Nenhum convite registrado ainda.";
 
   const embed = new EmbedBuilder()
     .setColor(config.colors.primary)
-    .setTitle(`${config.botName} | Invites`)
+    .setTitle(`${config.botName} | 📨 Invites`)
     .setDescription([
-      "> Ranking de convites v\u00E1lidos e ferramentas de reset.",
+      "> Ranking de convites válidos e ferramentas de reset.",
+      "> Entradas novas ficam em análise antes de contar no saldo disponível.",
       "",
       ranking
     ].join("\n"));
@@ -737,10 +738,12 @@ async function handleAdminSelectMenus(interaction, config) {
         `> **Usu\u00E1rio:** ${user ? `<@${userId}>` : userId}`,
         `> **Total:** ${stats.total || 0}`,
         `> **Dispon\u00EDveis:** ${getRedeemableInvites(stats)}`,
+        `> **V\u00E1lidos:** ${stats.current || 0}`,
+        `> **Em an\u00E1lise:** ${stats.pending || 0}`,
         `> **Resgatados/Resetados:** ${stats.redeemed || 0}`,
         `> **Fake:** ${stats.fake || 0}`,
-        `> **Saiu:** ${stats.left || 0}`,
-        `> **Entrou v\u00E1lido:** ${stats.current || 0}`,
+        `> **Inv\u00E1lidos:** ${stats.invalid || 0}`,
+        `> **Saiu:** ${stats.left_count || 0}`,
         "",
         `> **\u00DAltimas entradas (${joins.length} total):**`
       ].join("\n"));
@@ -749,7 +752,14 @@ async function handleAdminSelectMenus(interaction, config) {
       const joinedUser = interaction.guild.members.cache.get(join.user_id)?.user;
       const joinedDate = new Date(join.joined_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'});
       const leftDate = join.left_at ? new Date(join.left_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'}) : 'Ainda no servidor';
-      return `${index + 1}. ${joinedUser?.tag || join.user_id} - ${join.is_fake ? '\uD83D\uDEAB Fake' : '\u2705 V\u00E1lido'} - Entrou: ${joinedDate} - Saiu: ${leftDate}`;
+      const statusLabel = {
+        pending: "\u23F3 Em an\u00E1lise",
+        valid: "\u2705 V\u00E1lido",
+        fake: "\uD83D\uDEAB Fake",
+        invalid: "\u26A0\uFE0F Inv\u00E1lido",
+        left: "\uD83D\uDEAA Saiu"
+      }[join.status] || (join.is_fake ? "\uD83D\uDEAB Fake" : "\u2705 V\u00E1lido");
+      return `${index + 1}. ${joinedUser?.tag || join.user_id} - ${statusLabel} - Entrou: ${joinedDate} - Saiu: ${leftDate}`;
     }).join("\n");
 
     embed.addFields({ name: "Hist\u00F3rico Recente", value: recentJoins || "Nenhuma entrada registrada" });

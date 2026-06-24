@@ -51,26 +51,34 @@ async function handleVerification(interaction, config) {
     ]
   });
 
-  await new Promise(resolve => setTimeout(resolve, 5000));
-
   const verificationResult = await performVerification(member, config);
 
   if (!verificationResult.success) {
+    const resultsText = formatVerificationResults(verificationResult.results);
     await interaction.editReply({
       embeds: [
         dangerEmbed(
           config,
           "\u274C Verifica\u00E7\u00E3o Falhou",
-          verificationResult.reason
+          [
+            verificationResult.reason,
+            "",
+            resultsText ? `### Resultado\n${resultsText}` : null
+          ].filter(Boolean).join("\n")
         )
       ]
     });
+    await logSeguranca(interaction.client, config, {
+      evento: "Verificação recusada",
+      userId: member.id,
+      detalhes: `${member.user.tag}: ${verificationResult.reason}`,
+    }).catch(() => null);
     return true;
   }
 
   try {
-    await member.roles.remove(unverifiedRole);
     await member.roles.add(verifiedRole);
+    await member.roles.remove(unverifiedRole);
 
     const resultsText = formatVerificationResults(verificationResult.results);
 

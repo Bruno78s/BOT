@@ -1,5 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
-const { AttachmentBuilder } = require("discord.js");
+const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const path = require("path");
 const { logSecurityEvent } = require("../utils/advancedLogger");
 const { addInviteJoin, findUsedInvite, sendInviteJoinLog } = require("../utils/invites");
@@ -7,9 +6,9 @@ const { addInviteJoin, findUsedInvite, sendInviteJoinLog } = require("../utils/i
 module.exports = {
   name: "guildMemberAdd",
   async execute(member, config) {
-    const { welcomeChannelId, unverifiedRoleId } = config.verification;
+    const { welcomeChannelId, unverifiedRoleId, channelId } = config.verification;
     const usedInvite = await findUsedInvite(member.guild).catch(() => null);
-    const inviteData = await addInviteJoin(member, usedInvite).catch((error) => {
+    const inviteData = await addInviteJoin(member, usedInvite, config).catch((error) => {
       console.error("Erro ao registrar invite:", error);
       return null;
     });
@@ -19,7 +18,7 @@ module.exports = {
         console.error("Erro ao enviar log de invite:", error);
       });
     }
-    
+
     if (!unverifiedRoleId || !welcomeChannelId) return;
 
     try {
@@ -32,8 +31,8 @@ module.exports = {
       await member.roles.add(unverifiedRole);
 
       const welcomeChannel = await member.guild.channels.fetch(welcomeChannelId).catch(() => null);
-      if (!welcomeChannel || !welcomeChannel.isTextBased()) {
-        console.error(`Canal de boas vindas não encontrado: ${welcomeChannelId}`);
+      if (!welcomeChannel?.isTextBased()) {
+        console.error(`Canal de boas-vindas não encontrado: ${welcomeChannelId}`);
         return;
       }
 
@@ -42,22 +41,22 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor(config.colors.primary)
-        .setTitle(`${config.botName} | Novo Membro`)
+        .setTitle(`${config.botName} | Novo membro`)
         .setDescription([
           `### Bem-vindo, ${member.user}!`,
           "",
           `**Cargo atribuído:** <@&${unverifiedRoleId}>`,
           "",
-          "👉 Vá ao canal <#1483134596274196490> para iniciar o processo de verificação."
+          `👉 Vá ao canal <#${channelId}> para iniciar o processo de verificação.`
         ].join("\n"))
         .setThumbnail("attachment://logo.png")
-        .setFooter({ 
-          text: "Bzn X • Boas Vindas", 
+        .setFooter({
+          text: "BznX Store • Boas-vindas",
           iconURL: "attachment://logo.png"
         })
         .setTimestamp();
 
-      await welcomeChannel.send({ 
+      await welcomeChannel.send({
         content: `${member.user}`,
         embeds: [embed],
         files: [logoAttachment]
@@ -73,12 +72,12 @@ module.exports = {
           fields: [
             { name: "Usuário", value: `${member.user.tag} (${member.id})`, inline: true },
             { name: "Cargo", value: `<@&${unverifiedRoleId}>`, inline: true },
-            { name: "Conta criada em", value: member.user.createdAt.toLocaleDateString('pt-BR'), inline: true }
+            { name: "Conta criada em", value: member.user.createdAt.toLocaleDateString("pt-BR"), inline: true }
           ]
         }
       );
 
-      console.log(`Novo membro ${member.user.tag} recebeu cargo não verificado e foi direcionado para boas vindas.`);
+      console.log(`Novo membro ${member.user.tag} recebeu cargo não verificado e foi direcionado para boas-vindas.`);
     } catch (error) {
       console.error("Erro ao processar novo membro:", error);
     }

@@ -1,10 +1,29 @@
-const { infoEmbed, successEmbed, dangerEmbed, warningEmbed } = require("./embeds");
+function getMinAccountAgeDays(config) {
+  return Number(process.env.VERIFICATION_MIN_ACCOUNT_AGE_DAYS || config.verification?.minAccountAgeDays || 7);
+}
+
+function getAccountAgeDays(user) {
+  return Math.floor((Date.now() - user.createdTimestamp) / (24 * 60 * 60 * 1000));
+}
+
+function hasSuspiciousUsername(user) {
+  const name = `${user.username || ""} ${user.globalName || ""}`.toLowerCase();
+  const suspiciousPatterns = [
+    /discord\.gg/i,
+    /free\s*(nitro|gift|skin|robux)/i,
+    /steamcommunity/i,
+    /airdrop/i,
+    /http(s)?:\/\//i
+  ];
+  return suspiciousPatterns.some((pattern) => pattern.test(name));
+}
 
 async function performVerification(member, config) {
   const user = member.user;
   const verificationResults = [];
+  const minAccountAgeDays = getMinAccountAgeDays(config);
+  const accountAgeDays = getAccountAgeDays(user);
 
-  // Verificação 1: Usuário não pode ser bot
   if (user.bot) {
     return {
       success: false,
@@ -12,38 +31,40 @@ async function performVerification(member, config) {
       results: verificationResults
     };
   }
-  verificationResults.push({ check: "Verificação de Bot", status: "✅ Passou", details: "Usuário é humano" });
+  verificationResults.push({ check: "Conta humana", status: "✅ Passou", details: "Usuário não é bot" });
 
-  // Verificação 2: Idade da conta (mínimo 7 dias)
-  const accountAge = Date.now() - user.createdTimestamp;
-  const minAccountAgeDays = 7;
-  const minAccountAgeMs = minAccountAgeDays * 24 * 60 * 60 * 1000;
-  
-  if (accountAge < minAccountAgeMs) {
-    const daysLeft = Math.ceil((minAccountAgeMs - accountAge) / (24 * 60 * 60 * 1000));
+  if (accountAgeDays < minAccountAgeDays) {
+    const daysLeft = Math.max(1, minAccountAgeDays - accountAgeDays);
+    verificationResults.push({
+      check: "Idade da conta",
+      status: "❌ Reprovou",
+      details: `Conta criada há ${accountAgeDays} dia(s)`
+    });
     return {
       success: false,
-      reason: `Sua conta Discord é muito nova. É necessário ter pelo menos ${minAccountAgeDays} dias de criação. Faltam ${daysLeft} dias.`,
+      reason: `Sua conta Discord é muito nova. É necessário ter pelo menos ${minAccountAgeDays} dias de criação. Faltam ${daysLeft} dia(s).`,
       results: verificationResults
     };
   }
-  const accountAgeDays = Math.floor(accountAge / (24 * 60 * 60 * 1000));
-  verificationResults.push({ check: "Idade da Conta", status: "✅ Passou", details: `Conta criada há ${accountAgeDays} dias` });
+  verificationResults.push({ check: "Idade da conta", status: "✅ Passou", details: `Conta criada há ${accountAgeDays} dia(s)` });
 
-  // Verificação 3: Avatar presente
   if (!user.avatar) {
-    verificationResults.push({ check: "Avatar", status: "⚠️ Aviso", details: "Sem avatar personalizado" });
+    verificationResults.push({ check: "Avatar", status: "⚠️ Atenção", details: "Sem avatar personalizado" });
   } else {
-    verificationResults.push({ check: "Avatar", status: "✅ Passou", details: "Avatar presente" });
+    verificationResults.push({ check: "Avatar", status: "✅ Passou", details: "Avatar personalizado encontrado" });
   }
 
-  // Verificação 4: Verificar se não está em outros servidores suspeitos (opcional)
-  // Esta verificação pode ser implementada mais tarde se necessário
-  verificationResults.push({ check: "Segurança Global", status: "✅ Passou", details: "Sem alertas de segurança" });
+  if (hasSuspiciousUsername(user)) {
+    verificationResults.push({ check: "Nome público", status: "❌ Reprovou", details: "Nome contém link ou termo suspeito" });
+    return {
+      success: false,
+      reason: "Sua conta possui sinais suspeitos no nome público. Ajuste seu perfil e tente novamente.",
+      results: verificationResults
+    };
+  }
+  verificationResults.push({ check: "Nome público", status: "✅ Passou", details: "Sem links ou termos suspeitos" });
 
-  // Verificação 5: Verificar histórico de infrações no servidor (opcional)
-  // Esta verificação pode ser implementada mais tarde se necessário
-  verificationResults.push({ check: "Histórico no Servidor", status: "✅ Passou", details: "Sem infrações anteriores" });
+  verificationResults.push({ check: "Segurança", status: "✅ Passou", details: "Nenhum bloqueio automático encontrado" });
 
   return {
     success: true,
@@ -54,11 +75,13 @@ async function performVerification(member, config) {
 
 function formatVerificationResults(results) {
   return results
-    .map(r => `${r.status} **${r.check}** - ${r.details}`)
+    .map((result) => `${result.status} **${result.check}** - ${result.details}`)
     .join("\n");
 }
 
 module.exports = {
   performVerification,
-  formatVerificationResults
+  formatVerificationResults,
+  getMinAccountAgeDays,
+  getAccountAgeDays
 };

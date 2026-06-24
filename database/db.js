@@ -28,6 +28,11 @@ ensureColumn("coupons", "payment_method", "TEXT");
 ensureColumn("coupons", "role_id", "TEXT");
 ensureColumn("coupons", "first_purchase_only", "INTEGER NOT NULL DEFAULT 0");
 ensureColumn("coupons", "per_user_limit", "INTEGER");
+ensureColumn("invite_stats", "pending", "INTEGER NOT NULL DEFAULT 0");
+ensureColumn("invite_stats", "invalid", "INTEGER NOT NULL DEFAULT 0");
+ensureColumn("invite_joins", "status", "TEXT NOT NULL DEFAULT 'pending'");
+ensureColumn("invite_joins", "validated_at", "INTEGER");
+ensureColumn("invite_joins", "invalid_reason", "TEXT");
 
 // Query functions
 function get(sql, params = []) {
