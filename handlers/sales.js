@@ -25,6 +25,20 @@ const { getSettings } = require("../utils/settings");
 const { sendPurchaseAuditLog } = require("./shared");
 
 const PIX_EXPIRY_MS = 15 * 60 * 1000;
+const PIX_MIN_AMOUNT = 0.01;
+const CARD_MIN_AMOUNT = 0.50;
+
+function roundMoney(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
+function getMinimumAmount(method) {
+  return method === "card" ? CARD_MIN_AMOUNT : PIX_MIN_AMOUNT;
+}
+
+function getPayableAmount(method, discountedAmount) {
+  return roundMoney(Math.max(getMinimumAmount(method), Number(discountedAmount || 0)));
+}
 
 function formatPixTimeout(ms) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -42,7 +56,7 @@ function formatPixDeadline(timestamp) {
   });
 }
 
-function buildPixDescription({ interaction, product, coupon, discount, finalPrice, checkout, pixCountdownLabel, pixDeadlineLabel }) {
+function buildPixDescription({ interaction, product, coupon, discount, discountedPrice, finalPrice, checkout, pixCountdownLabel, pixDeadlineLabel }) {
   return [
     `> 👤 **Cliente:** <@${interaction.user.id}>`,
     `> 📦 **Produto:** ${product.name}`,
@@ -83,11 +97,12 @@ function buildPixEmbed({ interaction, config, description, qrCodeAttached }) {
   return embed;
 }
 
-function buildCardDescription({ interaction, product, coupon, discount, finalPrice, checkout }) {
+function buildCardDescription({ interaction, product, coupon, discount, discountedPrice, finalPrice, checkout }) {
   return [
     `> 👤 **Cliente:** <@${interaction.user.id}>`,
     `> 📦 **Produto:** ${product.name}`,
     coupon ? `> 🏷️ **Desconto:** ${formatPrice(discount)} (cupom **${coupon.code.toUpperCase()}**)` : null,
+    coupon && discountedPrice !== finalPrice ? `> ℹ️ **Subtotal com desconto:** ${formatPrice(discountedPrice)}` : null,
     `> 💰 **Valor:** ${formatPrice(finalPrice)}`,
     checkout.checkoutUrl ? `> 💳 **Pagamento com cartão:** [Clique aqui para pagar](${checkout.checkoutUrl})` : null,
     "",
@@ -160,13 +175,13 @@ async function showPaymentMethodChoice(interaction, config) {
 
   let coupon = null;
   let discount = 0;
-  let finalPrice = product.price;
+  let discountedPrice = product.price;
 
   if (ticket.coupon_id) {
     coupon = await get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
     if (coupon) {
       discount = calculateDiscount(product.price, coupon);
-      finalPrice = Math.round((product.price - discount) * 100) / 100;
+      discountedPrice = roundMoney(product.price - discount);
     }
   }
 
@@ -175,12 +190,22 @@ async function showPaymentMethodChoice(interaction, config) {
     : "Nenhum cupom aplicado.";
 
   return interaction.editReply({
-    embeds: [infoEmbed(config, "Escolher pagamento", `Escolha como deseja pagar **${product.name}**.\n\n${description}\n\n**Total:** ${formatPrice(finalPrice)}${coupon ? ` (de ${formatPrice(product.price)})` : ""}`)],
+    embeds: [infoEmbed(config, "Escolher pagamento", [
+      `Escolha como deseja pagar **${product.name}**.`,
+      "",
+      description,
+      coupon ? `Subtotal com desconto: **${formatPrice(discountedPrice)}**` : null,
+      "",
+      `PIX: **${formatPrice(getPayableAmount("pix", discountedPrice))}**`,
+      `Cartão: **${formatPrice(getPayableAmount("card", discountedPrice))}**`,
+      "",
+      "Os valores acima já consideram o mínimo permitido por cada forma de pagamento."
+    ].filter(Boolean).join("\n"))],
     components: [buildPaymentMethodRow()]
   });
 }
 
-function startPixCountdown({ message, interaction, config, product, coupon, discount, finalPrice, checkout, paymentId, pixExpiresAt, qrCodeAttached, row }) {
+function startPixCountdown({ message, interaction, config, product, coupon, discount, discountedPrice, finalPrice, checkout, paymentId, pixExpiresAt, qrCodeAttached, row }) {
   const updateCountdown = async () => {
     const remainingMs = Math.max(0, pixExpiresAt - Date.now());
     const countdownLabel = formatPixTimeout(remainingMs);
@@ -197,6 +222,7 @@ function startPixCountdown({ message, interaction, config, product, coupon, disc
       product,
       coupon,
       discount,
+      discountedPrice,
       finalPrice,
       checkout,
       pixCountdownLabel: countdownLabel,
@@ -328,15 +354,17 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
 
   let coupon = null;
   let discount = 0;
-  let finalPrice = product.price;
+  let discountedPrice = product.price;
 
   if (ticket.coupon_id) {
     coupon = await get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
     if (coupon) {
       discount = calculateDiscount(product.price, coupon);
-      finalPrice = Math.round((product.price - discount) * 100) / 100;
+      discountedPrice = roundMoney(product.price - discount);
     }
   }
+
+  const finalPrice = getPayableAmount(method, discountedPrice);
 
   let checkout = null;
 
@@ -376,7 +404,7 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
   );
 
   if (method === "card") {
-    const description = buildCardDescription({ interaction, product, coupon, discount, finalPrice, checkout });
+    const description = buildCardDescription({ interaction, product, coupon, discount, discountedPrice, finalPrice, checkout });
     await interaction.editReply({ content: "✅ Link de pagamento com cartão gerado! Veja abaixo.", ephemeral: true });
     await interaction.channel.send({
       embeds: [buildCardEmbed({ interaction, config, description })],
@@ -401,6 +429,7 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
     product,
     coupon,
     discount,
+    discountedPrice,
     finalPrice,
     checkout,
     pixCountdownLabel: pixTimeoutLabel,
@@ -424,6 +453,7 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
       product,
       coupon,
       discount,
+      discountedPrice,
       finalPrice,
       checkout,
       paymentId: localPaymentRecord.id,
@@ -449,7 +479,7 @@ async function handleCouponModal(interaction, config) {
 
   let discount = 0;
   let coupon = null;
-  let finalPrice = product.price;
+  let discountedPrice = product.price;
 
   if (couponCode) {
     const validation = await validateCoupon(interaction.guild.id, couponCode, product.price, product.id);
@@ -462,7 +492,7 @@ async function handleCouponModal(interaction, config) {
 
     coupon = validation.coupon;
     discount = calculateDiscount(product.price, coupon);
-    finalPrice = product.price - discount;
+    discountedPrice = roundMoney(product.price - discount);
   }
 
   const description = coupon
@@ -470,7 +500,17 @@ async function handleCouponModal(interaction, config) {
     : "Nenhum cupom aplicado.";
 
   await interaction.editReply({
-    embeds: [infoEmbed(config, "Escolher pagamento", `Escolha como deseja pagar **${product.name}**.\n\n${description}\n\n**Total:** ${formatPrice(finalPrice)} (${coupon ? `De ${formatPrice(product.price)}` : ""})`)],
+    embeds: [infoEmbed(config, "Escolher pagamento", [
+      `Escolha como deseja pagar **${product.name}**.`,
+      "",
+      description,
+      coupon ? `Subtotal com desconto: **${formatPrice(discountedPrice)}**` : null,
+      "",
+      `PIX: **${formatPrice(getPayableAmount("pix", discountedPrice))}**`,
+      `Cartão: **${formatPrice(getPayableAmount("card", discountedPrice))}**`,
+      "",
+      "Os valores acima já consideram o mínimo permitido por cada forma de pagamento."
+    ].filter(Boolean).join("\n"))],
     components: [buildPaymentMethodRow()]
   });
 
