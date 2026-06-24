@@ -1,11 +1,11 @@
 const { get, run, all } = require("../database/db");
 
 async function createCoupon(guildId, code, discountType, discountValue, options = {}) {
-  const { maxUses, minAmount, expiresAt, productId } = options;
+  const { maxUses, minAmount, expiresAt, productId, paymentMethod, roleId, firstPurchaseOnly, perUserLimit } = options;
   
   run(
-    "INSERT INTO coupons (guild_id, code, discount_type, discount_value, max_uses, min_amount, product_id, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [guildId, code.toUpperCase(), discountType, discountValue, maxUses || null, minAmount || null, productId || null, expiresAt || null, Date.now()]
+    "INSERT INTO coupons (guild_id, code, discount_type, discount_value, max_uses, min_amount, payment_method, role_id, first_purchase_only, per_user_limit, product_id, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [guildId, code.toUpperCase(), discountType, discountValue, maxUses || null, minAmount || null, paymentMethod || null, roleId || null, firstPurchaseOnly ? 1 : 0, perUserLimit || null, productId || null, expiresAt || null, Date.now()]
   );
   
   return { success: true };
@@ -91,6 +91,36 @@ async function validateCoupon(guildId, code, amount, productId = null) {
   return { valid: true, coupon };
 }
 
+async function validateCouponForCheckout(guildId, code, amount, productId, member, method) {
+  const result = await validateCoupon(guildId, code, amount, productId);
+  if (!result.valid) return result;
+
+  const coupon = result.coupon;
+  if (coupon.payment_method && coupon.payment_method !== "any" && coupon.payment_method !== method) {
+    return { valid: false, reason: `Cupom válido apenas para ${coupon.payment_method === "card" ? "cartão" : "PIX"}` };
+  }
+
+  if (coupon.role_id && !member?.roles?.cache?.has(coupon.role_id)) {
+    return { valid: false, reason: "Cupom disponível apenas para um cargo específico" };
+  }
+
+  if (coupon.first_purchase_only) {
+    const previous = get("SELECT COUNT(*) as total FROM payments WHERE guild_id = ? AND user_id = ? AND status = 'approved'", [guildId, member.id]);
+    if ((previous?.total || 0) > 0) {
+      return { valid: false, reason: "Cupom válido apenas para primeira compra" };
+    }
+  }
+
+  if (coupon.per_user_limit) {
+    const usage = get("SELECT COUNT(*) as total FROM payments WHERE guild_id = ? AND user_id = ? AND coupon_id = ? AND status = 'approved'", [guildId, member.id, coupon.id]);
+    if ((usage?.total || 0) >= coupon.per_user_limit) {
+      return { valid: false, reason: "Você já atingiu o limite de uso deste cupom" };
+    }
+  }
+
+  return { valid: true, coupon };
+}
+
 async function useCoupon(couponId) {
   run("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [couponId]);
 }
@@ -115,6 +145,7 @@ module.exports = {
   updateCoupon,
   deleteCoupon,
   validateCoupon,
+  validateCouponForCheckout,
   useCoupon,
   calculateDiscount
 };

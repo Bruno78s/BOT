@@ -15,7 +15,8 @@ const { logVenda, logComprovante, logPedido, logVendaSite } = require("./channel
 const { ensureProductPanels } = require("./productPanels");
 const { sendReceiptDM, sendReceiptToPrivateChannel } = require("./receipt");
 const { useCoupon } = require("./coupons");
-const { get } = require("../database/db");
+const { get, run } = require("../database/db");
+const { getFulfillmentStatusLabel, getOrderCode } = require("./orders");
 const {
   constructStripeWebhookEvent,
   fetchCardCheckoutSession,
@@ -107,16 +108,11 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   const product = config.products.find((item) => item.id === localPayment.product_id);
   const coupon = localPayment.coupon_id ? get("SELECT * FROM coupons WHERE id = ?", [localPayment.coupon_id]) : null;
   const orderId = localPayment.id;
+  const orderCode = getOrderCode(localPayment);
   const paymentId = paymentData.id;
   const paymentMethodLabel = localPayment.provider === "stripe" ? "Cartão" : "PIX Mercado Pago";
   const deliveryChannelId = product?.category === "sites" ? config.deliveryChannels?.sites : config.deliveryChannels?.bots;
   const deliveryChannel = deliveryChannelId ? await client.channels.fetch(deliveryChannelId).catch(() => null) : null;
-
-  const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
-  if (messages) {
-    const botMessages = messages.filter(m => m.author.id === client.user.id);
-    await channel.bulkDelete(botMessages).catch(() => null);
-  }
 
   const remainingStock = decrementStock(config, localPayment.product_id);
 
@@ -135,7 +131,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       `> 👤 **Cliente:** <@${localPayment.user_id}>`,
       `> 📦 **Produto:** ${product?.name || localPayment.product_id}`,
       `> 💰 **Valor:** ${formatPrice(localPayment.amount)}`,
-      `> 📝 **Pedido:** #${orderId}`,
+      `> 📝 **Pedido:** ${orderCode}`,
       `> 📋 **Pagamento:** \`${paymentId}\``,
       "",
       "─────────────────────────────",
@@ -164,6 +160,29 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       .setStyle(ButtonStyle.Danger)
   );
   const row = new ActionRowBuilder().addComponents(...buttons);
+
+  const fulfillmentStatus = hasAutoDelivery ? "delivered" : "preparing";
+  if (localPayment.payment_message_id) {
+    const paymentMessage = await channel.messages.fetch(localPayment.payment_message_id).catch(() => null);
+    if (paymentMessage?.editable) {
+      await paymentMessage.edit({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x00c853)
+            .setAuthor({ name: `${config.botName} • Pedido`, iconURL: client.user.displayAvatarURL() })
+            .setTitle("✅ Pagamento aprovado")
+            .setDescription([
+              `> **Pedido:** ${orderCode}`,
+              `> **Status:** ${getFulfillmentStatusLabel(fulfillmentStatus)}`,
+              `> **Produto:** ${product?.name || localPayment.product_id}`,
+              `> **Valor:** ${formatPrice(localPayment.amount)}`
+            ].join("\n"))
+            .setTimestamp()
+        ],
+        components: []
+      }).catch(() => null);
+    }
+  }
 
   console.log("[WEBHOOK] Enviando mensagem de pagamento aprovado para canal:", channel.id);
   await channel.send({
@@ -198,10 +217,10 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     checkoutUrl: localPayment.checkout_url,
     providerPaymentId: paymentId,
     coupon,
-    orderId
+    orderId: orderCode
   };
 
-  await sendClientDM(client, config, localPayment, product, orderId, paymentId);
+  await sendClientDM(client, config, localPayment, product, orderCode, paymentId);
   await sendReceiptToPrivateChannel(client, config, receiptData, "PAGO").catch((error) => {
     console.error("[RECEIPT] Falha ao enviar comprovante aprovado:", error.message);
   });
@@ -219,7 +238,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
             { name: "👤 Cliente", value: `<@${localPayment.user_id}>`, inline: true },
             { name: "📦 Produto", value: product?.name || localPayment.product_id, inline: true },
             { name: "💰 Valor", value: formatPrice(localPayment.amount), inline: true },
-            { name: "📋 Pedido", value: `#${orderId}`, inline: true },
+            { name: "📋 Pedido", value: orderCode, inline: true },
             { name: "📦 Estoque", value: `${remainingStock >= 0 ? remainingStock : "?"} restantes`, inline: true },
             { name: "🚀 Entrega", value: deliveryType, inline: true },
           ])
@@ -248,7 +267,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     userId: localPayment.user_id,
     productName: product?.name || localPayment.product_id,
     amount: localPayment.amount,
-    orderId,
+    orderId: orderCode,
     paymentId,
     channelId: localPayment.channel_id,
     coupon: coupon?.code ? coupon.code.toUpperCase() : null,
@@ -258,7 +277,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     userId: localPayment.user_id,
     productName: product?.name || localPayment.product_id,
     amount: localPayment.amount,
-    orderId,
+    orderId: orderCode,
     paymentId,
     channelId: localPayment.channel_id,
   });
@@ -269,9 +288,14 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       { name: "Cliente", value: `<@${localPayment.user_id}>`, inline: true },
       { name: "Produto", value: product?.name || localPayment.product_id, inline: true },
       { name: "Valor", value: formatPrice(localPayment.amount), inline: true },
-      { name: "ID do Pedido", value: `#${orderId}`, inline: true }
+      { name: "ID do Pedido", value: orderCode, inline: true }
     ]
   });
+
+  run(
+    "UPDATE payments SET order_code = ?, fulfillment_status = ?, delivered_at = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_at END WHERE id = ?",
+    [orderCode, fulfillmentStatus, fulfillmentStatus, Date.now(), localPayment.id]
+  );
 
   return true;
 }
@@ -381,6 +405,7 @@ async function processMercadoPagoPayment(client, config, paymentId, source = "we
         const confirmed = await confirmApprovedPayment(client, config, paymentData, localPayment);
         if (confirmed === false) throw new Error("confirmacao local nao concluida");
         await updatePaymentStatusByProviderId(paymentData.id, "approved");
+        run("UPDATE payments SET order_code = COALESCE(order_code, ?), fulfillment_status = COALESCE(NULLIF(fulfillment_status, 'awaiting_payment'), ?) WHERE id = ?", [getOrderCode(localPayment), "paid", localPayment.id]);
         if (localPayment.coupon_id) {
           await useCoupon(localPayment.coupon_id).catch((error) => console.error("[COUPON] Falha ao registrar uso:", error.message));
         }
@@ -450,6 +475,7 @@ async function processStripePayment(client, config, sessionId, source = "webhook
         );
         if (confirmed === false) throw new Error("confirmacao local nao concluida");
         await updateStripePaymentStatus(session.id, "approved", paymentIntentId);
+        run("UPDATE payments SET order_code = COALESCE(order_code, ?), fulfillment_status = COALESCE(NULLIF(fulfillment_status, 'awaiting_payment'), ?) WHERE id = ?", [getOrderCode(localPayment), "paid", localPayment.id]);
         if (localPayment.coupon_id) {
           await useCoupon(localPayment.coupon_id).catch((error) => console.error("[COUPON] Falha ao registrar uso:", error.message));
         }

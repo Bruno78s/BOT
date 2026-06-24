@@ -132,7 +132,7 @@ async function createReceiptAttachment({
   doc
     .fillColor("#64748B")
     .fontSize(9)
-    .text("Este comprovante é destinado à conferência interna da equipe BznX Store. A validade depende da confirmação do provedor de pagamento.", 48, 680, {
+    .text("Este comprovante é destinado à conferência interna da equipe BznX Store. Não é nota fiscal. A validade depende da confirmação do provedor de pagamento.", 48, 680, {
       width: 499,
       align: "center"
     });

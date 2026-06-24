@@ -19,6 +19,15 @@ function ensureColumn(table, column, definition) {
 }
 
 ensureColumn("payments", "coupon_id", "INTEGER");
+ensureColumn("payments", "order_code", "TEXT");
+ensureColumn("payments", "fulfillment_status", "TEXT NOT NULL DEFAULT 'awaiting_payment'");
+ensureColumn("payments", "delivered_at", "INTEGER");
+ensureColumn("payments", "issue_reason", "TEXT");
+ensureColumn("payments", "payment_message_id", "TEXT");
+ensureColumn("coupons", "payment_method", "TEXT");
+ensureColumn("coupons", "role_id", "TEXT");
+ensureColumn("coupons", "first_purchase_only", "INTEGER NOT NULL DEFAULT 0");
+ensureColumn("coupons", "per_user_limit", "INTEGER");
 
 // Query functions
 function get(sql, params = []) {

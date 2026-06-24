@@ -9,7 +9,8 @@ const {
   StringSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle
+  TextInputStyle,
+  AttachmentBuilder
 } = require("discord.js");
 const { infoEmbed, successEmbed, dangerEmbed } = require("../utils/embeds");
 const { getSettings, upsertSettings } = require("../utils/settings");
@@ -20,6 +21,7 @@ const { listCoupons, createCoupon, deleteCoupon, validateCoupon, calculateDiscou
 const { getInviteStats, getInviteLeaderboard, getRedeemableInvites, setRedeemedInvites } = require("../utils/invites");
 const { parsePriceInput, getCurrentProducts, buildProductAdminView, buildProductBackRow, buildMainMenuBackRow } = require("./shared");
 const { buildAdminHome } = require("../utils/adminPanel");
+const { getFulfillmentStatusLabel, getOrderCode } = require("../utils/orders");
 const { ensureStatusPanel } = require("../utils/statusPanel");
 const { ensureProductPanels } = require("../utils/productPanels");
 const { runCustomerRoleSync, getCustomerRoleSyncStatus } = require("../utils/customerRoleSync");
@@ -63,7 +65,7 @@ async function handleAdminMenu(interaction, config) {
 
     const statusEmoji = { approved: "\u2705", pending: "\u23F3", rejected: "\u274C", cancelled: "\u26D4" };
     const paymentOptions = payments.slice(0, 25).map(p => ({
-      label: `#${p.id} \u2014 ${formatPrice(p.amount)}`,
+      label: `${getOrderCode(p)} — ${formatPrice(p.amount)}`.slice(0, 100),
       description: `${statusEmoji[p.status] || "\u2B55"} ${p.status.toUpperCase()} | ${new Date(p.created_at).toLocaleDateString('pt-BR')} | <@${p.user_id}>`,
       value: `view_payment_${p.id}`
     }));
@@ -73,6 +75,9 @@ async function handleAdminMenu(interaction, config) {
         .setCustomId("payment_menu")
         .setPlaceholder("Selecione um pagamento para detalhar...")
         .addOptions(paymentOptions)
+    );
+    const actions = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId("admin_export_sales_csv").setLabel("Exportar CSV").setStyle(ButtonStyle.Secondary)
     );
 
     const embed = new EmbedBuilder()
@@ -87,7 +92,7 @@ async function handleAdminMenu(interaction, config) {
       .setFooter({ text: `${config.botName} \u2022 Pagamentos` })
       .setTimestamp();
 
-    return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
+    return interaction.update({ embeds: [embed], components: [row, actions, buildMainMenuBackRow()] });
   }
 
   if (selectedValue === "admin_coupons") {
@@ -438,6 +443,28 @@ async function handleAdminButtons(interaction, config) {
     });
   }
 
+  if (customId === "admin_export_sales_csv") {
+    const rows = all("SELECT * FROM payments WHERE guild_id = ? ORDER BY created_at DESC", [interaction.guild.id]);
+    const header = ["order_code", "id", "status", "fulfillment_status", "provider", "user_id", "product_id", "amount", "created_at", "updated_at"];
+    const csv = [
+      header.join(","),
+      ...rows.map((payment) => header.map((key) => {
+        const value = key === "order_code" ? getOrderCode(payment) : payment[key];
+        return `"${String(value ?? "").replace(/"/g, '""')}"`;
+      }).join(","))
+    ].join("\n");
+
+    const file = new AttachmentBuilder(Buffer.from(csv, "utf8"), {
+      name: `vendas-${interaction.guild.id}-${Date.now()}.csv`
+    });
+
+    return interaction.reply({
+      content: "Exportação de vendas gerada.",
+      files: [file],
+      ephemeral: true
+    });
+  }
+
   if (customId === "admin_health_view") {
     return interaction.reply({
       embeds: [buildHealthEmbed(interaction, config)],
@@ -648,6 +675,32 @@ async function handleAdminButtons(interaction, config) {
     return;
   }
 
+  if (customId.startsWith("payment_mark_")) {
+    const match = customId.match(/^payment_mark_(refunded|cancelled|delivered|problem)_(\d+)$/);
+    if (!match) return false;
+
+    const [, action, paymentId] = match;
+    const statusMap = {
+      refunded: { payment: "refunded", fulfillment: "refunded", label: "reembolsado" },
+      cancelled: { payment: "cancelled", fulfillment: "cancelled", label: "cancelado" },
+      delivered: { payment: "approved", fulfillment: "delivered", label: "entregue manualmente" },
+      problem: { payment: "problem", fulfillment: "problem", label: "marcado com problema" }
+    };
+    const next = statusMap[action];
+    const payment = get("SELECT * FROM payments WHERE id = ?", [paymentId]);
+    if (!payment) return interaction.reply({ content: "Pagamento não encontrado.", ephemeral: true });
+
+    run(
+      "UPDATE payments SET status = ?, fulfillment_status = ?, delivered_at = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_at END, issue_reason = CASE WHEN ? = 'problem' THEN 'Marcado manualmente pelo admin' ELSE issue_reason END, updated_at = ? WHERE id = ?",
+      [next.payment, next.fulfillment, next.fulfillment, Date.now(), next.fulfillment, Date.now(), paymentId]
+    );
+
+    return interaction.reply({
+      embeds: [successEmbed(config, "Pedido atualizado", `Pedido **${getOrderCode(payment)}** foi ${next.label}.`)],
+      ephemeral: true
+    });
+  }
+
   return false;
 }
 
@@ -738,7 +791,7 @@ async function handleAdminSelectMenus(interaction, config) {
       new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("coupon_code").setLabel("C\u00F3digo do cupom").setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder("Ex: PROMO10")),
       new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("coupon_discount_type").setLabel("Tipo de desconto (percentage/fixed)").setStyle(TextInputStyle.Short).setRequired(true).setValue("percentage")),
       new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("coupon_discount_value").setLabel("Valor do desconto").setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder("Ex: 10 (para 10% ou R$ 10)")),
-      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("coupon_max_uses").setLabel("M\u00E1ximo de usos (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder("Ex: 100")),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("coupon_max_uses").setLabel("Usos | metodo | cargo | first | limite/user").setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder("Ex: 100 | pix | cargoId | first | 1")),
       new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("coupon_min_amount").setLabel("Valor m\u00EDnimo (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder("Ex: 50"))
     );
     return interaction.showModal(modal);
@@ -751,22 +804,30 @@ async function handleAdminSelectMenus(interaction, config) {
 
     const product = config.products.find(p => p.id === payment.product_id);
     const statusEmoji = payment.status === "approved" ? "\u2705" : payment.status === "pending" ? "\u23F3" : "\u274C";
+    const orderCode = getOrderCode(payment);
 
     const embed = new EmbedBuilder()
       .setColor(config.colors.primary)
-      .setTitle(`${config.botName} | Detalhes do Pedido #${payment.id}`)
+      .setTitle(`${config.botName} | Detalhes do Pedido ${orderCode}`)
       .setDescription([
         `> **Cliente:** <@${payment.user_id}>`,
         `> **Produto:** ${product?.name || payment.product_id}`,
         `> **Valor:** ${formatPrice(payment.amount)}`,
         `> **Gateway:** ${payment.provider}`,
         `> **Status:** ${statusEmoji} ${payment.status}`,
+        `> **Entrega:** ${getFulfillmentStatusLabel(payment.fulfillment_status)}`,
         `> **Pagamento ID:** ${payment.provider_payment_id || payment.preference_id || "N/A"}`,
         `> **Canal:** <#${payment.channel_id}>`,
         `> **Data:** ${new Date(payment.created_at).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'})}`
       ].join("\n"));
 
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("back_to_payments").setLabel("⬅️ Voltar").setStyle(ButtonStyle.Secondary));
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`payment_mark_refunded_${payment.id}`).setLabel("Reembolsado").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`payment_mark_cancelled_${payment.id}`).setLabel("Cancelado").setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId(`payment_mark_delivered_${payment.id}`).setLabel("Entregue").setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`payment_mark_problem_${payment.id}`).setLabel("Problema").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId("back_to_payments").setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+    );
     return interaction.update({ embeds: [embed], components: [row] });
   }
 
@@ -778,7 +839,7 @@ async function handleAdminSelectMenus(interaction, config) {
     }
 
     const paymentOptions = payments.slice(0, 25).map(p => ({
-      label: `Pedido #${p.id} - ${formatPrice(p.amount)}`,
+      label: `${getOrderCode(p)} - ${formatPrice(p.amount)}`.slice(0, 100),
       description: `${p.provider} | ${p.status} | ${new Date(p.created_at).toLocaleDateString('pt-BR')}`,
       value: `view_payment_${p.id}`
     }));
@@ -994,7 +1055,24 @@ async function handleAdminModals(interaction, config) {
       }
 
       const options = {};
-      if (maxUses) { options.maxUses = parseInt(maxUses); if (Number.isNaN(options.maxUses) || options.maxUses <= 0) return interaction.reply({ embeds: [dangerEmbed(config, "Valor inv\u00E1lido", "O m\u00E1ximo de usos deve ser um n\u00FAmero positivo.")], ephemeral: true }); }
+      if (maxUses) {
+        const [maxRaw, methodRaw, roleRaw, firstRaw, perUserRaw] = maxUses.split("|").map((part) => part.trim()).filter(Boolean);
+        if (maxRaw) {
+          options.maxUses = parseInt(maxRaw);
+          if (Number.isNaN(options.maxUses) || options.maxUses <= 0) return interaction.reply({ embeds: [dangerEmbed(config, "Valor inv\u00E1lido", "O m\u00E1ximo de usos deve ser um n\u00FAmero positivo.")], ephemeral: true });
+        }
+        if (methodRaw) {
+          const method = methodRaw.toLowerCase();
+          if (!["pix", "card", "any"].includes(method)) return interaction.reply({ embeds: [dangerEmbed(config, "M\u00E9todo inv\u00E1lido", "Use pix, card ou any.")], ephemeral: true });
+          options.paymentMethod = method;
+        }
+        if (roleRaw && /^\d{10,}$/.test(roleRaw)) options.roleId = roleRaw;
+        if (firstRaw && ["first", "primeira", "1"].includes(firstRaw.toLowerCase())) options.firstPurchaseOnly = true;
+        if (perUserRaw) {
+          options.perUserLimit = parseInt(perUserRaw);
+          if (Number.isNaN(options.perUserLimit) || options.perUserLimit <= 0) return interaction.reply({ embeds: [dangerEmbed(config, "Limite inv\u00E1lido", "O limite por usu\u00E1rio deve ser positivo.")], ephemeral: true });
+        }
+      }
       if (minAmount) { options.minAmount = parsePriceInput(minAmount); if (!Number.isFinite(options.minAmount) || options.minAmount <= 0) return interaction.reply({ embeds: [dangerEmbed(config, "Valor inv\u00E1lido", "O valor m\u00EDnimo deve ser um n\u00FAmero positivo.")], ephemeral: true }); }
       if (productId) { const product = config.products.find(p => p.id === productId); if (!product) return interaction.reply({ embeds: [dangerEmbed(config, "Produto n\u00E3o encontrado", "O ID do produto informado n\u00E3o existe.")], ephemeral: true }); options.productId = productId; }
 

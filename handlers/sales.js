@@ -19,7 +19,7 @@ const { buildCartEmbed, buildTermsEmbed, formatPrice, buildTermsSnapshot } = req
 const { createCheckoutPayment, getPendingPaymentByChannel } = require("../utils/mercadoPago");
 const { createCardCheckoutSession } = require("../utils/stripePayments");
 const { get, run } = require("../database/db");
-const { validateCoupon, calculateDiscount } = require("../utils/coupons");
+const { validateCoupon, validateCouponForCheckout, calculateDiscount } = require("../utils/coupons");
 const { logPedido } = require("../utils/channelLogger");
 const { getSettings } = require("../utils/settings");
 const { sendPurchaseAuditLog } = require("./shared");
@@ -162,6 +162,23 @@ function buildPaymentMethodRow() {
   );
 }
 
+function buildPendingPaymentRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("cart_cancel_pending_payment")
+      .setLabel("Cancelar pagamento atual")
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId("select_payment_gateway_menu")
+      .setLabel("Voltar")
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
+
+function getPaymentLabel(provider) {
+  return provider === "stripe" ? "Cartão" : "PIX";
+}
+
 async function showPaymentMethodChoice(interaction, config) {
   await interaction.deferReply({ ephemeral: true });
 
@@ -180,6 +197,13 @@ async function showPaymentMethodChoice(interaction, config) {
   if (ticket.coupon_id) {
     coupon = await get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
     if (coupon) {
+      const validation = await validateCouponForCheckout(interaction.guild.id, coupon.code, product.price, product.id, interaction.member, method);
+      if (!validation.valid) {
+        return interaction.editReply({
+          embeds: [dangerEmbed(config, "Cupom incompatível", `${validation.reason}. Remova ou troque o cupom para continuar.`)],
+          components: [buildPaymentMethodRow()]
+        });
+      }
       discount = calculateDiscount(product.price, coupon);
       discountedPrice = roundMoney(product.price - discount);
     }
@@ -352,6 +376,28 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
     });
   }
 
+  const existingPendingPayment = await getPendingPaymentByChannel(interaction.channel.id);
+  if (existingPendingPayment) {
+    return interaction.editReply({
+      embeds: [
+        infoEmbed(
+          config,
+          "Pagamento já gerado",
+          [
+            `Já existe um pagamento **${getPaymentLabel(existingPendingPayment.provider)}** pendente neste carrinho.`,
+            "",
+            `Produto: **${product.name}**`,
+            `Valor: **${formatPrice(existingPendingPayment.amount)}**`,
+            existingPendingPayment.checkout_url ? `Link atual: [Clique aqui](${existingPendingPayment.checkout_url})` : null,
+            "",
+            "Para trocar entre PIX e Cartão, cancele o pagamento atual e escolha novamente."
+          ].filter(Boolean).join("\n")
+        )
+      ],
+      components: [buildPendingPaymentRow()]
+    });
+  }
+
   let coupon = null;
   let discount = 0;
   let discountedPrice = product.price;
@@ -409,6 +455,8 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
     await interaction.channel.send({
       embeds: [buildCardEmbed({ interaction, config, description })],
       components: [row]
+    }).then((message) => {
+      if (localPaymentRecord?.id) run("UPDATE payments SET payment_message_id = ? WHERE id = ?", [message.id, localPaymentRecord.id]);
     });
     return;
   }
@@ -444,6 +492,10 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
     components: [row],
     files
   });
+
+  if (localPaymentRecord?.id) {
+    run("UPDATE payments SET payment_message_id = ? WHERE id = ?", [paymentMessage.id, localPaymentRecord.id]);
+  }
 
   if (localPaymentRecord?.id) {
     startPixCountdown({
@@ -572,6 +624,24 @@ async function handleCartButtons(interaction, config) {
       }
       return true;
     }
+  }
+
+  if (customId === "cart_cancel_pending_payment") {
+    await interaction.deferReply({ ephemeral: true });
+    const pendingPayment = await getPendingPaymentByChannel(interaction.channel.id);
+    if (!pendingPayment) {
+      return interaction.editReply({
+        embeds: [infoEmbed(config, "Nenhum pagamento pendente", "Este carrinho não possui pagamento pendente no momento.")],
+        components: [buildPaymentMethodRow()]
+      });
+    }
+
+    await run("UPDATE payments SET status = 'cancelled', updated_at = ? WHERE id = ?", [Date.now(), pendingPayment.id]);
+
+    return interaction.editReply({
+      embeds: [successEmbed(config, "Pagamento cancelado", "O pagamento pendente foi cancelado localmente. Escolha novamente como deseja pagar.")],
+      components: [buildPaymentMethodRow()]
+    });
   }
 
   if (customId === "cart_manual_payment") {
