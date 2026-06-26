@@ -72,6 +72,25 @@ async function canCreateTicket(guild, userId, type, config) {
     return { ok: false, reason: "Limite de tickets simultaneos atingido." };
   }
 
+  const userOpenTickets = await get(
+    "SELECT COUNT(*) as total FROM tickets WHERE guild_id = ? AND user_id = ? AND status = 'open'",
+    [guildId, userId]
+  );
+  const maxOpenPerUser = Math.max(Number(process.env.MAX_OPEN_TICKETS_PER_USER || 2), 1);
+  if (Number(userOpenTickets?.total || 0) >= maxOpenPerUser) {
+    return { ok: false, reason: `Você já possui ${maxOpenPerUser} ticket(s)/carrinho(s) aberto(s). Encerre um deles antes de abrir outro.` };
+  }
+
+  if (type === "sales") {
+    const pendingPayment = await get(
+      "SELECT channel_id FROM payments WHERE guild_id = ? AND user_id = ? AND status = 'pending' LIMIT 1",
+      [guildId, userId]
+    );
+    if (pendingPayment) {
+      return { ok: false, reason: `Você já possui um pagamento pendente em <#${pendingPayment.channel_id}>. Finalize ou cancele antes de criar outro carrinho.` };
+    }
+  }
+
   const openSameTypeTicket = await get(
     "SELECT channel_id FROM tickets WHERE guild_id = ? AND user_id = ? AND type = ? AND status = 'open' LIMIT 1",
     [guildId, userId, type]
@@ -177,8 +196,8 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
   const insertStartTime = Date.now();
   try {
     await run(
-      "INSERT INTO tickets (guild_id, channel_id, user_id, type, product_id, number, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'open', ?)",
-      [guild.id, channel.id, member.id, type, productId || null, number, Date.now()]
+      "INSERT INTO tickets (guild_id, channel_id, user_id, type, product_id, number, status, internal_status, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, 'open', 'open', ?, ?)",
+      [guild.id, channel.id, member.id, type, productId || null, number, Date.now(), Date.now()]
     );
     const insertTime = Date.now() - insertStartTime;
     console.log(`[TICKETS] âœ… INSERT successful (${insertTime}ms): channel=${channel.id}, user=${member.id}, type=${type}, product_id=${productId || null}`);
@@ -321,10 +340,33 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
         .setStyle(ButtonStyle.Danger)
     );
 
+    const statusRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("ticket_status_waiting_customer")
+        .setLabel("Cliente")
+        .setEmoji("👤")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("ticket_status_waiting_staff")
+        .setLabel("Staff")
+        .setEmoji("🛠️")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("ticket_status_reviewing")
+        .setLabel("Análise")
+        .setEmoji("🔎")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("ticket_status_resolved")
+        .setLabel("Resolvido")
+        .setEmoji("✅")
+        .setStyle(ButtonStyle.Success)
+    );
+
     await channel.send({
       content: `<@${member.id}>`,
       embeds: [supportEmbed],
-      components: [supportRow]
+      components: [supportRow, statusRow]
     });
   }
 
@@ -353,8 +395,8 @@ async function closeTicket(channel, userId, config, options = {}) {
 
   try {
     await run(
-      "UPDATE tickets SET status = 'closed', closed_at = ? WHERE id = ?",
-      [Date.now(), ticket.id]
+      "UPDATE tickets SET status = 'closed', internal_status = 'resolved', closed_at = ?, close_reason = ? WHERE id = ?",
+      [Date.now(), "Fechado manualmente", ticket.id]
     );
     console.log(`[TICKETS] âœ… Ticket closed: channel=${channel.id}, ticket_id=${ticket.id}`);
   } catch (error) {

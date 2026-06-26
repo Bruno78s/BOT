@@ -702,6 +702,37 @@ async function handleAdminButtons(interaction, config) {
     });
   }
 
+  if (customId.startsWith("payment_customer_history_")) {
+    const userId = customId.replace("payment_customer_history_", "");
+    const payments = all("SELECT * FROM payments WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC LIMIT 10", [interaction.guild.id, userId]);
+    const tickets = all("SELECT * FROM tickets WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC LIMIT 8", [interaction.guild.id, userId]);
+    const paidTotal = payments
+      .filter((payment) => payment.status === "approved")
+      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+    const paymentLines = payments.length
+      ? payments.map((payment) => `${getOrderCode(payment)} • ${payment.status} • ${formatPrice(payment.amount)} • ${new Date(payment.created_at).toLocaleDateString("pt-BR")}`).join("\n").slice(0, 1000)
+      : "Nenhuma compra registrada.";
+    const ticketLines = tickets.length
+      ? tickets.map((ticket) => `#${String(ticket.number).padStart(3, "0")} • ${ticket.type} • ${ticket.status}/${ticket.internal_status || "open"} • ${new Date(ticket.created_at).toLocaleDateString("pt-BR")}`).join("\n").slice(0, 1000)
+      : "Nenhum ticket registrado.";
+
+    return interaction.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(config.colors.primary)
+          .setTitle(`${config.botName} | Histórico do Cliente`)
+          .setDescription(`Cliente: <@${userId}>\nTotal aprovado: **${formatPrice(paidTotal)}**`)
+          .addFields([
+            { name: "💰 Últimas compras", value: paymentLines, inline: false },
+            { name: "🎫 Últimos tickets", value: ticketLines, inline: false }
+          ])
+          .setTimestamp()
+      ],
+      ephemeral: true
+    });
+  }
+
   return false;
 }
 
@@ -835,10 +866,13 @@ async function handleAdminSelectMenus(interaction, config) {
       new ButtonBuilder().setCustomId(`payment_mark_refunded_${payment.id}`).setLabel("Reembolsado").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`payment_mark_cancelled_${payment.id}`).setLabel("Cancelado").setStyle(ButtonStyle.Danger),
       new ButtonBuilder().setCustomId(`payment_mark_delivered_${payment.id}`).setLabel("Entregue").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId(`payment_mark_problem_${payment.id}`).setLabel("Problema").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`payment_mark_problem_${payment.id}`).setLabel("Problema").setStyle(ButtonStyle.Primary)
+    );
+    const secondRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`payment_customer_history_${payment.user_id}`).setLabel("Histórico Cliente").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("back_to_payments").setLabel("Voltar").setStyle(ButtonStyle.Secondary)
     );
-    return interaction.update({ embeds: [embed], components: [row] });
+    return interaction.update({ embeds: [embed], components: [row, secondRow] });
   }
 
   if (customId === "back_to_payments") {

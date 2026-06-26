@@ -33,6 +33,11 @@ ensureColumn("invite_stats", "invalid", "INTEGER NOT NULL DEFAULT 0");
 ensureColumn("invite_joins", "status", "TEXT NOT NULL DEFAULT 'pending'");
 ensureColumn("invite_joins", "validated_at", "INTEGER");
 ensureColumn("invite_joins", "invalid_reason", "TEXT");
+ensureColumn("tickets", "internal_status", "TEXT NOT NULL DEFAULT 'open'");
+ensureColumn("tickets", "claimed_by", "TEXT");
+ensureColumn("tickets", "last_activity_at", "INTEGER");
+ensureColumn("tickets", "auto_close_warned_at", "INTEGER");
+ensureColumn("tickets", "close_reason", "TEXT");
 
 // Query functions
 function get(sql, params = []) {

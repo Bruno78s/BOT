@@ -25,6 +25,7 @@ const AutoRestock = require("../utils/autoRestock");
 const { startCustomerRoleSync } = require("../utils/customerRoleSync");
 const { startStatusPanel } = require("../utils/statusPanel");
 const { processMercadoPagoPayment } = require("../utils/webhookServer");
+const { startTicketAutoClose } = require("../utils/ticketAutomation");
 
 function resolvePresenceType(typeKey) {
   const normalized = String(typeKey || "").trim().toLowerCase();
@@ -145,6 +146,7 @@ module.exports = {
 
     startCustomerRoleSync(client);
     startStatusPanel(client, config);
+    startTicketAutoClose(client, config);
 
     setInterval(async () => {
       for (const guild of client.guilds.cache.values()) {

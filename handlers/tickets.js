@@ -10,6 +10,12 @@ const { logToDb, logToChannel } = require("../utils/logger");
 const { logTicketEvent, logFeedbackEvent } = require("../utils/advancedLogger");
 const { getSettings } = require("../utils/settings");
 const { formatDuration, formatStars } = require("./shared");
+const { getTicketStatusLabel, setTicketInternalStatus } = require("../utils/ticketAutomation");
+
+function canManageTicket(member, settings) {
+  const hasSupportRole = settings.support_role_id && member.roles.cache.has(settings.support_role_id);
+  return hasSupportRole || member.permissions.has(PermissionFlagsBits.Administrator);
+}
 
 async function handleTicketButtons(interaction, config) {
   const { customId } = interaction;
@@ -18,8 +24,7 @@ async function handleTicketButtons(interaction, config) {
     await interaction.deferReply({ ephemeral: true });
     const settings = await getSettings(interaction.guild.id) || {};
     const member = interaction.member;
-    const hasSupportRole = settings.support_role_id && member.roles.cache.has(settings.support_role_id);
-    if (!hasSupportRole && !member.permissions.has(PermissionFlagsBits.Administrator)) {
+    if (!canManageTicket(member, settings)) {
       return interaction.editReply({
         embeds: [dangerEmbed(config, "Sem permissão", "Apenas staff pode assumir tickets.")]
       });
@@ -28,9 +33,40 @@ async function handleTicketButtons(interaction, config) {
     await interaction.channel.send({
       content: `🙋 **Ticket assumido por ${member.user.tag}**`
     });
+    setTicketInternalStatus(interaction.channel.id, "claimed", member.id);
 
     await interaction.editReply({
       embeds: [successEmbed(config, "Ticket assumido", "Você assumiu este ticket com sucesso.")]
+    });
+    return true;
+  }
+
+  if (customId.startsWith("ticket_status_")) {
+    await interaction.deferReply({ ephemeral: true });
+    const settings = await getSettings(interaction.guild.id) || {};
+    if (!canManageTicket(interaction.member, settings)) {
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Sem permissão", "Apenas staff pode alterar o status do ticket.")]
+      });
+    }
+
+    const status = customId.replace("ticket_status_", "");
+    const updated = setTicketInternalStatus(interaction.channel.id, status, interaction.user.id);
+    if (!updated) {
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Ticket não encontrado", "Este canal não está registrado como ticket aberto.")]
+      });
+    }
+
+    const label = getTicketStatusLabel(status);
+    await interaction.channel.send({
+      embeds: [
+        infoEmbed(config, `📌 Status atualizado: ${label}`, `Alterado por ${interaction.user}.`)
+      ]
+    });
+
+    await interaction.editReply({
+      embeds: [successEmbed(config, "Status atualizado", `Ticket marcado como **${label}**.`)]
     });
     return true;
   }
