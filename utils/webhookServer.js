@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const crypto = require("crypto");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const {
@@ -55,33 +55,33 @@ async function sendClientDM(client, config, localPayment, product, orderId, paym
 
     const dmEmbed = new EmbedBuilder()
       .setColor(0x00c853)
-      .setAuthor({ name: `${config.botName} • Compra Confirmada`, iconURL: client.user.displayAvatarURL() })
-      .setTitle("✅ Seu pagamento foi aprovado!")
+      .setAuthor({ name: `${config.botName} â€¢ Compra Confirmada`, iconURL: client.user.displayAvatarURL() })
+      .setTitle("âœ… Seu pagamento foi aprovado!")
       .setDescription([
-        `> 📦 **Produto:** ${product?.name || localPayment.product_id}`,
-        `> 💰 **Valor:** ${formatPrice(localPayment.amount)}`,
-        `> 📋 **Pedido:** #${orderId}`,
+        `> ðŸ“¦ **Produto:** ${product?.name || localPayment.product_id}`,
+        `> ðŸ’° **Valor:** ${formatPrice(localPayment.amount)}`,
+        `> ðŸ“‹ **Pedido:** #${orderId}`,
         "",
         hasAutoDelivery
-          ? "> 🚀 Seu produto foi entregue automaticamente! Confira abaixo:"
+          ? "> ðŸš€ Seu produto foi entregue automaticamente! Confira abaixo:"
           : "> Volte ao servidor e clique em **Abrir Ticket de Entrega** para receber seu produto.",
       ].join("\n"))
-      .setFooter({ text: `${config.botName} • Obrigado pela compra!` })
+      .setFooter({ text: `${config.botName} â€¢ Obrigado pela compra!` })
       .setTimestamp();
 
     if (hasAutoDelivery) {
       const deliveryEmbed = new EmbedBuilder()
         .setColor(0x1e88e5)
-        .setTitle("📦 Entrega do Produto")
+        .setTitle("ðŸ“¦ Entrega do Produto")
         .setDescription([
           `> **Produto:** ${product.name}`,
           `> **Link de acesso:**`,
           `> ${product.deliveryUrl}`,
           "",
-          "⚠️ Este link é pessoal e intransferível.",
+          "âš ï¸ Este link Ã© pessoal e intransferÃ­vel.",
           "Em caso de problemas, abra um ticket de suporte no servidor.",
         ].join("\n"))
-        .setFooter({ text: `${config.botName} • Entrega Automática` })
+        .setFooter({ text: `${config.botName} â€¢ Entrega AutomÃ¡tica` })
         .setTimestamp();
 
       await user.send({ embeds: [dmEmbed, deliveryEmbed] }).catch(() => null);
@@ -89,11 +89,21 @@ async function sendClientDM(client, config, localPayment, product, orderId, paym
       await user.send({ embeds: [dmEmbed] }).catch(() => null);
     }
 
-    console.log(`[DM] Notificação enviada para ${user.tag} (entrega automática: ${hasAutoDelivery})`);
+    console.log(`[DM] NotificaÃ§Ã£o enviada para ${user.tag} (entrega automÃ¡tica: ${hasAutoDelivery})`);
     return hasAutoDelivery;
   } catch (err) {
     console.log(`[DM] Falha ao enviar DM para ${localPayment.user_id}:`, err.message);
     return false;
+  }
+}
+
+async function cleanupCartBotMessages(channel, client) {
+  const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  if (!messages) return;
+
+  const botMessages = messages.filter((message) => message.author?.id === client.user.id);
+  for (const message of botMessages.values()) {
+    await message.delete().catch(() => null);
   }
 }
 
@@ -107,21 +117,22 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
 
   const product = config.products.find((item) => item.id === localPayment.product_id);
   const coupon = localPayment.coupon_id ? get("SELECT * FROM coupons WHERE id = ?", [localPayment.coupon_id]) : null;
-  const orderId = localPayment.id;
-  const orderCode = getOrderCode(localPayment);
+  const orderCode = getOrderCode(localPayment, product);
   const paymentId = paymentData.id;
   const paymentMethodLabel = localPayment.provider === "stripe" ? "Cartão" : "PIX Mercado Pago";
   const deliveryChannelId = product?.category === "sites" ? config.deliveryChannels?.sites : config.deliveryChannels?.bots;
   const deliveryChannel = deliveryChannelId ? await client.channels.fetch(deliveryChannelId).catch(() => null) : null;
+  const hasAutoDelivery = !!product?.deliveryUrl;
 
   const remainingStock = decrementStock(config, localPayment.product_id);
-
-  // Atualizar painéis de produtos com novo estoque
-  ensureProductPanels(client, config).catch(err => 
+  ensureProductPanels(client, config).catch((err) =>
     console.log("[WEBHOOK] Erro ao atualizar painéis:", err.message)
   );
 
-  const hasAutoDelivery = !!product?.deliveryUrl;
+  const dmDelivered = await sendClientDM(client, config, localPayment, product, orderCode, paymentId);
+  const fulfillmentStatus = hasAutoDelivery ? "delivered" : "preparing";
+
+  await cleanupCartBotMessages(channel, client);
 
   const summaryEmbed = new EmbedBuilder()
     .setColor(0x00c853)
@@ -138,14 +149,21 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
       "",
       "> ✅ Seu pagamento foi **aprovado automaticamente**.",
       hasAutoDelivery
-        ? "> 🚀 Seu produto foi **entregue por DM**. Verifique suas mensagens privadas."
-        : "> 📦 Seu pedido foi registrado. Abra um ticket de entrega para receber seu produto.",
+        ? `> 🚀 Seu produto foi **entregue por DM**.${dmDelivered ? " Verifique suas mensagens privadas." : " Caso a DM esteja fechada, abra um ticket de suporte."}`
+        : "> 📦 Seu pedido foi registrado. Abra um ticket de entrega para receber seu produto."
     ].join("\n"))
     .setFooter({ text: `${config.botName} • Pedido Confirmado`, iconURL: client.user.displayAvatarURL() })
     .setTimestamp();
 
   const buttons = [];
-  if (!hasAutoDelivery) {
+  if (hasAutoDelivery) {
+    buttons.push(
+      new ButtonBuilder()
+        .setLabel("Abrir DM")
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/channels/@me/${localPayment.user_id}`)
+    );
+  } else {
     buttons.push(
       new ButtonBuilder()
         .setCustomId("order_open_delivery_ticket")
@@ -153,56 +171,32 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
         .setStyle(ButtonStyle.Primary)
     );
   }
+
   buttons.push(
     new ButtonBuilder()
       .setCustomId("order_close_cart")
       .setLabel("Fechar Carrinho")
       .setStyle(ButtonStyle.Danger)
   );
-  const row = new ActionRowBuilder().addComponents(...buttons);
-
-  const fulfillmentStatus = hasAutoDelivery ? "delivered" : "preparing";
-  if (localPayment.payment_message_id) {
-    const paymentMessage = await channel.messages.fetch(localPayment.payment_message_id).catch(() => null);
-    if (paymentMessage?.editable) {
-      await paymentMessage.edit({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x00c853)
-            .setAuthor({ name: `${config.botName} • Pedido`, iconURL: client.user.displayAvatarURL() })
-            .setTitle("✅ Pagamento aprovado")
-            .setDescription([
-              `> **Pedido:** ${orderCode}`,
-              `> **Status:** ${getFulfillmentStatusLabel(fulfillmentStatus)}`,
-              `> **Produto:** ${product?.name || localPayment.product_id}`,
-              `> **Valor:** ${formatPrice(localPayment.amount)}`
-            ].join("\n"))
-            .setTimestamp()
-        ],
-        components: []
-      }).catch(() => null);
-    }
-  }
 
   console.log("[WEBHOOK] Enviando mensagem de pagamento aprovado para canal:", channel.id);
   await channel.send({
     content: `<@${localPayment.user_id}>`,
     embeds: [summaryEmbed],
-    components: [row]
+    components: [new ActionRowBuilder().addComponents(...buttons)]
   });
   console.log("[WEBHOOK] Mensagem enviada com sucesso");
 
-  // Dar cargo de cliente
   try {
     const guild = channel.guild;
     const member = await guild.members.fetch(localPayment.user_id).catch(() => null);
     const clientRoleId = config.clientRoleId || process.env.CLIENT_ROLE_ID;
-    if (member && !member.roles.cache.has(clientRoleId)) {
+    if (member && clientRoleId && !member.roles.cache.has(clientRoleId)) {
       await member.roles.add(clientRoleId);
       console.log(`[WEBHOOK] Cargo de cliente adicionado para ${member.user.tag}`);
     }
   } catch (err) {
-    console.log(`[WEBHOOK] Falha ao adicionar cargo de cliente:`, err.message);
+    console.log("[WEBHOOK] Falha ao adicionar cargo de cliente:", err.message);
   }
 
   const receiptUser = await client.users.fetch(localPayment.user_id).catch(() => null);
@@ -220,7 +214,6 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     orderId: orderCode
   };
 
-  await sendClientDM(client, config, localPayment, product, orderCode, paymentId);
   await sendReceiptToPrivateChannel(client, config, receiptData, "PAGO").catch((error) => {
     console.error("[RECEIPT] Falha ao enviar comprovante aprovado:", error.message);
   });
@@ -231,16 +224,16 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     await deliveryChannel.send({
       embeds: [
         new EmbedBuilder()
-          .setColor(hasAutoDelivery ? 0x00c853 : 0xffa000)
+          .setColor(0x00c853)
           .setAuthor({ name: `${config.botName} • Entrega`, iconURL: client.user.displayAvatarURL() })
-          .setTitle(hasAutoDelivery ? "✅ Entrega Confirmada" : "📋 Entrega Pendente (Ticket)")
+          .setTitle("✅ Entrega confirmada!")
           .addFields([
             { name: "👤 Cliente", value: `<@${localPayment.user_id}>`, inline: true },
             { name: "📦 Produto", value: product?.name || localPayment.product_id, inline: true },
             { name: "💰 Valor", value: formatPrice(localPayment.amount), inline: true },
             { name: "📋 Pedido", value: orderCode, inline: true },
             { name: "📦 Estoque", value: `${remainingStock >= 0 ? remainingStock : "?"} restantes`, inline: true },
-            { name: "🚀 Entrega", value: deliveryType, inline: true },
+            { name: "🚀 Entrega", value: deliveryType, inline: true }
           ])
           .setFooter({ text: `${config.botName} • Entrega`, iconURL: client.user.displayAvatarURL() })
           .setTimestamp()
@@ -250,15 +243,6 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
 
   if (channel.deletable) {
     setTimeout(() => {
-      channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xf1c40f)
-            .setTitle("🛒 Carrinho fechado automaticamente")
-            .setDescription("Este canal de carrinho será fechado automaticamente em 45 segundos.")
-            .setTimestamp()
-        ]
-      }).catch(() => null);
       channel.delete("Carrinho fechado automaticamente após pagamento confirmado").catch(() => null);
     }, 45000);
   }
@@ -270,7 +254,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     orderId: orderCode,
     paymentId,
     channelId: localPayment.channel_id,
-    coupon: coupon?.code ? coupon.code.toUpperCase() : null,
+    coupon: coupon?.code ? coupon.code.toUpperCase() : null
   });
 
   await logComprovante(client, config, {
@@ -279,7 +263,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     amount: localPayment.amount,
     orderId: orderCode,
     paymentId,
-    channelId: localPayment.channel_id,
+    channelId: localPayment.channel_id
   });
 
   await logTicketEvent(client, config, "Pagamento Aprovado", localPayment.channel_id, {
@@ -299,7 +283,6 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
 
   return true;
 }
-
 function verifyWebhookSignature(req) {
   const secret = (process.env.MERCADO_PAGO_WEBHOOK_SECRET || "").trim();
   if (!secret) return true;
@@ -322,7 +305,7 @@ function verifyWebhookSignature(req) {
     const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
     const expected = crypto.createHmac("sha256", secret).update(manifest).digest("hex");
     if (expected !== v1) {
-      console.log("[WEBHOOK] Assinatura não confere (secret pode estar incorreto), aceitando mesmo assim");
+      console.log("[WEBHOOK] Assinatura nÃ£o confere (secret pode estar incorreto), aceitando mesmo assim");
     }
     return true;
   } catch {
@@ -573,7 +556,7 @@ function startWebhookServer(client, config) {
 
   async function handleMercadoPagoWebhook(req, res) {
     console.log("[WEBHOOK] ===========================================");
-    console.log("[WEBHOOK] Nova requisição recebida");
+    console.log("[WEBHOOK] Nova requisiÃ§Ã£o recebida");
     console.log("[WEBHOOK] Headers:", JSON.stringify(req.headers, null, 2));
     console.log("[WEBHOOK] Body:", JSON.stringify(req.body, null, 2));
     console.log("[WEBHOOK] Query:", JSON.stringify(req.query, null, 2));
@@ -582,7 +565,7 @@ function startWebhookServer(client, config) {
 
     try {
       if (!verifyWebhookSignature(req)) {
-        console.log("[WEBHOOK] Assinatura inválida, ignorando requisição");
+        console.log("[WEBHOOK] Assinatura invÃ¡lida, ignorando requisiÃ§Ã£o");
         return;
       }
 
@@ -591,7 +574,7 @@ function startWebhookServer(client, config) {
       console.log(`[WEBHOOK] Recebido: paymentId=${paymentId}, topic=${topic}, ip=${req.ip}`);
 
       if (!paymentId || (topic && topic !== "payment")) {
-        console.log("[WEBHOOK] Ignorado: paymentId ou topic inválido");
+        console.log("[WEBHOOK] Ignorado: paymentId ou topic invÃ¡lido");
         return;
       }
 
@@ -625,7 +608,7 @@ function startWebhookServer(client, config) {
 
   server.on("error", (error) => {
     if (error.code === "EADDRINUSE") {
-      console.error(`Porta ${port} já está em uso. Feche a outra instância do bot ou configure outra porta para os webhooks.`);
+      console.error(`Porta ${port} jÃ¡ estÃ¡ em uso. Feche a outra instÃ¢ncia do bot ou configure outra porta para os webhooks.`);
       return;
     }
 
@@ -637,3 +620,4 @@ module.exports = {
   processMercadoPagoPayment,
   startWebhookServer
 };
+

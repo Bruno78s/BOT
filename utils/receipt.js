@@ -32,39 +32,132 @@ function createVerificationCode(parts) {
     .createHash("sha256")
     .update(parts.filter(Boolean).join(":"))
     .digest("hex")
-    .slice(0, 16)
-    .toUpperCase();
+    .slice(0, 18)
+    .toUpperCase()
+    .replace(/(.{6})/g, "$1-")
+    .replace(/-$/, "");
 }
 
-function drawHeader(doc, botName, status) {
+function shorten(value, max = 54) {
+  const text = String(value || "N/A");
+  return text.length > max ? `${text.slice(0, max - 3)}...` : text;
+}
+
+function drawTopBar(doc, botName, status) {
   const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
-  doc.rect(0, 0, 595.28, 120).fill("#111827");
+  const paid = status === "PAGO";
+
+  doc.rect(0, 0, 595.28, 132).fill("#0B1120");
+  doc.rect(0, 122, 595.28, 10).fill(paid ? "#22C55E" : "#F59E0B");
 
   try {
-    doc.image(logoPath, 48, 30, { width: 64, height: 64 });
+    doc.image(logoPath, 44, 31, { width: 66, height: 66 });
   } catch {
     // Logo opcional.
   }
 
   doc
     .fillColor("#FFFFFF")
-    .fontSize(22)
-    .text(botName || "BznX Store", 130, 36)
-    .fontSize(11)
+    .font("Helvetica-Bold")
+    .fontSize(23)
+    .text(botName || "BznX Store", 126, 35)
+    .font("Helvetica")
+    .fontSize(10)
     .fillColor("#CBD5E1")
-    .text("Loja digital de bots e sites", 130, 66);
+    .text("Comprovante administrativo de pedido digital", 126, 66)
+    .fillColor("#94A3B8")
+    .text("Bots, sites, automações e serviços digitais", 126, 84);
 
   doc
-    .roundedRect(410, 38, 120, 32, 6)
-    .fill(status === "PAGO" ? "#16A34A" : "#F59E0B")
+    .roundedRect(410, 38, 116, 34, 8)
+    .fill(paid ? "#16A34A" : "#F59E0B")
     .fillColor("#FFFFFF")
+    .font("Helvetica-Bold")
     .fontSize(13)
-    .text(status, 410, 47, { width: 120, align: "center" });
+    .text(status, 410, 48, { width: 116, align: "center" });
 }
 
-function drawRow(doc, label, value, x, y, width = 230) {
-  doc.fillColor("#64748B").fontSize(9).text(label.toUpperCase(), x, y);
-  doc.fillColor("#111827").fontSize(11).text(value || "N/A", x, y + 14, { width });
+function drawCard(doc, x, y, width, height, title) {
+  doc
+    .roundedRect(x, y, width, height, 10)
+    .fillAndStroke("#FFFFFF", "#E5E7EB");
+
+  if (title) {
+    doc
+      .fillColor("#0F172A")
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text(title, x + 18, y + 16);
+  }
+}
+
+function drawField(doc, label, value, x, y, width = 210) {
+  doc
+    .fillColor("#64748B")
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text(label.toUpperCase(), x, y, { width });
+
+  doc
+    .fillColor("#0F172A")
+    .font("Helvetica")
+    .fontSize(10.5)
+    .text(value || "N/A", x, y + 13, { width, lineGap: 2 });
+}
+
+function drawVerificationSeal(doc, code, x, y) {
+  doc.roundedRect(x, y, 150, 92, 10).fillAndStroke("#F8FAFC", "#CBD5E1");
+  doc
+    .fillColor("#0F172A")
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .text("VERIFICAÇÃO", x + 14, y + 14);
+
+  doc
+    .font("Courier-Bold")
+    .fontSize(12)
+    .fillColor("#111827")
+    .text(code, x + 14, y + 36, { width: 122, align: "center" });
+
+  doc
+    .font("Helvetica")
+    .fontSize(7)
+    .fillColor("#64748B")
+    .text("Use este código para conferir o pedido nos registros internos da loja.", x + 14, y + 68, {
+      width: 122,
+      align: "center"
+    });
+}
+
+function drawItemTable(doc, product, amount, coupon, x, y) {
+  doc.roundedRect(x, y, 499, 92, 8).strokeColor("#E5E7EB").stroke();
+  doc.rect(x, y, 499, 28).fill("#F8FAFC");
+  doc
+    .fillColor("#475569")
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text("ITEM", x + 16, y + 10)
+    .text("CUPOM", x + 296, y + 10, { width: 80, align: "center" })
+    .text("VALOR", x + 390, y + 10, { width: 90, align: "right" });
+
+  doc
+    .fillColor("#0F172A")
+    .font("Helvetica-Bold")
+    .fontSize(11)
+    .text(shorten(product?.name || "Produto digital", 42), x + 16, y + 45, { width: 250 })
+    .font("Helvetica")
+    .fontSize(9)
+    .fillColor("#64748B")
+    .text(product?.id || "produto", x + 16, y + 62, { width: 250 });
+
+  doc
+    .fillColor("#0F172A")
+    .font("Helvetica")
+    .fontSize(10)
+    .text(coupon?.code ? coupon.code.toUpperCase() : "Nenhum", x + 296, y + 50, { width: 80, align: "center" })
+    .font("Helvetica-Bold")
+    .fontSize(12)
+    .text(formatMoney(amount), x + 390, y + 48, { width: 90, align: "right" });
 }
 
 async function createReceiptAttachment({
@@ -82,7 +175,12 @@ async function createReceiptAttachment({
   status = "AGUARDANDO PAGAMENTO",
   issuedAt = Date.now()
 }) {
-  const doc = new PDFDocument({ size: "A4", margin: 48 });
+  const doc = new PDFDocument({ size: "A4", margin: 0, info: {
+    Title: `Comprovante ${orderId || "BznX"}`,
+    Author: botName || "BznX Store",
+    Subject: "Comprovante administrativo de pedido"
+  }});
+
   const verificationCode = createVerificationCode([
     botName,
     guildId,
@@ -94,45 +192,74 @@ async function createReceiptAttachment({
     orderId
   ]);
 
-  drawHeader(doc, botName, status);
+  drawTopBar(doc, botName, status);
 
   doc
-    .fillColor("#111827")
-    .fontSize(18)
-    .text("Comprovante de Pedido", 48, 150)
-    .fontSize(10)
+    .fillColor("#0F172A")
+    .font("Helvetica-Bold")
+    .fontSize(20)
+    .text("Comprovante de Pedido", 48, 158)
+    .font("Helvetica")
+    .fontSize(9)
     .fillColor("#64748B")
-    .text("Documento administrativo gerado automaticamente pela BznX Store.", 48, 174);
-
-  doc.roundedRect(48, 210, 499, 118, 8).strokeColor("#E5E7EB").stroke();
-  drawRow(doc, "Pedido", `#${orderId || "N/A"}`, 70, 230);
-  drawRow(doc, "Status", status, 310, 230);
-  drawRow(doc, "Emitido em", formatDate(issuedAt), 70, 280);
-  drawRow(doc, "Código de verificação", verificationCode, 310, 280);
-
-  doc.roundedRect(48, 350, 499, 152, 8).strokeColor("#E5E7EB").stroke();
-  drawRow(doc, "Cliente Discord", `${user?.tag || "N/A"} (${user?.id || "N/A"})`, 70, 372, 440);
-  drawRow(doc, "Produto", product?.name || "N/A", 70, 422);
-  drawRow(doc, "Valor", formatMoney(amount), 310, 422);
-  drawRow(doc, "Forma de pagamento", paymentMethod || "N/A", 70, 472);
-  drawRow(doc, "ID do pagamento", providerPaymentId || "N/A", 310, 472);
-
-  doc.roundedRect(48, 524, 499, 92, 8).strokeColor("#E5E7EB").stroke();
-  drawRow(doc, "Servidor", guildId || "N/A", 70, 546);
-  drawRow(doc, "Carrinho", channelId || "N/A", 310, 546);
-  drawRow(doc, "Cupom", coupon ? `${coupon.code?.toUpperCase?.() || coupon.code} aplicado` : "Nenhum", 70, 586);
-  drawRow(doc, "Link de pagamento", checkoutUrl || "N/A", 310, 586);
+    .text("Documento gerado automaticamente após confirmação ou abertura de pagamento.", 48, 184);
 
   doc
-    .moveTo(48, 660)
-    .lineTo(547, 660)
+    .roundedRect(382, 152, 165, 44, 8)
+    .fillAndStroke("#F8FAFC", "#E2E8F0")
+    .fillColor("#64748B")
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text("PEDIDO", 398, 162)
+    .fillColor("#0F172A")
+    .font("Helvetica-Bold")
+    .fontSize(12)
+    .text(`#${orderId || "N/A"}`, 398, 176, { width: 130 });
+
+  drawCard(doc, 48, 220, 499, 118, "Resumo");
+  drawField(doc, "Status", status, 70, 252, 140);
+  drawField(doc, "Emitido em", formatDate(issuedAt), 230, 252, 140);
+  drawField(doc, "Forma de pagamento", paymentMethod || "N/A", 390, 252, 130);
+  drawField(doc, "ID do pagamento", shorten(providerPaymentId, 34), 70, 296, 210);
+  drawField(doc, "Carrinho/Canal", channelId || "N/A", 310, 296, 210);
+
+  drawCard(doc, 48, 362, 499, 126, "Cliente");
+  drawField(doc, "Discord", user?.tag || user?.username || "N/A", 70, 394, 210);
+  drawField(doc, "ID Discord", user?.id || "N/A", 310, 394, 210);
+  drawField(doc, "Servidor", guildId || "N/A", 70, 438, 210);
+  drawField(doc, "Referência", `#${orderId || "N/A"}`, 310, 438, 210);
+
+  doc
+    .fillColor("#0F172A")
+    .font("Helvetica-Bold")
+    .fontSize(12)
+    .text("Itens do pedido", 48, 518);
+  drawItemTable(doc, product, amount, coupon, 48, 540);
+
+  drawCard(doc, 48, 654, 320, 92, "Observações");
+  doc
+    .fillColor("#334155")
+    .font("Helvetica")
+    .fontSize(9)
+    .text([
+      "Este comprovante registra a operação na BznX Store.",
+      "Ele não substitui nota fiscal, recibo fiscal ou documento tributário.",
+      "A validade depende da confirmação final pelo provedor de pagamento."
+    ].join("\n"), 68, 684, { width: 280, lineGap: 4 });
+
+  drawVerificationSeal(doc, verificationCode, 397, 654);
+
+  doc
+    .moveTo(48, 774)
+    .lineTo(547, 774)
     .strokeColor("#E5E7EB")
     .stroke();
 
   doc
-    .fillColor("#64748B")
-    .fontSize(9)
-    .text("Este comprovante é destinado à conferência interna da equipe BznX Store. Não é nota fiscal. A validade depende da confirmação do provedor de pagamento.", 48, 680, {
+    .fillColor("#94A3B8")
+    .font("Helvetica")
+    .fontSize(8)
+    .text(`BznX Store • Documento interno • Link de pagamento: ${shorten(checkoutUrl, 82)}`, 48, 790, {
       width: 499,
       align: "center"
     });
