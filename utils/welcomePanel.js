@@ -1,6 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { EmbedBuilder } = require("discord.js");
-const { AttachmentBuilder } = require("discord.js");
+const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
 const path = require("path");
 
 async function ensureWelcomePanel(client, config) {
@@ -8,7 +6,7 @@ async function ensureWelcomePanel(client, config) {
   if (!welcomeChannelId) return;
 
   const channel = await client.channels.fetch(welcomeChannelId).catch(() => null);
-  if (!channel || !channel.isTextBased()) return;
+  if (!channel?.isTextBased()) return;
 
   const recent = await channel.messages.fetch({ limit: 20 }).catch(() => null);
   let existingMessage = null;
@@ -16,7 +14,7 @@ async function ensureWelcomePanel(client, config) {
     existingMessage = recent.find(
       (msg) =>
         msg.author?.id === client.user.id &&
-        msg.embeds?.[0]?.title?.includes("Bem-vindo")
+        msg.embeds?.[0]?.footer?.text?.includes("Boas-vindas")
     );
   }
 
@@ -25,49 +23,49 @@ async function ensureWelcomePanel(client, config) {
 
   const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
   const bannerPath = path.join(__dirname, "..", "public", "banner-bznx.png");
-
   const logoAttachment = new AttachmentBuilder(logoPath, { name: "logo.png" });
   const bannerAttachment = new AttachmentBuilder(bannerPath, { name: "banner.png" });
 
   const embed = new EmbedBuilder()
     .setColor(config.colors.primary)
-    .setTitle(`Bem-vindos(as)!`)
+    .setTitle(`👋 Bem-vindo(a) à ${config.botName}`)
     .setDescription([
-      `Bem-vindo ao **${config.botName}**.`,
+      `Você está no servidor oficial da **${config.botName}**.`,
       "",
-      "Este servidor reúne suporte, vendas e informações oficiais dos nossos produtos.",
+      "Aqui você encontra atendimento, novidades, compras, entregas e suporte dos produtos da loja.",
       "",
-      "**O que você encontra aqui:**",
+      "**Para liberar seu acesso:**",
+      `1. Acesse ${verifyChannelMention}`,
+      "2. Clique no botão de verificação",
+      "3. Aguarde a aprovação automática",
+      "",
+      "**O que temos por aqui:**",
       "• bots Discord e sistemas personalizados",
-      "• sites responsivos e profissionais",
-      "• atendimento via ticket",
-      "• suporte pós-venda",
+      "• sites profissionais e responsivos",
+      "• atendimento por ticket",
+      "• entregas e suporte pós-venda",
       "",
-      "**Primeiro acesso**",
-      `Para liberar os canais, conclua a verificação em ${verifyChannelMention}.`,
-      "",
-      "Após a verificação, você poderá acessar as áreas de atendimento e produtos."
+      "Depois da verificação, os canais principais serão liberados automaticamente."
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
     .setImage("attachment://banner.png")
-    .setFooter({ 
-      text: `${config.botName} • Bem-vindo`, 
+    .setFooter({
+      text: `${config.botName} • Boas-vindas`,
       iconURL: "attachment://logo.png"
     })
     .setTimestamp();
 
+  const payload = {
+    embeds: [embed],
+    files: [logoAttachment, bannerAttachment]
+  };
+
   if (existingMessage) {
-    await existingMessage.edit({ 
-      embeds: [embed],
-      files: [logoAttachment, bannerAttachment]
-    });
+    await existingMessage.edit(payload);
     return;
   }
 
-  await channel.send({ 
-    embeds: [embed],
-    files: [logoAttachment, bannerAttachment]
-  });
+  await channel.send(payload);
 }
 
 module.exports = {

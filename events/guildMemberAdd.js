@@ -3,6 +3,13 @@ const path = require("path");
 const { logSecurityEvent } = require("../utils/advancedLogger");
 const { addInviteJoin, findUsedInvite, sendInviteJoinLog } = require("../utils/invites");
 
+function getAccountAgeText(user) {
+  const days = Math.floor((Date.now() - user.createdTimestamp) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return "criada hoje";
+  if (days === 1) return "criada há 1 dia";
+  return `criada há ${days} dias`;
+}
+
 module.exports = {
   name: "guildMemberAdd",
   async execute(member, config) {
@@ -37,21 +44,34 @@ module.exports = {
       }
 
       const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
+      const bannerPath = path.join(__dirname, "..", "public", "banner-bznx.png");
       const logoAttachment = new AttachmentBuilder(logoPath, { name: "logo.png" });
+      const bannerAttachment = new AttachmentBuilder(bannerPath, { name: "banner.png" });
+      const memberCount = member.guild.memberCount || member.guild.members.cache.size;
 
       const embed = new EmbedBuilder()
         .setColor(config.colors.primary)
-        .setTitle(`${config.botName} | Novo membro`)
+        .setAuthor({
+          name: `${config.botName} • Novo membro`,
+          iconURL: member.user.displayAvatarURL({ size: 128 })
+        })
+        .setTitle(`👋 Bem-vindo(a), ${member.user.username}!`)
         .setDescription([
-          `### Bem-vindo, ${member.user}!`,
+          `${member}, seja bem-vindo(a) à **${config.botName}**.`,
           "",
-          `**Cargo atribuído:** <@&${unverifiedRoleId}>`,
+          "Para liberar seu acesso ao servidor, conclua a verificação no canal abaixo.",
           "",
-          `👉 Vá ao canal <#${channelId}> para iniciar o processo de verificação.`
+          `✅ **Verificação:** <#${channelId}>`,
+          `🛡️ **Cargo atual:** <@&${unverifiedRoleId}>`,
+          `👥 **Você é o membro:** #${memberCount}`,
+          `📅 **Conta Discord:** ${getAccountAgeText(member.user)}`,
+          "",
+          "Após a aprovação, os canais de produtos, suporte e atendimento serão liberados automaticamente."
         ].join("\n"))
-        .setThumbnail("attachment://logo.png")
+        .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+        .setImage("attachment://banner.png")
         .setFooter({
-          text: "BznX Store • Boas-vindas",
+          text: `${config.botName} • Boas-vindas`,
           iconURL: "attachment://logo.png"
         })
         .setTimestamp();
@@ -59,7 +79,7 @@ module.exports = {
       await welcomeChannel.send({
         content: `${member.user}`,
         embeds: [embed],
-        files: [logoAttachment]
+        files: [logoAttachment, bannerAttachment]
       });
 
       await logSecurityEvent(
@@ -72,7 +92,8 @@ module.exports = {
           fields: [
             { name: "Usuário", value: `${member.user.tag} (${member.id})`, inline: true },
             { name: "Cargo", value: `<@&${unverifiedRoleId}>`, inline: true },
-            { name: "Conta criada em", value: member.user.createdAt.toLocaleDateString("pt-BR"), inline: true }
+            { name: "Conta criada em", value: member.user.createdAt.toLocaleDateString("pt-BR"), inline: true },
+            { name: "Invite", value: inviteData?.inviteCode || "não identificado", inline: true }
           ]
         }
       );
