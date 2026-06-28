@@ -190,7 +190,11 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   try {
     const guild = channel.guild;
     const member = await guild.members.fetch(localPayment.user_id).catch(() => null);
-    const clientRoleId = config.clientRoleId || process.env.CLIENT_ROLE_ID;
+    const clientRoleId = config.clientRoleId || process.env.DISCORD_CUSTOMER_ROLE_ID || process.env.CLIENT_ROLE_ID;
+    if (!clientRoleId) {
+      console.log("[WEBHOOK] Cargo de cliente nao configurado: defina DISCORD_CUSTOMER_ROLE_ID ou CLIENT_ROLE_ID.");
+      return;
+    }
     if (member && clientRoleId && !member.roles.cache.has(clientRoleId)) {
       await member.roles.add(clientRoleId);
       console.log(`[WEBHOOK] Cargo de cliente adicionado para ${member.user.tag}`);
