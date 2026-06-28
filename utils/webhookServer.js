@@ -49,51 +49,53 @@ function decrementStock(config, productId) {
 async function sendClientDM(client, config, localPayment, product, orderId, paymentId) {
   try {
     const user = await client.users.fetch(localPayment.user_id).catch(() => null);
-    if (!user) return false;
+    if (!user) return { sent: false, dmChannelId: null };
 
     const hasAutoDelivery = !!product?.deliveryUrl;
+    const dmChannel = await user.createDM().catch(() => null);
+    if (!dmChannel?.send) return { sent: false, dmChannelId: null };
 
     const dmEmbed = new EmbedBuilder()
       .setColor(0x00c853)
-      .setAuthor({ name: `${config.botName} â€¢ Compra Confirmada`, iconURL: client.user.displayAvatarURL() })
-      .setTitle("âœ… Seu pagamento foi aprovado!")
+      .setAuthor({ name: `${config.botName} • Compra Confirmada`, iconURL: client.user.displayAvatarURL() })
+      .setTitle("✅ Seu pagamento foi aprovado!")
       .setDescription([
-        `> ðŸ“¦ **Produto:** ${product?.name || localPayment.product_id}`,
-        `> ðŸ’° **Valor:** ${formatPrice(localPayment.amount)}`,
-        `> ðŸ“‹ **Pedido:** #${orderId}`,
+        `> 📦 **Produto:** ${product?.name || localPayment.product_id}`,
+        `> 💰 **Valor:** ${formatPrice(localPayment.amount)}`,
+        `> 📋 **Pedido:** #${orderId}`,
         "",
         hasAutoDelivery
-          ? "> ðŸš€ Seu produto foi entregue automaticamente! Confira abaixo:"
+          ? "> 🚀 Seu produto foi entregue automaticamente! Confira abaixo:"
           : "> Volte ao servidor e clique em **Abrir Ticket de Entrega** para receber seu produto.",
       ].join("\n"))
-      .setFooter({ text: `${config.botName} â€¢ Obrigado pela compra!` })
+      .setFooter({ text: `${config.botName} • Obrigado pela compra!` })
       .setTimestamp();
 
     if (hasAutoDelivery) {
       const deliveryEmbed = new EmbedBuilder()
         .setColor(0x1e88e5)
-        .setTitle("ðŸ“¦ Entrega do Produto")
+        .setTitle("📦 Entrega do Produto")
         .setDescription([
           `> **Produto:** ${product.name}`,
           `> **Link de acesso:**`,
           `> ${product.deliveryUrl}`,
           "",
-          "âš ï¸ Este link Ã© pessoal e intransferÃ­vel.",
+          "⚠️ Este link é pessoal e intransferível.",
           "Em caso de problemas, abra um ticket de suporte no servidor.",
         ].join("\n"))
-        .setFooter({ text: `${config.botName} â€¢ Entrega AutomÃ¡tica` })
+        .setFooter({ text: `${config.botName} • Entrega Automática` })
         .setTimestamp();
 
-      await user.send({ embeds: [dmEmbed, deliveryEmbed] }).catch(() => null);
+      await dmChannel.send({ embeds: [dmEmbed, deliveryEmbed] });
     } else {
-      await user.send({ embeds: [dmEmbed] }).catch(() => null);
+      await dmChannel.send({ embeds: [dmEmbed] });
     }
 
-    console.log(`[DM] NotificaÃ§Ã£o enviada para ${user.tag} (entrega automÃ¡tica: ${hasAutoDelivery})`);
-    return hasAutoDelivery;
+    console.log(`[DM] Notificação enviada para ${user.tag} (entrega automática: ${hasAutoDelivery})`);
+    return { sent: true, dmChannelId: dmChannel.id };
   } catch (err) {
     console.log(`[DM] Falha ao enviar DM para ${localPayment.user_id}:`, err.message);
-    return false;
+    return { sent: false, dmChannelId: null };
   }
 }
 
@@ -129,7 +131,11 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     console.log("[WEBHOOK] Erro ao atualizar painéis:", err.message)
   );
 
-  const dmDelivered = await sendClientDM(client, config, localPayment, product, orderCode, paymentId);
+  const dmResult = await sendClientDM(client, config, localPayment, product, orderCode, paymentId);
+  const dmDelivered = dmResult.sent;
+  const dmUrl = dmResult.dmChannelId
+    ? `https://discord.com/channels/@me/${dmResult.dmChannelId}`
+    : "https://discord.com/channels/@me";
   const fulfillmentStatus = hasAutoDelivery ? "delivered" : "preparing";
 
   await cleanupCartBotMessages(channel, client);
@@ -159,9 +165,9 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   if (hasAutoDelivery) {
     buttons.push(
       new ButtonBuilder()
-        .setLabel("Abrir DM")
+        .setLabel("Abrir DM do bot")
         .setStyle(ButtonStyle.Link)
-        .setURL(`https://discord.com/channels/@me/${localPayment.user_id}`)
+        .setURL(dmUrl)
     );
   } else {
     buttons.push(
