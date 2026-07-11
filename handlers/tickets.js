@@ -17,6 +17,44 @@ function canManageTicket(member, settings) {
   return hasSupportRole || member.permissions.has(PermissionFlagsBits.Administrator);
 }
 
+function buildStatusNotification(status, ticket, actor) {
+  const userMention = `<@${ticket.user_id}>`;
+  const staffMention = `${actor}`;
+  const map = {
+    claimed: {
+      content: userMention,
+      title: "🙋 Ticket assumido",
+      description: `${staffMention} assumiu seu atendimento. A equipe já está acompanhando este ticket.`
+    },
+    waiting_customer: {
+      content: userMention,
+      title: "👤 Aguardando cliente",
+      description: `${userMention}, precisamos do seu retorno para continuar o atendimento.`
+    },
+    waiting_staff: {
+      content: null,
+      title: "🛠️ Aguardando staff",
+      description: `Ticket marcado por ${staffMention}. A equipe precisa dar continuidade.`
+    },
+    reviewing: {
+      content: userMention,
+      title: "🔎 Em análise",
+      description: `${userMention}, seu caso está em análise pela equipe.`
+    },
+    resolved: {
+      content: userMention,
+      title: "✅ Atendimento resolvido",
+      description: `${userMention}, este atendimento foi marcado como resolvido. Se ainda precisar de algo, responda aqui antes do fechamento.`
+    }
+  };
+
+  return map[status] || {
+    content: userMention,
+    title: `📌 Status atualizado: ${getTicketStatusLabel(status)}`,
+    description: `Alterado por ${staffMention}.`
+  };
+}
+
 async function handleTicketButtons(interaction, config) {
   const { customId } = interaction;
 
@@ -30,10 +68,18 @@ async function handleTicketButtons(interaction, config) {
       });
     }
 
+    const updated = setTicketInternalStatus(interaction.channel.id, "claimed", member.id);
+    if (!updated) {
+      return interaction.editReply({
+        embeds: [dangerEmbed(config, "Ticket não encontrado", "Este canal não está registrado como ticket aberto.")]
+      });
+    }
+
+    const notification = buildStatusNotification("claimed", updated, interaction.user);
     await interaction.channel.send({
-      content: `🙋 **Ticket assumido por ${member.user.tag}**`
+      content: notification.content || undefined,
+      embeds: [infoEmbed(config, notification.title, notification.description)]
     });
-    setTicketInternalStatus(interaction.channel.id, "claimed", member.id);
 
     await interaction.editReply({
       embeds: [successEmbed(config, "Ticket assumido", "Você assumiu este ticket com sucesso.")]
@@ -59,10 +105,10 @@ async function handleTicketButtons(interaction, config) {
     }
 
     const label = getTicketStatusLabel(status);
+    const notification = buildStatusNotification(status, updated, interaction.user);
     await interaction.channel.send({
-      embeds: [
-        infoEmbed(config, `📌 Status atualizado: ${label}`, `Alterado por ${interaction.user}.`)
-      ]
+      content: notification.content || undefined,
+      embeds: [infoEmbed(config, notification.title, notification.description)]
     });
 
     await interaction.editReply({

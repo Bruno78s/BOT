@@ -1,5 +1,5 @@
-/**
- * Handler de Vendas — carrinho, pagamento, cupons (contexto de compra), pedidos
+﻿/**
+ * Handler de Vendas - carrinho, pagamento, cupons (contexto de compra), pedidos
  */
 const {
   ActionRowBuilder,
@@ -69,7 +69,7 @@ function buildPixDescription({ interaction, product, coupon, discount, discounte
     "─────────────────────────────",
     "",
     checkout.copyPasteCode
-      ? `📋 **Copia e Cola PIX:**\n\`\`\`\n${checkout.copyPasteCode}\n\`\`\``
+      ? "📋 **Copia e Cola PIX:** clique no botão **Copiar PIX** abaixo para receber somente o código."
       : null,
     "",
     "─────────────────────────────",
@@ -80,7 +80,6 @@ function buildPixDescription({ interaction, product, coupon, discount, discounte
     "> 📬 Após isso, seu pedido seguirá para entrega ou ticket de atendimento.",
   ].filter(Boolean).join("\n");
 }
-
 function buildPixEmbed({ interaction, config, description, qrCodeAttached }) {
   const embed = new EmbedBuilder()
     .setColor(0x00b4d8)
@@ -96,7 +95,6 @@ function buildPixEmbed({ interaction, config, description, qrCodeAttached }) {
 
   return embed;
 }
-
 function buildCardDescription({ interaction, product, coupon, discount, discountedPrice, finalPrice, checkout }) {
   return [
     `> 👤 **Cliente:** <@${interaction.user.id}>`,
@@ -172,6 +170,21 @@ function buildPendingPaymentRow() {
       .setCustomId("select_payment_gateway_menu")
       .setLabel("Voltar")
       .setStyle(ButtonStyle.Secondary)
+  );
+}
+
+function buildPixPaymentRow(paymentId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`pix_copy_${paymentId}`)
+      .setLabel("Copiar PIX")
+      .setEmoji("📋")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("ticket_cancel_purchase")
+      .setLabel("Cancelar Pedido")
+      .setEmoji("❌")
+      .setStyle(ButtonStyle.Danger)
   );
 }
 
@@ -447,7 +460,8 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("ticket_cancel_purchase")
-      .setLabel("\u274C Cancelar Pedido")
+      .setLabel("Cancelar Pedido")
+      .setEmoji("❌")
       .setStyle(ButtonStyle.Danger)
   );
 
@@ -491,12 +505,12 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
 
   const paymentMessage = await interaction.channel.send({
     embeds: [paymentEmbed],
-    components: [row],
+    components: [localPaymentRecord?.id ? buildPixPaymentRow(localPaymentRecord.id) : row],
     files
   });
 
   if (localPaymentRecord?.id) {
-    run("UPDATE payments SET payment_message_id = ? WHERE id = ?", [paymentMessage.id, localPaymentRecord.id]);
+    run("UPDATE payments SET payment_message_id = ?, pix_copy_code = ? WHERE id = ?", [paymentMessage.id, checkout.copyPasteCode || null, localPaymentRecord.id]);
   }
 
   if (localPaymentRecord?.id) {
@@ -513,7 +527,7 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
       paymentId: localPaymentRecord.id,
       pixExpiresAt,
       qrCodeAttached,
-      row
+      row: buildPixPaymentRow(localPaymentRecord.id)
     });
   }
 }
@@ -575,6 +589,35 @@ async function handleCouponModal(interaction, config) {
 
 async function handleCartButtons(interaction, config) {
   const { customId } = interaction;
+
+  if (customId.startsWith("pix_copy_")) {
+    const paymentId = Number(customId.replace("pix_copy_", ""));
+    const payment = Number.isFinite(paymentId)
+      ? await get("SELECT pix_copy_code, status FROM payments WHERE id = ?", [paymentId])
+      : null;
+
+    if (!payment?.pix_copy_code) {
+      await interaction.reply({
+        content: "Não encontrei o código PIX deste pagamento. Gere um novo PIX ou chame a equipe.",
+        ephemeral: true
+      });
+      return true;
+    }
+
+    if (payment.status !== "pending") {
+      await interaction.reply({
+        content: "Este PIX não está mais pendente. Se precisar, gere um novo pagamento.",
+        ephemeral: true
+      });
+      return true;
+    }
+
+    await interaction.reply({
+      content: `📋 **Copia e Cola PIX:**\n\`\`\`\n${payment.pix_copy_code}\n\`\`\``,
+      ephemeral: true
+    });
+    return true;
+  }
 
   if (customId === "cart_apply_coupon") {
     const modal = new ModalBuilder()
@@ -951,3 +994,4 @@ module.exports = {
   handleCartButtons,
   handleOrderButtons
 };
+

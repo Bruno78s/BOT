@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS payments (
   delivered_at bigint,
   issue_reason text,
   payment_message_id text,
+  pix_copy_code text,
   status text NOT NULL,
   amount numeric NOT NULL,
   checkout_url text,

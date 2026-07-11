@@ -41,10 +41,7 @@ async function startTicketAutoClose(client, config) {
 
   async function checkTickets() {
     const now = Date.now();
-    const tickets = all(
-      "SELECT * FROM tickets WHERE status = 'open' AND type = 'support'",
-      []
-    );
+    const tickets = all("SELECT * FROM tickets WHERE status = 'open' AND type = 'support'", []);
 
     for (const ticket of tickets) {
       const lastActivity = ticket.last_activity_at || ticket.created_at;

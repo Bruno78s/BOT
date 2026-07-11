@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS payments (
   delivered_at INTEGER,
   issue_reason TEXT,
   payment_message_id TEXT,
+  pix_copy_code TEXT,
   status TEXT NOT NULL,
   amount REAL NOT NULL,
   checkout_url TEXT,
