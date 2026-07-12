@@ -1,4 +1,4 @@
-const { PermissionFlagsBits, SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
 const {
   addModerationCase,
   buildCaseFields,
@@ -11,7 +11,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("desbanir")
     .setDescription("Remove o banimento de um usuário pelo ID.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addStringOption((option) =>
       option
         .setName("usuario_id")

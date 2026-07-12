@@ -1,4 +1,4 @@
-const { PermissionFlagsBits, SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
 const {
   addModerationCase,
   buildCaseFields,
@@ -12,7 +12,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("kick")
     .setDescription("Expulsa um membro do servidor com log de moderação.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
     .addUserOption((option) =>
       option.setName("usuario").setDescription("Membro que será expulso.").setRequired(true)
     )

@@ -46,22 +46,13 @@ client.once("clientReady", async () => {
 const commandsPath = path.join(__dirname, "commands");
 const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith(".js"));
 const commandsData = [];
-const allowedCommands = new Set(
-  (process.env.DISCORD_ALLOWED_COMMANDS || "")
-    .split(",")
-    .map((commandName) => commandName.trim().toLowerCase())
-    .filter(Boolean)
-);
 
 for (const file of commandFiles) {
   const filePath = path.join(commandsPath, file);
   const command = require(filePath);
   if (command?.data) {
-    if (allowedCommands.size > 0 && !allowedCommands.has(command.data.name)) {
-      console.warn(`[COMMANDS] Ignorando comando fora da lista permitida: /${command.data.name}`);
-      continue;
-    }
-    client.commands.set(command.data.name, command);
+    const commandName = command.data.name;
+    client.commands.set(commandName, command);
     commandsData.push(command.data.toJSON());
   }
 }

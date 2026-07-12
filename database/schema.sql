@@ -213,6 +213,8 @@ CREATE TABLE IF NOT EXISTS invite_joins (
   status TEXT NOT NULL DEFAULT 'pending',
   validated_at INTEGER,
   invalid_reason TEXT,
+  log_channel_id TEXT,
+  log_message_id TEXT,
   joined_at INTEGER NOT NULL,
   left_at INTEGER,
   PRIMARY KEY (guild_id, user_id)

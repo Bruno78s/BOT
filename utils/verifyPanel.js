@@ -37,14 +37,12 @@ async function ensureVerifyPanel(client, config) {
       "Para liberar seu acesso ao servidor, confirme sua conta no botão abaixo.",
       "",
       "**A verificação analisa:**",
-      "• validade básica da conta Discord",
-      "• tempo mínimo de criação da conta",
-      "• sinais de automação ou conta suspeita",
-      "• histórico inicial de entrada por convite",
+      "• Idade da conta",
+      "• Presença de banimentos ou restrições",
+      "• Atividade suspeita",
       "",
       "**Requisitos:**",
-      "• Conta Discord ativa",
-      `• Tempo de criação superior a ${minAccountAgeDays} dias`,
+      `• Conta com pelo menos **${minAccountAgeDays} dias** de idade`,
       "",
       "Após a aprovação, seus canais serão liberados automaticamente."
     ].join("\n"))

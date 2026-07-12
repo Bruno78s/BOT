@@ -54,10 +54,9 @@
     "badWords": [],
     "ignoredChannelIds": [],
     "ignoredRoleIds": [],
+    "ignoreStaff": false,
     "linkWhitelist": [
-      "bznx-store.duckdns.org",
-      "discord.com",
-      "discord.gg"
+      "bznx-store.duckdns.org"
     ],
     "spamWindowMs": 8000,
     "spamMaxMessages": 6,
@@ -111,6 +110,11 @@
   },
   "feedbackChannelId": "1469735032091312323",
   "inviteChannelId": "1505706829022498846",
+  "invites": {
+    "minAccountAgeDays": 7,
+    "validAfterMinutes": 5,
+    "suspiciousLogChannelId": "1520846532591747172"
+  },
   "inviteShowcaseChannelId": "1469735012265099345",
   "productPanelChannels": {
     "ticket": "1469735040354353296",

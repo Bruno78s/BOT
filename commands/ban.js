@@ -1,4 +1,4 @@
-const { PermissionFlagsBits, SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
 const {
   addModerationCase,
   buildCaseFields,
@@ -12,7 +12,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("ban")
     .setDescription("Bane um usuário do servidor com registro profissional.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addUserOption((option) =>
       option.setName("usuario").setDescription("Usuário que será banido.").setRequired(true)
     )

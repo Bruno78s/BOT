@@ -34,6 +34,8 @@ ensureColumn("invite_stats", "invalid", "INTEGER NOT NULL DEFAULT 0");
 ensureColumn("invite_joins", "status", "TEXT NOT NULL DEFAULT 'pending'");
 ensureColumn("invite_joins", "validated_at", "INTEGER");
 ensureColumn("invite_joins", "invalid_reason", "TEXT");
+ensureColumn("invite_joins", "log_channel_id", "TEXT");
+ensureColumn("invite_joins", "log_message_id", "TEXT");
 ensureColumn("tickets", "internal_status", "TEXT NOT NULL DEFAULT 'open'");
 ensureColumn("tickets", "claimed_by", "TEXT");
 ensureColumn("tickets", "last_activity_at", "INTEGER");

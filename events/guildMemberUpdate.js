@@ -1,4 +1,43 @@
-const { EmbedBuilder } = require("discord.js");
+const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
+const path = require("path");
+
+function buildBoosterFiles() {
+  const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
+  return [new AttachmentBuilder(logoPath, { name: "logo.png" })];
+}
+
+function buildBoosterEmbed({ config, guild, member, boosterRoleId, type }) {
+  const joined = type === "joined";
+  const boostCount = guild.premiumSubscriptionCount || 0;
+  const boostLevel = guild.premiumTier || 0;
+
+  return new EmbedBuilder()
+    .setColor(joined ? 0xf472b6 : 0xf59e0b)
+    .setAuthor({ name: `${config.botName} | Boosters`, iconURL: "attachment://logo.png" })
+    .setTitle(joined ? "Impulso recebido" : "Impulso encerrado")
+    .setDescription(joined
+      ? [
+          `> **${member.user.tag}** impulsionou o servidor.`,
+          "> Obrigado por apoiar a comunidade e ajudar a BznX Store a crescer.",
+          "",
+          `Cargo aplicado: <@&${boosterRoleId}>`
+        ].join("\n")
+      : [
+          `> **${member.user.tag}** não está mais impulsionando o servidor.`,
+          "> O apoio anterior continua registrado com carinho pela equipe.",
+          "",
+          `Cargo removido: <@&${boosterRoleId}>`
+        ].join("\n")
+    )
+    .addFields(
+      { name: "Membro", value: `<@${member.id}>`, inline: true },
+      { name: "Boosts ativos", value: `${boostCount}`, inline: true },
+      { name: "Nível do servidor", value: `${boostLevel}`, inline: true }
+    )
+    .setThumbnail("attachment://logo.png")
+    .setFooter({ text: `${config.botName} • Sistema de boosters` })
+    .setTimestamp();
+}
 
 module.exports = {
   name: "guildMemberUpdate",
@@ -30,19 +69,8 @@ module.exports = {
       }
 
       await announceChannel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x00b4d8)
-            .setTitle("🎉 Novo Booster")
-            .setDescription([
-              `> <@${member.id}> acabou de impulsionar o servidor!`,
-              "> Cargo de booster atribuído automaticamente.",
-              "",
-              "> Obrigado pelo suporte!"
-            ].join("\n"))
-            .setFooter({ text: `${config.botName} • Booster`, iconURL: guild.client.user.displayAvatarURL() })
-            .setTimestamp()
-        ]
+        embeds: [buildBoosterEmbed({ config, guild, member, boosterRoleId, type: "joined" })],
+        files: buildBoosterFiles()
       }).catch(() => null);
     }
 
@@ -56,19 +84,8 @@ module.exports = {
       }
 
       await announceChannel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xffa000)
-            .setTitle("🔻 Booster saiu")
-            .setDescription([
-              `> <@${member.id}> não está mais impulsionando o servidor.`,
-              "> Cargo de booster removido automaticamente.",
-              "",
-              "> Obrigado pelo apoio anterior!"
-            ].join("\n"))
-            .setFooter({ text: `${config.botName} • Booster`, iconURL: guild.client.user.displayAvatarURL() })
-            .setTimestamp()
-        ]
+        embeds: [buildBoosterEmbed({ config, guild, member, boosterRoleId, type: "left" })],
+        files: buildBoosterFiles()
       }).catch(() => null);
     }
   }

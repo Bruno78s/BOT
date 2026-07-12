@@ -3,10 +3,21 @@ const { get, run, all } = require("../database/db");
 
 const inviteCache = new Map();
 const DEFAULT_FAKE_ACCOUNT_AGE_DAYS = 7;
-const DEFAULT_VALID_AFTER_MINUTES = 30;
+const DEFAULT_VALID_AFTER_MINUTES = 5;
+const DEFAULT_SUSPICIOUS_LOG_CHANNEL_ID = "1520846532591747172";
 
 function getInviteLogChannelId(config) {
   return config.inviteChannelId || config.invitesChannelId || config.logChannels?.invites || "1505706829022498846";
+}
+
+function getSuspiciousInviteLogChannelId(config) {
+  return (
+    process.env.INVITE_SUSPICIOUS_LOG_CHANNEL_ID ||
+    config.invites?.suspiciousLogChannelId ||
+    config.logChannels?.inviteSuspeitos ||
+    config.logChannels?.seguranca ||
+    DEFAULT_SUSPICIOUS_LOG_CHANNEL_ID
+  );
 }
 
 function getFakeAccountAgeMs(config) {
@@ -22,6 +33,14 @@ function getInviteValidationMs(config) {
 function getGuildCache(guildId) {
   if (!inviteCache.has(guildId)) inviteCache.set(guildId, new Map());
   return inviteCache.get(guildId);
+}
+
+function formatAccountAge(user) {
+  const totalHours = Math.max(0, Math.floor((Date.now() - user.createdTimestamp) / (60 * 60 * 1000)));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days <= 0) return `${hours || 1} hora(s)`;
+  return hours ? `${days} dia(s) e ${hours} hora(s)` : `${days} dia(s)`;
 }
 
 function formatDuration(ms) {
@@ -80,12 +99,13 @@ async function addInviteJoin(member, invite, config = {}) {
   const inviteCode = invite?.code || null;
   const isFake = Date.now() - member.user.createdTimestamp < getFakeAccountAgeMs(config) ? 1 : 0;
   const status = isFake ? "fake" : "pending";
+  const invalidReason = isFake ? "Conta recente abaixo do tempo mínimo configurado" : null;
 
   run(
     `INSERT OR REPLACE INTO invite_joins
-      (guild_id, user_id, inviter_id, invite_code, is_fake, status, validated_at, invalid_reason, joined_at, left_at)
-     VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL)`,
-    [guildId, member.id, inviterId, inviteCode, isFake, status, Date.now()]
+      (guild_id, user_id, inviter_id, invite_code, is_fake, status, validated_at, invalid_reason, log_channel_id, log_message_id, joined_at, left_at)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, ?, NULL, NULL, ?, NULL)`,
+    [guildId, member.id, inviterId, inviteCode, isFake, status, invalidReason, Date.now()]
   );
 
   if (inviterId && inviterId !== member.id) {
@@ -101,7 +121,100 @@ async function addInviteJoin(member, invite, config = {}) {
     );
   }
 
-  return { inviterId, inviteCode, isFake: Boolean(isFake), status };
+  return { inviterId, inviteCode, isFake: Boolean(isFake), status, invalidReason };
+}
+
+function buildInviteStatusLine(status, reason = null) {
+  if (status === "valid") return "✅ **Aprovado.**";
+  if (status === "invalid") return `❌ **Inválido.**${reason ? `\n> ${reason}` : ""}`;
+  if (status === "fake") return `⚠️ **Suspeito.**${reason ? `\n> ${reason}` : ""}`;
+  return "⏳ **Em análise.**";
+}
+
+function buildPublicInviteEmbed(config, member, inviteData, status = "pending", reason = null) {
+  const inviterText = inviteData.inviterId ? `<@${inviteData.inviterId}>` : "Desconhecido";
+
+  return new EmbedBuilder()
+    .setColor(status === "valid" ? (config.colors?.success || 0x2e7d32) : config.colors?.primary || 0x1e88e5)
+    .setTitle("📨 Novo membro por invite")
+    .setDescription([
+      `**Convidado:** ${member}`,
+      `**Por:** ${inviterText}`,
+      "",
+      `**Idade da conta:** ${formatAccountAge(member.user)}`,
+      "",
+      buildInviteStatusLine(status, reason)
+    ].join("\n"))
+    .setFooter({ text: `${config.botName || "BznX Store"} • Invites` })
+    .setTimestamp();
+}
+
+function buildSuspiciousInviteEmbed(config, member, inviteData) {
+  const inviterText = inviteData.inviterId ? `<@${inviteData.inviterId}>` : "Desconhecido";
+
+  return new EmbedBuilder()
+    .setColor(config.colors?.warning || 0xf9a825)
+    .setTitle("Entrada suspeita por invite")
+    .setDescription([
+      `**Convidado:** ${member} (${member.id})`,
+      `**Por:** ${inviterText}`,
+      `**Código:** ${inviteData.inviteCode || "não identificado"}`,
+      `**Idade da conta:** ${formatAccountAge(member.user)}`,
+      "",
+      `**Motivo:** ${inviteData.invalidReason || "Conta marcada como suspeita."}`,
+      "",
+      "Esta entrada não foi enviada ao canal público de invites."
+    ].join("\n"))
+    .setFooter({ text: `${config.botName || "BznX Store"} • Logs de invites` })
+    .setTimestamp();
+}
+
+async function saveInviteLogMessage(guildId, userId, message) {
+  if (!message?.id || !message.channel?.id) return;
+  run(
+    "UPDATE invite_joins SET log_channel_id = ?, log_message_id = ? WHERE guild_id = ? AND user_id = ?",
+    [message.channel.id, message.id, guildId, userId]
+  );
+}
+
+async function sendInviteJoinLog(member, config, inviteData) {
+  const channelId = inviteData.isFake ? getSuspiciousInviteLogChannelId(config) : getInviteLogChannelId(config);
+  const channel = await member.guild.channels.fetch(channelId).catch(() => null);
+  if (!channel?.isTextBased()) return;
+
+  const embed = inviteData.isFake
+    ? buildSuspiciousInviteEmbed(config, member, inviteData)
+    : buildPublicInviteEmbed(config, member, inviteData, "pending");
+
+  const message = await channel.send({ embeds: [embed] });
+  await saveInviteLogMessage(member.guild.id, member.id, message);
+}
+
+async function editInviteLogMessage(guild, config, row, status, reason = null) {
+  if (!row.log_channel_id || !row.log_message_id) return;
+
+  const channel = await guild.channels.fetch(row.log_channel_id).catch(() => null);
+  const message = channel?.messages ? await channel.messages.fetch(row.log_message_id).catch(() => null) : null;
+  if (!message?.editable) return;
+
+  const member = await guild.members.fetch(row.user_id).catch(() => null);
+  const user = member?.user || await guild.client.users.fetch(row.user_id).catch(() => null);
+  const memberLike = member || {
+    id: row.user_id,
+    user: user || { id: row.user_id, createdTimestamp: row.joined_at || Date.now() },
+    toString: () => `<@${row.user_id}>`
+  };
+
+  const inviteData = {
+    inviterId: row.inviter_id,
+    inviteCode: row.invite_code,
+    isFake: Boolean(row.is_fake),
+    invalidReason: row.invalid_reason
+  };
+
+  await message.edit({
+    embeds: [buildPublicInviteEmbed(config, memberLike, inviteData, status, reason)]
+  }).catch(() => null);
 }
 
 async function validatePendingInvites(guild, config) {
@@ -131,12 +244,14 @@ async function validatePendingInvites(guild, config) {
         [Date.now(), guild.id, row.inviter_id]
       );
     }
+
+    await editInviteLogMessage(guild, config, row, "valid");
   }
 
   return rows;
 }
 
-async function markMemberLeft(member) {
+async function markMemberLeft(member, config = {}) {
   const guildId = member.guild.id;
   const joinRecord = get(
     "SELECT * FROM invite_joins WHERE guild_id = ? AND user_id = ? AND left_at IS NULL",
@@ -146,7 +261,7 @@ async function markMemberLeft(member) {
   if (!joinRecord) return null;
 
   const status = joinRecord.status === "valid" ? "left" : "invalid";
-  const invalidReason = joinRecord.status === "pending" ? "Saiu antes do tempo mínimo para convite válido" : joinRecord.invalid_reason;
+  const invalidReason = joinRecord.status === "pending" ? "Saiu antes dos 5 minutos de análise" : joinRecord.invalid_reason;
 
   run(
     "UPDATE invite_joins SET left_at = ?, status = ?, invalid_reason = ? WHERE guild_id = ? AND user_id = ?",
@@ -172,6 +287,10 @@ async function markMemberLeft(member) {
         joinRecord.inviter_id
       ]
     );
+  }
+
+  if (joinRecord.status === "pending") {
+    await editInviteLogMessage(member.guild, config, joinRecord, "invalid", invalidReason);
   }
 
   return joinRecord;
@@ -218,40 +337,6 @@ function buildInviteStatsEmbed(config, member, stats) {
       `> **Saídas:** ${stats.left_count || 0}`
     ].join("\n"))
     .setTimestamp();
-}
-
-async function sendInviteJoinLog(member, config, inviteData) {
-  const channelId = getInviteLogChannelId(config);
-  const channel = await member.guild.channels.fetch(channelId).catch(() => null);
-  if (!channel?.isTextBased()) return;
-
-  const inviterText = inviteData.inviterId ? `<@${inviteData.inviterId}>` : "Desconhecido";
-  const inviterStats = inviteData.inviterId ? await getInviteStats(member.guild.id, inviteData.inviterId) : null;
-  const validCount = inviterStats ? getRedeemableInvites(inviterStats) : 0;
-  const pendingCount = inviterStats ? Number(inviterStats.pending || 0) : 0;
-  const validationText = formatDuration(getInviteValidationMs(config));
-  const accountAgeDays = Math.floor((Date.now() - member.user.createdTimestamp) / (24 * 60 * 60 * 1000));
-
-  const embed = new EmbedBuilder()
-    .setColor(inviteData.isFake ? 0xf1c40f : config.colors.primary)
-    .setTitle(inviteData.isFake ? "⚠️ Entrada suspeita por invite" : "📨 Novo membro por invite")
-    .setDescription([
-      `**Convidado:** ${member}`,
-      `**Por:** ${inviterText}`,
-      `**Código:** ${inviteData.inviteCode || "não identificado"}`,
-      `**Idade da conta:** ${accountAgeDays} dia(s)`,
-      "",
-      inviteData.isFake
-        ? "⚠️ Esta entrada foi marcada como fake/recente e não conta como invite válido."
-        : `⏳ Invite em análise por **${validationText}** antes de virar válido.`,
-      "",
-      `✅ **Válidos disponíveis:** ${validCount}`,
-      `⏳ **Em análise:** ${pendingCount}`
-    ].join("\n"))
-    .setFooter({ text: `${config.botName} • Invites` })
-    .setTimestamp();
-
-  await channel.send({ embeds: [embed] });
 }
 
 module.exports = {

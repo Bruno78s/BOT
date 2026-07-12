@@ -97,11 +97,50 @@ function addChannelOption(command, description, required = false) {
   );
 }
 
+function getLockOverwrite(locked) {
+  const value = locked ? false : null;
+  return {
+    SendMessages: value,
+    SendMessagesInThreads: value,
+    CreatePublicThreads: value,
+    CreatePrivateThreads: value,
+    AddReactions: value
+  };
+}
+
+async function setChannelLock(channel, interaction, locked, reason) {
+  const botMember = interaction.guild.members.me;
+  const botPermissions = channel.permissionsFor?.(botMember);
+
+  if (!botPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+    throw new Error(`Meu cargo precisa da permissao **Gerenciar Canais** em ${channel}.`);
+  }
+
+  if (channel.isThread?.()) {
+    if (locked) {
+      if (channel.setLocked) await channel.setLocked(true, reason);
+      if (channel.setArchived) await channel.setArchived(true, reason);
+    } else {
+      if (channel.setLocked) await channel.setLocked(false, reason);
+      if (channel.setArchived) await channel.setArchived(false, reason);
+    }
+    return locked ? "Thread travada e arquivada." : "Thread destravada e reaberta.";
+  }
+
+  if (!channel.permissionOverwrites?.edit) {
+    throw new Error("Este tipo de canal nao permite alterar permissoes diretamente.");
+  }
+
+  await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, getLockOverwrite(locked), { reason });
+  return locked
+    ? "Mensagens, reacoes e criacao/envio em threads foram bloqueados para @everyone."
+    : "Permissoes de envio voltaram ao padrao do canal para @everyone.";
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("mod")
     .setDescription("Central profissional de ferramentas de moderação.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addSubcommand((command) => addUserReason(command.setName("unmute").setDescription("Remove o mute/timeout de um membro."), "Membro que terá o mute removido."))
     .addSubcommand((command) => addUserReason(command.setName("warn").setDescription("Aplica um aviso interno em um membro."), "Membro que receberá o aviso."))
     .addSubcommand((command) => command.setName("warnings").setDescription("Lista os avisos internos de um membro.").addUserOption((option) => option.setName("usuario").setDescription("Membro consultado.").setRequired(true)))
@@ -216,14 +255,26 @@ module.exports = {
       const channel = interaction.options.getChannel("canal") || interaction.channel;
       const reason = interaction.options.getString("motivo") || "Sem motivo informado.";
       const denySend = subcommand === "lock";
-      await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: denySend ? false : null }, { reason });
+      let lockResult;
+      try {
+        lockResult = await setChannelLock(channel, interaction, denySend, `${reason} | Moderador: ${interaction.user.tag}`);
+      } catch (error) {
+        return interaction.editReply({
+          embeds: [createModerationEmbed(config, {
+            title: "Nao consegui alterar o canal",
+            description: error.message || "O Discord recusou a alteracao de permissoes do canal.",
+            color: config.colors?.danger,
+            icon: "⚠️"
+          })]
+        });
+      }
       return finishModerationAction(interaction, config, {
         action: subcommand,
         targetId: channel.id,
         targetTag: `#${channel.name}`,
         reason,
         title: denySend ? "Canal travado" : "Canal liberado",
-        description: denySend ? "O envio de mensagens foi bloqueado para @everyone." : "O envio de mensagens voltou ao padrão do canal.",
+        description: lockResult,
         icon: denySend ? "🔒" : "🔓",
         fields: [{ name: "📍 Canal", value: `${channel}`, inline: true }]
       });

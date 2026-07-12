@@ -51,6 +51,16 @@ function shorten(value, max = 58) {
   return text.length > max ? `${text.slice(0, max - 3)}...` : text;
 }
 
+function sanitizeFilenamePart(value, fallback = "registro") {
+  return normalizeText(value, fallback)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/#\d+$/, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || fallback;
+}
+
 function statusMeta(status) {
   const normalized = String(status || "").toUpperCase();
   if (normalized === "PAGO" || normalized === "APROVADO") {
@@ -449,11 +459,12 @@ async function createReceiptAttachment({
   drawMechanicalAuth(doc, receiptId, verificationCode, checkoutUrl);
 
   const pdfBuffer = await buildPdfBuffer(doc);
-  const safeOrderId = String(orderId || Date.now()).replace(/[^\w-]/g, "");
+  const safeProductName = sanitizeFilenamePart(productName, "Produto");
+  const safeCustomerName = sanitizeFilenamePart(user?.globalName || user?.username || user?.tag || user?.id, "Cliente");
   const safeStatus = String(status || "status").toLowerCase().replace(/[^\w-]+/g, "-");
 
   return new AttachmentBuilder(pdfBuffer, {
-    name: `comprovante-bznx-${safeOrderId}-${safeStatus}.pdf`
+    name: `comprovante-BznX-${safeProductName}-${safeCustomerName}-${safeStatus}.pdf`
   });
 }
 

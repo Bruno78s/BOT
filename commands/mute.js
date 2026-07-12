@@ -1,4 +1,4 @@
-const { PermissionFlagsBits, SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
 const {
   addModerationCase,
   buildCaseFields,
@@ -16,7 +16,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("mute")
     .setDescription("Silencia um membro por tempo determinado.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) =>
       option.setName("usuario").setDescription("Membro que será silenciado.").setRequired(true)
     )

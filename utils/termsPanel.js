@@ -19,31 +19,31 @@ async function ensureTermsPanel(client, config) {
     .setColor(config.colors.primary)
     .setTitle(`${config.botName} • Termos de Compra e Uso`)
     .setDescription([
-      "Ao comprar ou solicitar qualquer serviço na **BznX Store**, você confirma que leu e concorda com os termos abaixo.",
+      "*Ao comprar ou solicitar qualquer serviço na **BznX Store**, você confirma que leu e concorda com os termos abaixo.*",
       "",
       "**1. Produtos e serviços**",
-      "A BznX Store trabalha com bots Discord, sites, automações, sistemas digitais, configurações e serviços personalizados.",
+      "*A BznX Store trabalha com bots Discord, sites, automações, sistemas digitais, configurações e serviços personalizados.*",
       "",
       "**2. Pagamento**",
-      "Os pagamentos podem ser feitos por PIX, cartão ou método manual autorizado pela equipe. O pedido só começa a ser processado após confirmação do pagamento.",
+      "*Os pagamentos podem ser feitos por PIX, cartão ou método manual autorizado pela equipe. O pedido só começa a ser processado após confirmação do pagamento.*",
       "",
       "**3. Entrega**",
-      "A entrega pode ocorrer por ticket, mensagem privada ou canal privado, conforme o produto contratado. Prazos podem variar de acordo com complexidade, fila de atendimento e necessidade de informações do cliente.",
+      "*A entrega pode ocorrer por ticket, mensagem privada ou canal privado, conforme o produto contratado. Prazos podem variar de acordo com complexidade, fila de atendimento e necessidade de informações do cliente.*",
       "",
       "**4. Responsabilidade do cliente**",
-      "O cliente deve enviar informações corretas, manter contato pelo ticket e não compartilhar arquivos, links ou credenciais recebidas de forma indevida.",
+      "*O cliente deve enviar informações corretas, manter contato pelo ticket e não compartilhar arquivos, links ou credenciais recebidas de forma indevida.*",
       "",
       "**5. Suporte e ajustes**",
-      "Ajustes básicos relacionados ao produto contratado podem ser solicitados dentro do prazo de suporte informado pela equipe. Alterações fora do escopo inicial podem gerar novo orçamento.",
+      "*Ajustes básicos relacionados ao produto contratado podem ser solicitados dentro do prazo de suporte informado pela equipe. Alterações fora do escopo inicial podem gerar novo orçamento.*",
       "",
       "**6. Reembolsos**",
-      "Os reembolsos sao so aprovados caso aja algum erro no produto ou serviço entregue, caso contrario nao sera aprovado.",
+      "*Os reembolsos só são aprovados em caso de erro no produto ou serviço entregue, caso contrário não serão aprovados.*",
       "",
       "**7. Uso permitido**",
-      "É proibido usar produtos da BznX Store para fraude, spam, ataques, roubo de dados, violação de regras do Discord ou qualquer atividade ilegal.",
+      "*É proibido usar produtos da BznX Store para fraude, spam, ataques, roubo de dados, violação de regras do Discord ou qualquer atividade ilegal.*",
       "",
       "**8. Atualizações dos termos**",
-      "Estes termos podem ser atualizados a qualquer momento para proteger a loja, clientes e equipe."
+      "*Estes termos podem ser atualizados a qualquer momento para proteger a loja, clientes e equipe.*"
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
     .setFooter({ text: `${config.botName} • Termos oficiais`, iconURL: "attachment://logo.png" })

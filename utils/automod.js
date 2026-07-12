@@ -16,7 +16,8 @@ const DEFAULT_SETTINGS = {
   badWords: [],
   ignoredChannelIds: [],
   ignoredRoleIds: [],
-  linkWhitelist: ["discord.com", "discord.gg", "bznx-store.duckdns.org"],
+  ignoreStaff: false,
+  linkWhitelist: ["bznx-store.duckdns.org"],
   spamWindowMs: 8000,
   spamMaxMessages: 6,
   capsMinLength: 18,
@@ -42,6 +43,10 @@ function getAutomodSettings(config) {
     ...DEFAULT_SETTINGS,
     ...source,
     enabled: process.env.AUTOMOD_ENABLED ? process.env.AUTOMOD_ENABLED === "true" : source.enabled ?? DEFAULT_SETTINGS.enabled,
+    antiLinks: process.env.AUTOMOD_ANTI_LINKS ? process.env.AUTOMOD_ANTI_LINKS === "true" : source.antiLinks ?? DEFAULT_SETTINGS.antiLinks,
+    antiSpam: process.env.AUTOMOD_ANTI_SPAM ? process.env.AUTOMOD_ANTI_SPAM === "true" : source.antiSpam ?? DEFAULT_SETTINGS.antiSpam,
+    antiCaps: process.env.AUTOMOD_ANTI_CAPS ? process.env.AUTOMOD_ANTI_CAPS === "true" : source.antiCaps ?? DEFAULT_SETTINGS.antiCaps,
+    ignoreStaff: process.env.AUTOMOD_IGNORE_STAFF ? process.env.AUTOMOD_IGNORE_STAFF === "true" : source.ignoreStaff ?? DEFAULT_SETTINGS.ignoreStaff,
     badWords: splitList(process.env.AUTOMOD_BAD_WORDS || source.badWords),
     ignoredChannelIds: splitList(source.ignoredChannelIds),
     ignoredRoleIds: splitList(source.ignoredRoleIds),
@@ -52,15 +57,47 @@ function getAutomodSettings(config) {
 function isIgnored(message, settings) {
   if (!settings.enabled) return true;
   if (!message.guild || message.author.bot) return true;
-  if (message.member?.permissions.has(PermissionFlagsBits.ManageMessages)) return true;
+  if (settings.ignoreStaff && message.member?.permissions.has(PermissionFlagsBits.ManageMessages)) return true;
   if (settings.ignoredChannelIds.includes(message.channel.id)) return true;
   return settings.ignoredRoleIds.some((roleId) => message.member?.roles.cache.has(roleId));
 }
 
+function normalizeHost(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split("/")[0]
+    .split("?")[0]
+    .split("#")[0]
+    .replace(/:\d+$/, "");
+}
+
+function extractLinks(content) {
+  const matches = String(content || "").match(
+    /(?:https?:\/\/)?(?:www\.)?(?:discord\.gg\/[a-z0-9-]+|[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s<]*)?)/gi
+  ) || [];
+
+  return matches
+    .map((item) => item.replace(/[)\].,!?;:]+$/g, ""))
+    .filter((item) => {
+      const host = normalizeHost(item);
+      return host.includes(".") || host === "discord.gg";
+    });
+}
+
+function isWhitelistedLink(url, settings) {
+  const host = normalizeHost(url);
+  return settings.linkWhitelist.some((allowed) => {
+    const allowedHost = normalizeHost(allowed);
+    return host === allowedHost || host.endsWith(`.${allowedHost}`);
+  });
+}
+
 function containsBlockedLink(content, settings) {
-  const urls = content.match(/https?:\/\/[^\s]+|discord\.gg\/[^\s]+/gi) || [];
+  const urls = extractLinks(content);
   if (!urls.length) return false;
-  return urls.some((url) => !settings.linkWhitelist.some((allowed) => url.toLowerCase().includes(String(allowed).toLowerCase())));
+  return urls.some((url) => !isWhitelistedLink(url, settings));
 }
 
 function isCapsFlood(content, settings) {
