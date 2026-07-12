@@ -23,6 +23,29 @@
     "voiceChannelId": "1469735459553808477"
   },
   "clientRoleId": "1469734831188348968",
+  "moderation": {
+    "logChannelId": "1469735354956251177",
+    "adminRoleIds": [],
+    "moderatorRoleIds": [],
+    "permissions": {
+      "ban": [],
+      "kick": [],
+      "mute": [],
+      "unmute": [],
+      "warn": [],
+      "purge": [],
+      "clearUser": [],
+      "announce": [],
+      "lock": [],
+      "unlock": [],
+      "slowmode": [],
+      "nick": [],
+      "role": [],
+      "pin": [],
+      "voice": [],
+      "info": []
+    }
+  },
   "booster": {
     "roleId": "1469734832073342996",
     "announceChannelId": "1506684365734805544"

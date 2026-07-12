@@ -23,8 +23,9 @@ async function clearChannel(channel) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("clear")
-    .setDescription("Limpa todas as mensagens recentes do canal atual")
+    .setDescription("Limpa todas as mensagens recentes do canal atual.")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+
   async execute(interaction) {
     if (!interaction.channel?.bulkDelete) {
       return interaction.reply({ content: "Este canal não permite limpeza em massa.", ephemeral: true });

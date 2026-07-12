@@ -11,10 +11,10 @@ function baseEmbed(color, title, description, icon = null) {
   const embed = new EmbedBuilder()
     .setColor(color)
     .setTimestamp();
-  
+
   if (title) embed.setTitle(icon ? `${icon} ${title}` : title);
   if (description) embed.setDescription(description);
-  
+
   return embed;
 }
 
