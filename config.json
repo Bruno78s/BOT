@@ -65,10 +65,24 @@
     "capsPercent": 0.75,
     "deleteMessage": true,
     "strikePunishments": [
-      { "strikes": 2, "action": "mute", "durationMs": 600000 },
-      { "strikes": 3, "action": "mute", "durationMs": 3600000 },
-      { "strikes": 5, "action": "kick" },
-      { "strikes": 7, "action": "ban" }
+      {
+        "strikes": 2,
+        "action": "mute",
+        "durationMs": 600000
+      },
+      {
+        "strikes": 3,
+        "action": "mute",
+        "durationMs": 3600000
+      },
+      {
+        "strikes": 5,
+        "action": "kick"
+      },
+      {
+        "strikes": 7,
+        "action": "ban"
+      }
     ]
   },
   "cartAbandonment": {
@@ -101,21 +115,23 @@
     "divulgacao": "1482976520887865364",
     "clone": "1482976207527215364",
     "verificacao": "1482976319510937651",
-    "site": "1482977055657299978"
+    "site": "1482977055657299978",
+    "ia": "1510670717757161654",
+    "sites": "1482977055657299978"
   },
   "logChannels": {
-    "sistema":      "1469735341165514794",
-    "relatorio":    "1507183329961574430",
-    "vendas":       "1469735299008565319",
+    "sistema": "1469735341165514794",
+    "relatorio": "1507183329961574430",
+    "vendas": "1469735299008565319",
     "comprovantes": "1469735330511851732",
     "comprovante": "1469735330511851732",
-    "pedidos":      "1469735333662032013",
-    "ticket":       "1469735337604415612",
-    "seguranca":    "1469735354956251177",
-    "feedback":     "1469735361914601492",
+    "pedidos": "1469735333662032013",
+    "ticket": "1469735337604415612",
+    "seguranca": "1469735354956251177",
+    "feedback": "1469735361914601492",
     "feedback-ticket": "1469735361914601492",
     "logs-feedback-ticket": "1469735361914601492",
-    "vendasSites":  "1507183243764699136"
+    "vendasSites": "1507183243764699136"
   },
   "keywords": {
     "sales": [
@@ -143,70 +159,15 @@
   },
   "products": [
     {
-      "id": "ticket-premium",
-      "name": "Ticket Premium",
+      "id": "clone-basic",
+      "name": "Clone Basic",
       "category": "bots",
-      "group": "ticket",
-      "tier": "premium",
-      "channelId": "1469735040354353296",
-      "price": 9.99,
-      "stock": 15,
-      "description": "Sistema de tickets premium com categorias, avaliação e logs."
-    },
-    {
-      "id": "ticket-basic",
-      "name": "Ticket Basic",
-      "category": "bots",
-      "group": "ticket",
+      "group": "clone",
       "tier": "basic",
-      "channelId": "1469735040354353296",
-      "price": 4,
-      "stock": 30,
-      "description": "Sistema de tickets essencial para atendimento."
-    },
-    {
-      "id": "vendas-premium",
-      "name": "Vendas Premium",
-      "category": "bots",
-      "group": "vendas",
-      "tier": "premium",
-      "channelId": "1469735048495239272",
-      "price": 9,
-      "stock": 10,
-      "description": "Sistema de vendas automatizadas com embeds e fluxo por ticket."
-    },
-    {
-      "id": "vendas-basic",
-      "name": "Vendas Basic",
-      "category": "bots",
-      "group": "vendas",
-      "tier": "basic",
-      "channelId": "1469735048495239272",
-      "price": 9,
-      "stock": 10,
-      "description": "Sistema básico de vendas para Discord."
-    },
-    {
-      "id": "moderacao-premium",
-      "name": "Moderação Premium",
-      "category": "bots",
-      "group": "moderacao",
-      "tier": "premium",
-      "channelId": "1482975772632420424",
-      "price": 8,
-      "stock": 15,
-      "description": "Bot de moderação avançada com logs e automações."
-    },
-    {
-      "id": "moderacao-basic",
-      "name": "Moderação Basic",
-      "category": "bots",
-      "group": "moderacao",
-      "tier": "basic",
-      "channelId": "1482975772632420424",
-      "price": 4,
-      "stock": 15,
-      "description": "Comandos essenciais de moderação."
+      "channelId": "1482976207527215364",
+      "price": 2.5,
+      "stock": 100,
+      "description": "Este plano copia apenas a estrutura essencial do servidor, incluindo:\n\n• 📂 Categorias\n• 💬 Canais\n• 👑 Cargos\n• 🔒 Permissões\n\nIdeal para quem deseja recriar a organização do servidor de forma rápida e econômica."
     },
     {
       "id": "clone-premium",
@@ -215,130 +176,163 @@
       "group": "clone",
       "tier": "premium",
       "channelId": "1482976207527215364",
-      "price": 4,
-      "stock": 5,
-      "description": "Serviço premium para clone/configuração de estruturas."
-    },
-    {
-      "id": "clone-basic",
-      "name": "Clone Basic",
-      "category": "bots",
-      "group": "clone",
-      "tier": "basic",
-      "channelId": "1482976207527215364",
-      "price": 2,
+      "price": 9.99,
       "stock": 100,
-      "description": "Clone básico de estrutura Discord."
+      "description": "Clone completo de servidores Discord, preservando praticamente toda a estrutura e conteúdo.\n\nEste plano inclui:\n\n• 📂 Categorias\n• 💬 Canais\n• 🔒 Permissões\n• 📝 Mensagens\n• 📎 Arquivos e anexos\n• 🖼️ Imagens\n\nPerfeito para quem deseja uma cópia completa do servidor, mantendo sua organização e conteúdo."
     },
     {
-      "id": "verificacao-premium",
-      "name": "Verificação Premium",
+      "id": "bot-filas-premium",
+      "name": "Bot de Filas - Premium",
       "category": "bots",
-      "group": "verificacao",
+      "group": "filas-freefire",
       "tier": "premium",
-      "channelId": "1482976319510937651",
-      "price": 8,
+      "channelId": "1505704550424776714",
+      "price": 14.99,
       "stock": 100,
-      "description": "Sistema de verificação completo com proteção anti-spam."
+      "description": "Bot completo de filas para Free Fire, desenvolvido para organizar partidas de forma automática e prática.\n\n**Recursos inclusos:**\n\n• 🎮 Criação automática de filas\n• ⚔️ Modos x1, 2v2, 3v3, 4v4 e outros formatos\n• 👥 Gerenciamento de jogadores\n• 📋 Organização automática das partidas\n• 🤖 Sistema rápido e fácil de utilizar\n• ⚙️ Configuração personalizada conforme a necessidade da comunidade\n\nIdeal para servidores que realizam campeonatos, treinamentos ou partidas competitivas de Free Fire."
     },
     {
-      "id": "verificacao-basic",
-      "name": "Verificação Basic",
+      "id": "bot-moderacao-basic",
+      "name": "Bot Moderação Basic",
       "category": "bots",
-      "group": "verificacao",
+      "group": "moderacao",
       "tier": "basic",
-      "channelId": "1482976319510937651",
-      "price": 4,
+      "channelId": "1482975772632420424",
+      "price": 4.99,
       "stock": 100,
-      "description": "Verificação simples por botão/comando."
+      "description": "Bot de moderação com os principais comandos para manter seu servidor organizado e seguro.\n\n**Recursos inclusos:**\n\n• 🛠️ Comandos básicos de moderação\n• 🔨 Banimento de membros\n• 👢 Expulsão\n• 🔇 Timeout/Mute\n• 🧹 Limpeza de mensagens\n• ⚠️ Sistema de avisos (Warn)\n• 👤 Gerenciamento de cargos\n\nIdeal para servidores que precisam de uma moderação simples, eficiente e fácil de usar."
     },
     {
-      "id": "divulgacao-premium",
-      "name": "Divulgação Premium",
+      "id": "bot-moderacao-premium",
+      "name": "Bot Moderação Premium",
       "category": "bots",
-      "group": "divulgacao",
+      "group": "moderacao",
       "tier": "premium",
-      "channelId": "1482976520887865364",
-      "price": 9,
-      "stock": 30,
-      "description": "Automação premium de divulgação."
+      "channelId": "1482975772632420424",
+      "price": 12.99,
+      "stock": 100,
+      "description": "Bot de moderação completo, desenvolvido para automatizar a segurança e administração do seu servidor.\n\n**Recursos inclusos:**\n\n• 🛠️ Todos os recursos da versão Basic\n• 📜 Sistema completo de logs\n• 🤖 Moderação automática (AutoMod)\n• 🚫 Anti-spam e anti-flood\n• 🔗 Anti-link configurável\n• 👥 Anti-raid\n• 🔐 Proteção contra ações maliciosas\n• ⚙️ Configurações personalizáveis\n• 📊 Registro detalhado das ações da equipe\n\nIdeal para comunidades que desejam uma moderação profissional, automatizada e altamente configurável."
     },
     {
-      "id": "divulgacao-basic",
-      "name": "Divulgação Basic",
+      "id": "bot-divulgacao-basic",
+      "name": "Bot Divulgação Basic",
       "category": "bots",
       "group": "divulgacao",
       "tier": "basic",
       "channelId": "1482976520887865364",
-      "price": 4,
-      "stock": 150,
-      "description": "Divulgação básica automatizada."
+      "price": 4.99,
+      "stock": 100,
+      "description": "Bot de divulgação automática para facilitar a promoção do seu servidor ou comunidade.\n\n**Recursos inclusos:**\n\n• 📢 Divulgação automática em intervalos configuráveis\n• 📝 Mensagens personalizadas\n• ⏰ Agendamento simples de envios\n• ⚙️ Configuração rápida e prática\n\nIdeal para quem busca automatizar divulgações de forma eficiente e sem complicações."
     },
     {
-      "id": "filas-freefire-premium",
-      "name": "Filas Free Fire Premium",
+      "id": "bot-divulgacao-premium",
+      "name": "Bot Divulgação Premium",
       "category": "bots",
-      "group": "filas-freefire",
+      "group": "divulgacao",
       "tier": "premium",
-      "channelId": "1505704550424776714",
-      "price": 0,
-      "stock": 0,
-      "description": "Bot de filas para Free Fire com criação de salas x1, 2v2, 3v3 e outros formatos."
+      "channelId": "1482976520887865364",
+      "price": 9.99,
+      "stock": 100,
+      "description": "Bot de divulgação avançado, desenvolvido para maximizar o alcance das suas campanhas com recursos extras e maior personalização.\n\n**Recursos inclusos:**\n\n• 🚀 Todos os recursos da versão Basic\n• 🤖 Múltiplos sistemas de divulgação automática\n• 📝 Mensagens totalmente personalizáveis\n• 📂 Suporte a imagens e arquivos\n• ⏱️ Agendamentos avançados\n• 🎯 Configurações individuais para cada canal\n• 📊 Estatísticas e controle de envios\n• ⚙️ Alto nível de personalização\n\nIdeal para comunidades e projetos que desejam uma automação de divulgação mais completa e profissional."
     },
     {
-      "id": "filas-freefire-platinum",
-      "name": "Filas Free Fire Platinum",
+      "id": "bot-ticket-basic",
+      "name": "Bot Ticket Basic",
       "category": "bots",
-      "group": "filas-freefire",
-      "tier": "platinum",
-      "channelId": "1505704550424776714",
-      "price": 0,
-      "stock": 0,
-      "description": "Bot de filas para Free Fire com criação de salas x1, 2v2, 3v3 e recursos avançados."
+      "group": "ticket",
+      "tier": "basic",
+      "channelId": "1469735040354353296",
+      "price": 4.99,
+      "stock": 100,
+      "description": "Sistema de tickets essencial para organizar o atendimento da sua comunidade de forma simples e eficiente.\n\n**Recursos inclusos:**\n\n• 🎫 Abertura de tickets\n• 📂 Organização automática dos atendimentos\n• 👥 Controle de acesso aos tickets\n• 🔒 Fechamento de tickets\n• ⚙️ Configuração rápida e intuitiva\n\nIdeal para servidores que precisam de um sistema de suporte funcional e fácil de utilizar."
     },
     {
-      "id": "filas-freefire-premium-plus",
-      "name": "Filas Free Fire Premium+",
+      "id": "bot-ticket-premium",
+      "name": "Bot Ticket Premium",
       "category": "bots",
-      "group": "filas-freefire",
-      "tier": "premium-plus",
-      "channelId": "1505704550424776714",
-      "price": 0,
-      "stock": 0,
-      "description": "Bot de filas para Free Fire com criação de salas x1, 2v2, 3v3 e automações Premium+."
-    },
-    {
-      "id": "filas-freefire-diamond",
-      "name": "Filas Free Fire Diamond",
-      "category": "bots",
-      "group": "filas-freefire",
-      "tier": "diamond",
-      "channelId": "1505704550424776714",
-      "price": 0,
-      "stock": 0,
-      "description": "Bot de filas para Free Fire com criação de salas x1, 2v2, 3v3 e pacote Diamond completo."
-    },
-    {
-      "id": "site-premium",
-      "name": "Site Premium",
-      "category": "sites",
-      "group": "site",
+      "group": "ticket",
       "tier": "premium",
-      "channelId": "1482977055657299978",
-      "price": 19,
-      "stock": 5,
-      "description": "Site premium responsivo com layout profissional."
+      "channelId": "1469735040354353296",
+      "price": 9.99,
+      "stock": 100,
+      "description": "Sistema de tickets completo, desenvolvido para oferecer um atendimento profissional e totalmente organizado.\n\n**Recursos inclusos:**\n\n• 🎫 Todos os recursos da versão Basic\n• 📁 Categorias de tickets personalizáveis\n• ⭐ Sistema de avaliação do atendimento\n• 📜 Logs completos de abertura e fechamento\n• 📝 Transcrição das conversas\n• 👥 Gerenciamento avançado de permissões\n• ⚙️ Painéis e configurações personalizáveis\n• 🤖 Automações para agilizar o suporte\n\nIdeal para comunidades e empresas que desejam um atendimento mais profissional, organizado e automatizado."
     },
     {
-      "id": "site-basic",
-      "name": "Site Basic",
+      "id": "bot-vendas-basic",
+      "name": "Bot Vendas Basic",
+      "category": "bots",
+      "group": "vendas",
+      "tier": "basic",
+      "channelId": "1469735048495239272",
+      "price": 6.99,
+      "stock": 100,
+      "description": "Sistema básico de vendas para Discord, ideal para quem deseja vender produtos e serviços de forma simples e organizada.\n\n**Recursos inclusos:**\n\n• 🛒 Painel de vendas\n• 📦 Cadastro de produtos\n• 💳 Informações de pagamento\n• 📝 Embeds personalizáveis\n• ⚙️ Configuração rápida e intuitiva\n\nIdeal para pequenos servidores e lojas que buscam um sistema de vendas prático e eficiente."
+    },
+    {
+      "id": "bot-vendas-premium",
+      "name": "Bot Vendas Premium",
+      "category": "bots",
+      "group": "vendas",
+      "tier": "premium",
+      "channelId": "1469735048495239272",
+      "price": 14.99,
+      "stock": 100,
+      "description": "Sistema completo de vendas automatizadas para Discord, desenvolvido para oferecer uma experiência profissional aos clientes.\n\n**Recursos inclusos:**\n\n• 🛒 Todos os recursos da versão Basic\n• 🎫 Fluxo de compra por ticket\n• 📝 Embeds totalmente personalizáveis\n• 📦 Gerenciamento avançado de produtos\n• 🤖 Automações durante o processo de compra\n• 📂 Organização automática dos pedidos\n• 📊 Logs das vendas\n• ⚙️ Alto nível de personalização\n\nIdeal para lojas e comunidades que desejam automatizar o atendimento e tornar o processo de vendas mais rápido, organizado e profissional."
+    },
+    {
+      "id": "bot-verificacao-basic",
+      "name": "Bot Verificação Basic",
+      "category": "bots",
+      "group": "verificacao",
+      "tier": "basic",
+      "channelId": "1482976319510937651",
+      "price": 4.99,
+      "stock": 100,
+      "description": "Sistema de verificação simples para Discord, ideal para controlar o acesso de novos membros de forma rápida e segura.\n\n**Recursos inclusos:**\n\n• ✅ Verificação por botão\n• 💬 Verificação por comando\n• 👤 Entrega automática de cargo\n• ⚙️ Configuração simples e rápida\n\nIdeal para servidores que desejam um sistema de verificação leve, prático e eficiente."
+    },
+    {
+      "id": "bot-verificacao-premium",
+      "name": "Bot Verificação Premium",
+      "category": "bots",
+      "group": "verificacao",
+      "tier": "premium",
+      "channelId": "1482976319510937651",
+      "price": 9.99,
+      "stock": 100,
+      "description": "Sistema de verificação avançado para Discord, desenvolvido para aumentar a segurança do servidor e impedir acessos maliciosos.\n\n**Recursos inclusos:**\n\n• ✅ Todos os recursos da versão Basic\n• 🛡️ Proteção contra spam e bots\n• 🚫 Sistema anti-raid\n• 🔐 Verificações personalizáveis\n• 👤 Gerenciamento automático de cargos\n• 📜 Logs das verificações\n• ⚙️ Configurações avançadas\n\nIdeal para comunidades que buscam um sistema de verificação completo, seguro e altamente configurável."
+    },
+    {
+      "id": "bot-ia-premium",
+      "name": "Bot IA",
+      "category": "bots",
+      "group": "ia",
+      "tier": "premium",
+      "channelId": "1510670717757161654",
+      "price": 12.99,
+      "stock": 100,
+      "description": "Leve seu servidor para outro nível com um Bot de Inteligência Artificial completo, rápido e profissional.\n\n**Recursos inclusos:**\n\n• 🤖 Conversas inteligentes em tempo real\n• 💬 Respostas automáticas e naturais\n• 📝 Geração de textos, ideias e conteúdos\n• ❓ Resolução de dúvidas dos membros\n• 🛒 Suporte para lojas e atendimento automatizado\n• 🎮 Interação para comunidades e entretenimento\n• ⚙️ Configurações personalizáveis\n• 🚀 Respostas rápidas e com alta disponibilidade\n\nIdeal para comunidades, lojas, equipes de suporte e servidores que desejam oferecer uma experiência moderna e inteligente aos seus membros."
+    },
+    {
+      "id": "sites-basic",
+      "name": "Sites Basic",
       "category": "sites",
-      "group": "site",
+      "group": "sites",
       "tier": "basic",
       "channelId": "1482977055657299978",
-      "price": 14,
+      "price": 175,
       "stock": 10,
-      "description": "Site básico responsivo para presença digital."
+      "description": "Tenha uma presença digital profissional com um site moderno, responsivo e desenvolvido para apresentar sua marca, projeto, serviço ou comunidade de forma organizada e confiável.\n\nO plano Basic é ideal para quem precisa de um site funcional, bonito e acessível em computadores, celulares e tablets.\n\n**Recursos inclusos:**\n\n• 🌐 Desenvolvimento de site responsivo\n• 💻 Compatibilidade com computadores, tablets e celulares\n• 🎨 Layout moderno e organizado\n• 🏠 Página inicial personalizada\n• 📄 Seções para apresentação do projeto ou empresa\n• 🛍️ Área para exibição de produtos ou serviços\n• 🧭 Menu de navegação\n• ⚡ Carregamento otimizado\n• 🔒 Estrutura segura e bem organizada\n• 🔍 Configuração básica para mecanismos de busca\n• 🛠️ Ajustes visuais conforme a identidade do projeto\n\nIdeal para portfólios, comunidades, lojas, servidores de jogos, projetos pessoais, páginas de divulgação e pequenos negócios que desejam iniciar sua presença digital com qualidade."
+    },
+    {
+      "id": "sites-premium",
+      "name": "Sites Premium",
+      "category": "sites",
+      "group": "sites",
+      "tier": "premium",
+      "channelId": "1482977055657299978",
+      "price": 250,
+      "stock": 5,
+      "description": "Transforme seu projeto em uma presença digital completa com um site premium, responsivo e desenvolvido com um layout profissional, moderno e totalmente personalizado.\n\nO plano Premium é indicado para clientes que desejam uma estrutura mais avançada, visual exclusivo, melhor experiência de navegação e recursos personalizados para destacar sua marca no mercado.\n\n**Recursos inclusos:**\n\n• 🌐 Desenvolvimento completo de site profissional\n• 📱 Design totalmente responsivo para computadores, tablets e celulares\n• 🎨 Layout premium e personalizado\n• 🖌️ Identidade visual adaptada à marca ou projeto\n• 🏠 Página inicial profissional e estratégica\n• 📄 Criação de múltiplas páginas e seções\n• 🛍️ Área completa para produtos ou serviços\n• 💳 Possibilidade de integração com sistema de pagamento\n• 🛒 Estrutura para loja virtual ou catálogo de produtos\n• 👤 Área de login, cadastro ou painel, quando necessário\n• 📩 Formulários de contato e atendimento\n• 💬 Integração com WhatsApp, Discord, Instagram e outras redes\n• 🤖 Possibilidade de integração com bots, APIs e sistemas externos\n• 🖼️ Inserção de banners, imagens, vídeos, ícones e animações\n• ✨ Efeitos visuais e transições profissionais\n• 🧭 Menu moderno e navegação intuitiva\n• 📊 Área para estatísticas, informações ou dados do projeto\n• 🔔 Avisos, notificações e mensagens personalizadas\n• 🔍 Configuração otimizada para mecanismos de busca\n• ⚡ Otimização de desempenho e velocidade\n• 🔒 Estrutura segura e profissional\n• 🛠️ Personalização de cores, fontes, páginas e componentes\n• 📦 Organização completa dos conteúdos\n• 🔧 Suporte para instalação e configuração na hospedagem\n• 🌍 Configuração de domínio e publicação do site\n• 📝 Alterações e ajustes finais antes da entrega\n\nIdeal para empresas, lojas, comunidades, servidores de jogos, projetos profissionais, sistemas de vendas, plataformas de atendimento e clientes que buscam um site completo, moderno e preparado para crescer."
     }
   ],
   "voiceChannelId": "1469735459553808477"
