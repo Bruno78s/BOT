@@ -37,7 +37,7 @@ async function ensureTermsPanel(client, config) {
       "Ajustes básicos relacionados ao produto contratado podem ser solicitados dentro do prazo de suporte informado pela equipe. Alterações fora do escopo inicial podem gerar novo orçamento.",
       "",
       "**6. Reembolsos**",
-      "Reembolsos são analisados caso a caso. Serviços já iniciados, entregues, personalizados ou aprovados pelo cliente podem não ser elegíveis a reembolso integral.",
+      "Os reembolsos sao so aprovados caso aja algum erro no produto ou serviço entregue, caso contrario nao sera aprovado.",
       "",
       "**7. Uso permitido**",
       "É proibido usar produtos da BznX Store para fraude, spam, ataques, roubo de dados, violação de regras do Discord ou qualquer atividade ilegal.",
