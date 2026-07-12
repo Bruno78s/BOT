@@ -15,6 +15,7 @@ const { ensureStatsPanel } = require("../utils/statsPanel");
 const { ensureTermsPanel } = require("../utils/termsPanel");
 const { ensureRulesPanel } = require("../utils/rulesPanel");
 const { ensureProductPanels } = require("../utils/productPanels");
+const { ensureInviteShowcasePanel } = require("../utils/inviteShowcasePanel");
 const { logSystemEvent } = require("../utils/advancedLogger");
 const { logSistema, logRelatorio } = require("../utils/channelLogger");
 const { cacheGuildInvites, validatePendingInvites } = require("../utils/invites");
@@ -236,6 +237,7 @@ module.exports = {
     await ensureStatsPanel(client, config);
     await ensureTermsPanel(client, config);
     await ensureRulesPanel(client, config);
+    await ensureInviteShowcasePanel(client, config);
     await ensureProductPanels(client, config);
 
     const presenceActivities = getPresenceActivities(config);

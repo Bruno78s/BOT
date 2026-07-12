@@ -1,79 +1,61 @@
-const { EmbedBuilder } = require("discord.js");
-const { AttachmentBuilder } = require("discord.js");
+const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
 const path = require("path");
 
 async function ensureTermsPanel(client, config) {
-  const termsChannelId = "1469735016971112448";
-  
+  const termsChannelId = config.termsChannelId || "1469735016971112448";
   const channel = await client.channels.fetch(termsChannelId).catch(() => null);
-  if (!channel || !channel.isTextBased()) return;
+  if (!channel?.isTextBased()) return;
 
-  const recent = await channel.messages.fetch({ limit: 20 }).catch(() => null);
-  let existingMessage = null;
-  if (recent) {
-    existingMessage = recent.find(
-      (msg) =>
-        msg.author?.id === client.user.id &&
-        msg.embeds?.[0]?.title?.includes("Termos")
-    );
-  }
+  const recent = await channel.messages.fetch({ limit: 30 }).catch(() => null);
+  const existingMessage = recent?.find((message) =>
+    message.author?.id === client.user.id &&
+    message.embeds?.[0]?.title?.includes("Termos de Compra")
+  );
 
   const logoPath = path.join(__dirname, "..", "public", "LOGO2.png");
   const logoAttachment = new AttachmentBuilder(logoPath, { name: "logo.png" });
 
   const embed = new EmbedBuilder()
     .setColor(config.colors.primary)
-    .setTitle(`${config.botName} | Termos de Uso`)
+    .setTitle(`${config.botName} • Termos de Compra e Uso`)
     .setDescription([
-      "> **1. Aceitação dos Termos**",
-      "> Ao utilizar este servidor Discord e os serviços oferecidos pela Bzn X Store, você concorda com estes termos de uso na íntegra.",
+      "Ao comprar ou solicitar qualquer serviço na **BznX Store**, você confirma que leu e concorda com os termos abaixo.",
       "",
-      "> **2. Serviços Oferecidos**",
-      "> A Bzn X Store oferece desenvolvimento de bots Discord e sites personalizados, bem como suporte técnico relacionado aos serviços contratados.",
+      "**1. Produtos e serviços**",
+      "A BznX Store trabalha com bots Discord, sites, automações, sistemas digitais, configurações e serviços personalizados.",
       "",
-      "> **3. Pagamentos**",
-      "> Os pagamentos podem ser processados por PIX ou cartão. Os preços estão em Reais (BRL) e estão sujeitos a alteração mediante aviso prévio.",
+      "**2. Pagamento**",
+      "Os pagamentos podem ser feitos por PIX, cartão ou método manual autorizado pela equipe. O pedido só começa a ser processado após confirmação do pagamento.",
       "",
-      "> **4. Entrega e Prazos**",
-      "> O prazo médio de entrega dos serviços é de até 24 horas úteis após a confirmação do pagamento. Atrasos podem ocorrer devido à complexidade do projeto ou fatores externos.",
+      "**3. Entrega**",
+      "A entrega pode ocorrer por ticket, mensagem privada ou canal privado, conforme o produto contratado. Prazos podem variar de acordo com complexidade, fila de atendimento e necessidade de informações do cliente.",
       "",
-      "> **5. Garantia**",
-      "> Oferecemos suporte para ajustes básicos por 7 dias após a entrega. Problemas decorrentes de mau uso ou modificações não autorizadas não estão cobertos pela garantia.",
+      "**4. Responsabilidade do cliente**",
+      "O cliente deve enviar informações corretas, manter contato pelo ticket e não compartilhar arquivos, links ou credenciais recebidas de forma indevida.",
       "",
-      "> **6. Reembolsos**",
-      "> Reembolsos serão analisados caso a caso e concedidos se o serviço não for entregue conforme o acordado ou apresentar defeitos técnicos que impeçam seu funcionamento.",
+      "**5. Suporte e ajustes**",
+      "Ajustes básicos relacionados ao produto contratado podem ser solicitados dentro do prazo de suporte informado pela equipe. Alterações fora do escopo inicial podem gerar novo orçamento.",
       "",
-      "> **7. Propriedade Intelectual**",
-      "> Todo o código desenvolvido pela Bzn X Store permanece sendo propriedade da empresa até que o pagamento integral seja efetuado. Após o pagamento, o cliente adquire direito de uso, não de redistribuição.",
+      "**6. Reembolsos**",
+      "Reembolsos são analisados caso a caso. Serviços já iniciados, entregues, personalizados ou aprovados pelo cliente podem não ser elegíveis a reembolso integral.",
       "",
-      "> **8. Comportamento do Usuário**",
-      "> O usuário compromete-se a não utilizar os serviços para fins ilegais, fraudulentos ou que violem os Termos de Serviço do Discord. O descumprimento pode resultar em banimento imediato.",
+      "**7. Uso permitido**",
+      "É proibido usar produtos da BznX Store para fraude, spam, ataques, roubo de dados, violação de regras do Discord ou qualquer atividade ilegal.",
       "",
-      "> **9. Privacidade**",
-      "> Respeitamos sua privacidade. Seus dados serão utilizados apenas para prestação dos serviços contratados e não serão compartilhados com terceiros sem seu consentimento.",
-      "",
-      "> **10. Alterações nos Termos**",
-      "> A Bzn X Store reserva-se o direito de alterar estes termos a qualquer momento. As alterações entrarão em vigor imediatamente após sua publicação."
+      "**8. Atualizações dos termos**",
+      "Estes termos podem ser atualizados a qualquer momento para proteger a loja, clientes e equipe."
     ].join("\n"))
     .setThumbnail("attachment://logo.png")
-    .setFooter({ 
-      text: `${config.botName} • Termos de Uso`, 
-      iconURL: "attachment://logo.png"
-    })
+    .setFooter({ text: `${config.botName} • Termos oficiais`, iconURL: "attachment://logo.png" })
     .setTimestamp();
 
+  const payload = { embeds: [embed], files: [logoAttachment] };
   if (existingMessage) {
-    await existingMessage.edit({ 
-      embeds: [embed],
-      files: [logoAttachment]
-    });
+    await existingMessage.edit(payload);
     return;
   }
 
-  await channel.send({ 
-    embeds: [embed],
-    files: [logoAttachment]
-  });
+  await channel.send(payload);
 }
 
 module.exports = {

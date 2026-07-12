@@ -28,6 +28,7 @@ const { runCustomerRoleSync, getCustomerRoleSyncStatus } = require("../utils/cus
 const { validateEnv } = require("../utils/envValidation");
 const { getAutomodSettings } = require("../utils/automod");
 const { buildCustomerSummary, getCustomerProfile, listTopCustomers } = require("../utils/customers");
+const { getSalesStatusLabel, isSalesEnabled } = require("../utils/salesControl");
 const fs = require("fs");
 const path = require("path");
 
@@ -165,6 +166,7 @@ async function handleAdminMenu(interaction, config) {
         "> **Status:** atualiza o painel de status.",
         "> **Sync Cliente:** busca pendencias do site e aplica o cargo Cliente.",
         "> **Presenca:** altera as mensagens rotativas exibidas no perfil do bot.",
+        "> **Vendas:** liga/desliga novas compras sem reiniciar o bot.",
       ].join("\n"));
 
     const row = new ActionRowBuilder().addComponents(
@@ -199,6 +201,11 @@ async function handleAdminMenu(interaction, config) {
         .setCustomId("admin_sync_history")
         .setLabel("🕘 Historico Sync")
         .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("admin_sales_toggle")
+        .setLabel(`Vendas ${getSalesStatusLabel(config)}`)
+        .setEmoji("🛒")
+        .setStyle(isSalesEnabled(config) ? ButtonStyle.Success : ButtonStyle.Danger),
       new ButtonBuilder()
         .setCustomId("admin_restart_bot")
         .setLabel("🔄 Reiniciar Bot")
@@ -600,6 +607,33 @@ async function handleAdminButtons(interaction, config) {
     return interaction.reply({
       embeds: [buildSyncHistoryEmbed(config)],
       ephemeral: true
+    });
+  }
+
+  if (customId === "admin_sales_toggle") {
+    await interaction.deferReply({ ephemeral: true });
+
+    const configData = readConfigFile();
+    const nextEnabled = configData.sales?.enabled === false;
+    configData.sales = {
+      ...(configData.sales || {}),
+      enabled: nextEnabled
+    };
+
+    writeConfigFile(configData);
+    applyConfigRuntime(config, configData);
+    await refreshRuntimePanels(interaction, config);
+
+    return interaction.editReply({
+      embeds: [
+        successEmbed(
+          config,
+          nextEnabled ? "Vendas ativadas" : "Vendas pausadas",
+          nextEnabled
+            ? "Novos carrinhos e pagamentos automáticos já estão liberados."
+            : "Novos carrinhos e pagamentos automáticos foram bloqueados. Tickets existentes continuam acessíveis para suporte e cancelamento."
+        )
+      ]
     });
   }
 

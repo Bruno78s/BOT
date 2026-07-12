@@ -23,6 +23,7 @@ const { validateCoupon, validateCouponForCheckout, calculateDiscount } = require
 const { logPedido } = require("../utils/channelLogger");
 const { getSettings } = require("../utils/settings");
 const { sendPurchaseAuditLog } = require("./shared");
+const { buildSalesClosedEmbed, isSalesEnabled } = require("../utils/salesControl");
 
 const PIX_EXPIRY_MS = 15 * 60 * 1000;
 const PIX_MIN_AMOUNT = 0.01;
@@ -195,6 +196,13 @@ function getPaymentLabel(provider) {
 async function showPaymentMethodChoice(interaction, config) {
   await interaction.deferReply({ ephemeral: true });
 
+  if (!isSalesEnabled(config)) {
+    return interaction.editReply({
+      embeds: [buildSalesClosedEmbed(config)],
+      components: []
+    });
+  }
+
   const ticket = await listTicketByChannel(interaction.channel.id);
   const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
   if (!product) {
@@ -210,7 +218,7 @@ async function showPaymentMethodChoice(interaction, config) {
   if (ticket.coupon_id) {
     coupon = await get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
     if (coupon) {
-      const validation = await validateCouponForCheckout(interaction.guild.id, coupon.code, product.price, product.id, interaction.member, method);
+      const validation = await validateCoupon(interaction.guild.id, coupon.code, product.price, product.id);
       if (!validation.valid) {
         return interaction.editReply({
           embeds: [dangerEmbed(config, "Cupom incompatível", `${validation.reason}. Remova ou troque o cupom para continuar.`)],
@@ -283,6 +291,12 @@ function startPixCountdown({ message, interaction, config, product, coupon, disc
 
 async function handleProductSelect(interaction, config) {
   await interaction.deferReply({ ephemeral: true });
+
+  if (!isSalesEnabled(config)) {
+    return interaction.editReply({
+      embeds: [buildSalesClosedEmbed(config)]
+    });
+  }
   
   const productId = interaction.values[0].replace("cart_start_", "");
   const settings = await getSettings(interaction.guild.id) || {};
@@ -382,6 +396,13 @@ async function handleSupportTicketSelect(interaction, config) {
 async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
   await interaction.deferReply({ ephemeral: true });
 
+  if (!isSalesEnabled(config)) {
+    return interaction.editReply({
+      embeds: [buildSalesClosedEmbed(config)],
+      components: []
+    });
+  }
+
   const ticket = await listTicketByChannel(interaction.channel.id);
   const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
   if (!product) {
@@ -420,6 +441,13 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
   if (ticket.coupon_id) {
     coupon = await get("SELECT * FROM coupons WHERE id = ?", [ticket.coupon_id]);
     if (coupon) {
+      const validation = await validateCouponForCheckout(interaction.guild.id, coupon.code, product.price, product.id, interaction.member, method);
+      if (!validation.valid) {
+        return interaction.editReply({
+          embeds: [dangerEmbed(config, "Cupom incompatível", `${validation.reason}. Remova ou troque o cupom para continuar.`)],
+          components: [buildPaymentMethodRow()]
+        });
+      }
       discount = calculateDiscount(product.price, coupon);
       discountedPrice = roundMoney(product.price - discount);
     }
@@ -535,6 +563,14 @@ async function handlePaymentGatewaySelect(interaction, config, method = "pix") {
 
 async function handleCouponModal(interaction, config) {
   await interaction.deferReply({ ephemeral: true });
+
+  if (!isSalesEnabled(config)) {
+    return interaction.editReply({
+      embeds: [buildSalesClosedEmbed(config)],
+      components: []
+    });
+  }
+
   const couponCode = interaction.fields.getTextInputValue("coupon_code").trim();
   const ticket = await listTicketByChannel(interaction.channel.id);
   const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
@@ -620,6 +656,14 @@ async function handleCartButtons(interaction, config) {
   }
 
   if (customId === "cart_apply_coupon") {
+    if (!isSalesEnabled(config)) {
+      await interaction.reply({
+        embeds: [buildSalesClosedEmbed(config)],
+        ephemeral: true
+      });
+      return true;
+    }
+
     const modal = new ModalBuilder()
       .setCustomId("coupon_modal")
       .setTitle("Aplicar Cupom");
@@ -691,6 +735,13 @@ async function handleCartButtons(interaction, config) {
 
   if (customId === "cart_manual_payment") {
     await interaction.deferReply({ ephemeral: true });
+    if (!isSalesEnabled(config)) {
+      return interaction.editReply({
+        embeds: [buildSalesClosedEmbed(config)],
+        components: []
+      });
+    }
+
     const ticket = await listTicketByChannel(interaction.channel.id);
     const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;
     if (!ticket || !product) {
@@ -746,6 +797,13 @@ async function handleCartButtons(interaction, config) {
 
   if (customId === "cart_accept_terms") {
     await interaction.deferReply({ ephemeral: true });
+    if (!isSalesEnabled(config)) {
+      return interaction.editReply({
+        embeds: [buildSalesClosedEmbed(config)],
+        components: []
+      });
+    }
+
     const ticket = await listTicketByChannel(interaction.channel.id);
     console.log(`[CART] cart_accept_terms: channel=${interaction.channel.id}, ticket=${ticket ? `found (id=${ticket.id}, productId=${ticket.product_id})` : "NOT FOUND"}`);
     const product = ticket?.product_id ? config.products.find((p) => p.id === ticket.product_id) : null;

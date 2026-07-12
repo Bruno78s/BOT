@@ -1,5 +1,6 @@
 const { ActionRowBuilder, EmbedBuilder, StringSelectMenuBuilder } = require("discord.js");
 const { get, run, all } = require("../database/db");
+const { getSalesStatusLabel } = require("./salesControl");
 
 function money(value) {
   return `R$ ${Number(value || 0).toFixed(2).replace(".", ",")}`;
@@ -77,6 +78,7 @@ function buildAdminHome(config) {
       {
         name: "💰 Vendas",
         value: [
+          `Status: **${getSalesStatusLabel(config)}**`,
           `Hoje: **${stats.todaySales}** (${money(stats.todayRevenue)})`,
           `Mês: **${money(stats.monthRevenue)}**`,
           `Total: **${money(stats.totalRevenue)}**`

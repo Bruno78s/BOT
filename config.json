@@ -90,6 +90,9 @@
     "warnAfterMinutes": 20,
     "closeAfterMinutes": 60
   },
+  "sales": {
+    "enabled": true
+  },
   "booster": {
     "roleId": "1469734832073342996",
     "announceChannelId": "1506684365734805544"
@@ -108,6 +111,7 @@
   },
   "feedbackChannelId": "1469735032091312323",
   "inviteChannelId": "1505706829022498846",
+  "inviteShowcaseChannelId": "1469735012265099345",
   "productPanelChannels": {
     "ticket": "1469735040354353296",
     "vendas": "1469735048495239272",
