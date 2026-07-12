@@ -36,9 +36,9 @@ function buildInviteShowcaseEmbed(config) {
     .setDescription([
       "A **BznX Store** desenvolve soluções prontas e personalizadas para Discord, lojas, comunidades e projetos profissionais.",
       "",
-      "Trabalhamos com **bots**, **sistemas de atendimento**, **vendas automatizadas**, **moderação**, **verificação**, **divulgação**, **IA** e **sites sob medida**.",
+      "Escolha o produto ideal nos canais da loja, abra seu carrinho e acompanhe tudo pelo Discord com atendimento organizado.",
       "",
-      "Escolha o produto ideal nos canais da loja, abra seu carrinho e acompanhe tudo pelo Discord com atendimento organizado."
+      "💡 **Dica:** Se você não encontrar o que procura, abra um ticket e solicite um orçamento personalizado."
     ].join("\n"))
     .addFields(
       {
@@ -46,7 +46,6 @@ function buildInviteShowcaseEmbed(config) {
         value: [
           `Planos disponíveis: **${stats.bots}**`,
           `A partir de **${money(stats.lowestBot)}**`,
-          "Tickets, vendas, moderação, verificação, divulgação, filas Free Fire, clone e IA."
         ].join("\n"),
         inline: true
       },
@@ -55,18 +54,17 @@ function buildInviteShowcaseEmbed(config) {
         value: [
           `Planos disponíveis: **${stats.sites}**`,
           `A partir de **${money(stats.lowestSite)}**`,
-          "Landing pages, catálogos, lojas, painéis, integrações e presença digital completa."
         ].join("\n"),
         inline: true
       },
       {
         name: "✅ Por que escolher a BznX?",
         value: [
-          "• Atendimento via ticket",
-          "• Pagamento por PIX ou cartão",
-          "• Comprovante e logs automáticos",
-          "• Entrega acompanhada pela equipe",
-          "• Soluções com visual profissional"
+          "**• Atendimento via ticket**",
+          "**• Pagamento por PIX ou cartão**",
+          "**• Comprovante e logs automáticos**",
+          "**• Entrega acompanhada pela equipe**",
+          "**• Soluções com visual profissional**"
         ].join("\n"),
         inline: false
       },
