@@ -11,6 +11,7 @@ const { logTicketEvent, logFeedbackEvent } = require("../utils/advancedLogger");
 const { getSettings } = require("../utils/settings");
 const { formatDuration, formatStars } = require("./shared");
 const { getTicketStatusLabel, setTicketInternalStatus } = require("../utils/ticketAutomation");
+const { sendTicketTranscript } = require("../utils/ticketTranscript");
 
 function canManageTicket(member, settings) {
   const hasSupportRole = settings.support_role_id && member.roles.cache.has(settings.support_role_id);
@@ -188,6 +189,10 @@ async function handleTicketButtons(interaction, config) {
       userId: interaction.user.id
     });
     const durationText = formatDuration(Date.now() - result.ticket.created_at);
+    const transcriptMessage = await sendTicketTranscript(interaction.channel, result.ticket, config).catch((error) => {
+      console.error("[TICKETS] Falha ao gerar transcript:", error.message);
+      return null;
+    });
     await logToChannel(logChannel, config, "info", "Ticket encerrado.", {
       title: `${config.botName} | Ticket fechado`,
       fields: [
@@ -196,7 +201,7 @@ async function handleTicketButtons(interaction, config) {
         { name: "Staff", value: `<@${interaction.user.id}>`, inline: true },
         { name: "Duração", value: durationText, inline: true },
         { name: "Avaliação", value: shouldRequestRating ? "Aguardando usuário" : "Não solicitada", inline: true },
-        { name: "Transcrição", value: "Não disponível", inline: true }
+        { name: "Transcrição", value: transcriptMessage?.url ? `[Abrir transcript](${transcriptMessage.url})` : "Não disponível", inline: true }
       ],
       footer: "BznX Store • Logs"
     });

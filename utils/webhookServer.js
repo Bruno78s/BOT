@@ -17,6 +17,7 @@ const { sendReceiptDM, sendReceiptToPrivateChannel } = require("./receipt");
 const { useCoupon } = require("./coupons");
 const { get, run } = require("../database/db");
 const { getFulfillmentStatusLabel, getOrderCode } = require("./orders");
+const { recordCustomerOrder, recordFailedPayment } = require("./customers");
 const {
   constructStripeWebhookEvent,
   fetchCardCheckoutSession,
@@ -290,6 +291,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     "UPDATE payments SET order_code = ?, fulfillment_status = ?, delivered_at = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_at END WHERE id = ?",
     [orderCode, fulfillmentStatus, fulfillmentStatus, Date.now(), localPayment.id]
   );
+  recordCustomerOrder({ ...localPayment, status: "approved", guild_id: channel.guild.id });
 
   return true;
 }
@@ -384,6 +386,7 @@ async function processMercadoPagoPayment(client, config, paymentId, source = "we
       const finalStatuses = new Set(["rejected", "cancelled", "canceled", "refunded", "charged_back"]);
       if (finalStatuses.has(paymentData.status)) {
         await updatePaymentStatusByProviderId(paymentData.id, paymentData.status);
+        recordFailedPayment(localPayment);
       }
       console.log(`[MERCADO_PAGO] ${source}: pagamento ${paymentData.id} ainda esta como ${paymentData.status}.`);
       return false;
@@ -449,6 +452,7 @@ async function processStripePayment(client, config, sessionId, source = "webhook
     if (session.payment_status !== "paid") {
       if (session.status === "expired") {
         await updateStripePaymentStatus(session.id, "expired", paymentIntentId);
+        recordFailedPayment(localPayment);
       }
       console.log(`[STRIPE] ${source}: pagamento ${session.id} ainda nao esta pago.`);
       return false;

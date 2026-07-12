@@ -38,6 +38,7 @@ ensureColumn("tickets", "internal_status", "TEXT NOT NULL DEFAULT 'open'");
 ensureColumn("tickets", "claimed_by", "TEXT");
 ensureColumn("tickets", "last_activity_at", "INTEGER");
 ensureColumn("tickets", "auto_close_warned_at", "INTEGER");
+ensureColumn("tickets", "abandoned_warned_at", "INTEGER");
 ensureColumn("tickets", "close_reason", "TEXT");
 
 // Query functions

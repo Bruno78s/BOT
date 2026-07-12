@@ -26,6 +26,8 @@ const { ensureStatusPanel } = require("../utils/statusPanel");
 const { ensureProductPanels } = require("../utils/productPanels");
 const { runCustomerRoleSync, getCustomerRoleSyncStatus } = require("../utils/customerRoleSync");
 const { validateEnv } = require("../utils/envValidation");
+const { getAutomodSettings } = require("../utils/automod");
+const { buildCustomerSummary, getCustomerProfile, listTopCustomers } = require("../utils/customers");
 const fs = require("fs");
 const path = require("path");
 
@@ -145,6 +147,14 @@ async function handleAdminMenu(interaction, config) {
     return showInvitesPanel(interaction, config);
   }
 
+  if (selectedValue === "admin_security") {
+    return interaction.update(buildSecurityPanel(config));
+  }
+
+  if (selectedValue === "admin_customers") {
+    return interaction.update(buildCustomersPanel(config, interaction.guild.id));
+  }
+
   if (selectedValue === "admin_settings") {
     const embed = new EmbedBuilder()
       .setColor(config.colors.primary)
@@ -233,6 +243,106 @@ async function showInvitesPanel(interaction, config) {
   return interaction.update({ embeds: [embed], components: [row, buildMainMenuBackRow()] });
 }
 
+function formatConfigList(value) {
+  if (!value) return "";
+  if (Array.isArray(value)) return value.join(",");
+  return String(value);
+}
+
+function setConfigList(raw) {
+  return String(raw || "")
+    .split(/[,\n;]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function buildSecurityPanel(config) {
+  const automod = getAutomodSettings(config);
+  const activeStrikes = get("SELECT COUNT(*) as total FROM moderation_strikes WHERE active = 1")?.total || 0;
+  const cases = get("SELECT COUNT(*) as total FROM moderation_cases")?.total || 0;
+  const warnings = get("SELECT COUNT(*) as total FROM moderation_warnings")?.total || 0;
+
+  const embed = new EmbedBuilder()
+    .setColor(automod.enabled ? config.colors.success : config.colors.warning)
+    .setTitle(`${config.botName} | 🛡️ Segurança`)
+    .setDescription("Central de automod, strikes, logs avançados e permissões de moderação.")
+    .addFields([
+      {
+        name: "🤖 Automod",
+        value: [
+          `Status: **${automod.enabled ? "ativo" : "desativado"}**`,
+          `Anti-link: **${automod.antiLinks ? "on" : "off"}**`,
+          `Anti-spam: **${automod.antiSpam ? "on" : "off"}**`,
+          `Anti-caps: **${automod.antiCaps ? "on" : "off"}**`,
+          `Palavras bloqueadas: **${automod.badWords.length}**`
+        ].join("\n"),
+        inline: true
+      },
+      {
+        name: "⚠️ Strikes",
+        value: [
+          `Ativos: **${activeStrikes}**`,
+          `Warnings: **${warnings}**`,
+          `Casos: **${cases}**`
+        ].join("\n"),
+        inline: true
+      },
+      {
+        name: "🔐 Permissões",
+        value: [
+          `Moderadores gerais: **${(config.moderation?.moderatorRoleIds || []).length} cargo(s)**`,
+          `Admins extras: **${(config.moderation?.adminRoleIds || []).length} cargo(s)**`,
+          `Log: ${config.moderation?.logChannelId ? `<#${config.moderation.logChannelId}>` : "canal de segurança"}`
+        ].join("\n"),
+        inline: false
+      }
+    ])
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId("admin_automod_config").setLabel("🤖 Configurar Automod").setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId("admin_mod_permissions").setLabel("🔐 Permissões").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId("admin_strikes_export").setLabel("📤 Exportar Strikes").setStyle(ButtonStyle.Secondary)
+  );
+
+  return { embeds: [embed], components: [row, buildMainMenuBackRow()] };
+}
+
+function buildCustomersPanel(config, guildId) {
+  const customers = listTopCustomers(guildId, 10);
+  const rows = customers.length
+    ? customers.map((customer, index) => `${index + 1}. <@${customer.user_id}> • ${formatPrice(customer.total_spent || 0)} • ${customer.total_orders || 0} pedido(s)`).join("\n")
+    : "Nenhum cliente registrado ainda.";
+
+  const totals = get(`
+    SELECT
+      COUNT(*) as customers,
+      SUM(total_spent) as revenue,
+      SUM(total_orders) as orders,
+      SUM(total_tickets) as tickets
+    FROM customer_profiles WHERE guild_id = ?
+  `, [guildId]) || {};
+
+  const embed = new EmbedBuilder()
+    .setColor(config.colors.primary)
+    .setTitle(`${config.botName} | 👥 Clientes`)
+    .setDescription("Perfis de clientes com compras, tickets, falhas e histórico.")
+    .addFields([
+      { name: "👥 Clientes", value: `${totals.customers || 0}`, inline: true },
+      { name: "💰 Receita registrada", value: formatPrice(totals.revenue || 0), inline: true },
+      { name: "🧾 Pedidos", value: `${totals.orders || 0}`, inline: true },
+      { name: "🏆 Top clientes", value: rows.slice(0, 1800), inline: false }
+    ])
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId("admin_customer_lookup").setLabel("🔎 Consultar Cliente").setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId("admin_customers_export").setLabel("📤 Exportar CSV").setStyle(ButtonStyle.Secondary)
+  );
+
+  return { embeds: [embed], components: [row, buildMainMenuBackRow()] };
+}
+
 function setEnvValue(content, key, value) {
   const line = `${key}=${value}`;
   const pattern = new RegExp(`^${key}=.*$`, "m");
@@ -286,8 +396,11 @@ function buildHealthEmbed(interaction, config) {
       (SELECT COUNT(*) FROM payments) as payments,
       (SELECT COUNT(*) FROM payments WHERE status = 'pending') as pending_payments,
       (SELECT COUNT(*) FROM tickets WHERE status = 'open') as open_tickets,
-      (SELECT COUNT(*) FROM logs) as logs
+      (SELECT COUNT(*) FROM logs) as logs,
+      (SELECT COUNT(*) FROM moderation_strikes WHERE active = 1) as active_strikes,
+      (SELECT COUNT(*) FROM customer_profiles) as customers
   `) || {};
+  const automod = getAutomodSettings(config);
 
   return new EmbedBuilder()
     .setColor(env.warnings.length || sync.lastError ? config.colors.warning : config.colors.success)
@@ -308,7 +421,17 @@ function buildHealthEmbed(interaction, config) {
           `Pagamentos: **${dbStats.payments || 0}**`,
           `Pendentes: **${dbStats.pending_payments || 0}**`,
           `Tickets abertos: **${dbStats.open_tickets || 0}**`,
-          `Logs: **${dbStats.logs || 0}**`
+          `Logs: **${dbStats.logs || 0}**`,
+          `Clientes: **${dbStats.customers || 0}**`
+        ].join("\n"),
+        inline: true
+      },
+      {
+        name: "Segurança",
+        value: [
+          `Automod: **${automod.enabled ? "ativo" : "desativado"}**`,
+          `Anti-link/spam/caps: **${automod.antiLinks ? "on" : "off"}/${automod.antiSpam ? "on" : "off"}/${automod.antiCaps ? "on" : "off"}**`,
+          `Strikes ativos: **${dbStats.active_strikes || 0}**`
         ].join("\n"),
         inline: true
       },
@@ -476,6 +599,98 @@ async function handleAdminButtons(interaction, config) {
   if (customId === "admin_sync_history") {
     return interaction.reply({
       embeds: [buildSyncHistoryEmbed(config)],
+      ephemeral: true
+    });
+  }
+
+  if (customId === "admin_automod_config") {
+    const automod = getAutomodSettings(config);
+    const modal = new ModalBuilder()
+      .setCustomId("admin_automod_modal")
+      .setTitle("Configurar Automod");
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("automod_enabled").setLabel("Ativo? true/false").setStyle(TextInputStyle.Short).setValue(String(automod.enabled)).setRequired(true)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("automod_bad_words").setLabel("Palavras bloqueadas").setStyle(TextInputStyle.Paragraph).setValue(formatConfigList(automod.badWords)).setRequired(false)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("automod_ignored_channels").setLabel("Canais ignorados").setStyle(TextInputStyle.Short).setValue(formatConfigList(automod.ignoredChannelIds)).setRequired(false)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("automod_ignored_roles").setLabel("Cargos ignorados").setStyle(TextInputStyle.Short).setValue(formatConfigList(automod.ignoredRoleIds)).setRequired(false)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("automod_whitelist").setLabel("Domínios liberados").setStyle(TextInputStyle.Short).setValue(formatConfigList(automod.linkWhitelist)).setRequired(false)
+      )
+    );
+    return interaction.showModal(modal);
+  }
+
+  if (customId === "admin_mod_permissions") {
+    const moderation = config.moderation || {};
+    const modal = new ModalBuilder()
+      .setCustomId("admin_mod_permissions_modal")
+      .setTitle("Permissões de Moderação");
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("mod_admin_roles").setLabel("Cargos admin extra").setStyle(TextInputStyle.Short).setValue(formatConfigList(moderation.adminRoleIds)).setRequired(false)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("mod_moderator_roles").setLabel("Cargos moderadores").setStyle(TextInputStyle.Short).setValue(formatConfigList(moderation.moderatorRoleIds)).setRequired(false)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("mod_announce_roles").setLabel("Cargos para anúncios").setStyle(TextInputStyle.Short).setValue(formatConfigList(moderation.permissions?.announce)).setRequired(false)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("mod_log_channel").setLabel("Canal de logs de moderação").setStyle(TextInputStyle.Short).setValue(String(moderation.logChannelId || config.logChannels?.seguranca || "")).setRequired(false)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("mod_purge_roles").setLabel("Cargos para limpar/travar canais").setStyle(TextInputStyle.Short).setValue(formatConfigList(moderation.permissions?.purge)).setRequired(false)
+      )
+    );
+    return interaction.showModal(modal);
+  }
+
+  if (customId === "admin_customer_lookup") {
+    const modal = new ModalBuilder()
+      .setCustomId("admin_customer_lookup_modal")
+      .setTitle("Consultar Cliente");
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("customer_user_id").setLabel("ID do usuário").setStyle(TextInputStyle.Short).setRequired(true)
+      )
+    );
+    return interaction.showModal(modal);
+  }
+
+  if (customId === "admin_customers_export") {
+    const rows = all("SELECT * FROM customer_profiles WHERE guild_id = ? ORDER BY total_spent DESC", [interaction.guild.id]);
+    const header = ["user_id", "total_spent", "total_orders", "total_tickets", "failed_payments", "last_order_at", "blacklisted", "notes"];
+    const csv = [
+      header.join(","),
+      ...rows.map((row) => header.map((key) => `"${String(row[key] ?? "").replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    return interaction.reply({
+      content: "Exportação de clientes gerada.",
+      files: [new AttachmentBuilder(Buffer.from(csv, "utf8"), { name: `clientes-${interaction.guild.id}-${Date.now()}.csv` })],
+      ephemeral: true
+    });
+  }
+
+  if (customId === "admin_strikes_export") {
+    const rows = all("SELECT * FROM moderation_strikes WHERE guild_id = ? ORDER BY created_at DESC", [interaction.guild.id]);
+    const header = ["id", "user_id", "moderator_id", "reason", "source", "active", "created_at"];
+    const csv = [
+      header.join(","),
+      ...rows.map((row) => header.map((key) => `"${String(row[key] ?? "").replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    return interaction.reply({
+      content: "Exportação de strikes gerada.",
+      files: [new AttachmentBuilder(Buffer.from(csv, "utf8"), { name: `strikes-${interaction.guild.id}-${Date.now()}.csv` })],
       ephemeral: true
     });
   }
@@ -985,6 +1200,70 @@ async function handleAdminModals(interaction, config) {
       embeds: [successEmbed(config, "Presenca atualizada", "As presencas rotativas foram salvas no .env e aplicadas em runtime.")],
       ephemeral: true
     });
+  }
+
+  if (customId === "admin_automod_modal") {
+    const configData = readConfigFile();
+    configData.automod = {
+      ...(configData.automod || {}),
+      enabled: interaction.fields.getTextInputValue("automod_enabled").trim().toLowerCase() !== "false",
+      badWords: setConfigList(interaction.fields.getTextInputValue("automod_bad_words")),
+      ignoredChannelIds: setConfigList(interaction.fields.getTextInputValue("automod_ignored_channels")),
+      ignoredRoleIds: setConfigList(interaction.fields.getTextInputValue("automod_ignored_roles")),
+      linkWhitelist: setConfigList(interaction.fields.getTextInputValue("automod_whitelist"))
+    };
+    writeConfigFile(configData);
+    applyConfigRuntime(config, configData);
+    return interaction.reply({
+      embeds: [successEmbed(config, "Automod atualizado", "As regras do automod foram salvas e já estão valendo em runtime.")],
+      ephemeral: true
+    });
+  }
+
+  if (customId === "admin_mod_permissions_modal") {
+    const configData = readConfigFile();
+    const currentPermissions = configData.moderation?.permissions || {};
+    const purgeRoles = setConfigList(interaction.fields.getTextInputValue("mod_purge_roles"));
+    configData.moderation = {
+      ...(configData.moderation || {}),
+      logChannelId: interaction.fields.getTextInputValue("mod_log_channel").replace(/\D/g, "") || configData.moderation?.logChannelId,
+      adminRoleIds: setConfigList(interaction.fields.getTextInputValue("mod_admin_roles")),
+      moderatorRoleIds: setConfigList(interaction.fields.getTextInputValue("mod_moderator_roles")),
+      permissions: {
+        ...currentPermissions,
+        announce: setConfigList(interaction.fields.getTextInputValue("mod_announce_roles")),
+        purge: purgeRoles,
+        clearUser: purgeRoles,
+        lock: purgeRoles,
+        unlock: purgeRoles,
+        slowmode: purgeRoles
+      }
+    };
+    writeConfigFile(configData);
+    applyConfigRuntime(config, configData);
+    return interaction.reply({
+      embeds: [successEmbed(config, "Permissões atualizadas", "As permissões de moderação foram salvas e aplicadas sem reiniciar.")],
+      ephemeral: true
+    });
+  }
+
+  if (customId === "admin_customer_lookup_modal") {
+    const userId = interaction.fields.getTextInputValue("customer_user_id").replace(/\D/g, "");
+    if (!userId) {
+      return interaction.reply({ embeds: [dangerEmbed(config, "ID inválido", "Informe um ID de usuário válido.")], ephemeral: true });
+    }
+    const profile = getCustomerProfile(interaction.guild.id, userId);
+    const payments = all("SELECT * FROM payments WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC LIMIT 5", [interaction.guild.id, userId]);
+    const orders = payments.length
+      ? payments.map((payment) => `\`${getOrderCode(payment)}\` • ${payment.status} • ${formatPrice(payment.amount)}`).join("\n")
+      : "Nenhum pedido recente.";
+    const embed = new EmbedBuilder()
+      .setColor(config.colors.primary)
+      .setTitle(`${config.botName} | Perfil do Cliente`)
+      .setDescription(`<@${userId}>\n\n${buildCustomerSummary(profile)}`)
+      .addFields({ name: "🧾 Últimos pedidos", value: orders.slice(0, 1024), inline: false })
+      .setTimestamp();
+    return interaction.reply({ embeds: [embed], ephemeral: true });
   }
 
   if (customId === "add_product_modal") {

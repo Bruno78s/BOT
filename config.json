@@ -46,6 +46,36 @@
       "info": []
     }
   },
+  "automod": {
+    "enabled": true,
+    "antiLinks": true,
+    "antiSpam": true,
+    "antiCaps": true,
+    "badWords": [],
+    "ignoredChannelIds": [],
+    "ignoredRoleIds": [],
+    "linkWhitelist": [
+      "bznx-store.duckdns.org",
+      "discord.com",
+      "discord.gg"
+    ],
+    "spamWindowMs": 8000,
+    "spamMaxMessages": 6,
+    "capsMinLength": 18,
+    "capsPercent": 0.75,
+    "deleteMessage": true,
+    "strikePunishments": [
+      { "strikes": 2, "action": "mute", "durationMs": 600000 },
+      { "strikes": 3, "action": "mute", "durationMs": 3600000 },
+      { "strikes": 5, "action": "kick" },
+      { "strikes": 7, "action": "ban" }
+    ]
+  },
+  "cartAbandonment": {
+    "enabled": true,
+    "warnAfterMinutes": 20,
+    "closeAfterMinutes": 60
+  },
   "booster": {
     "roleId": "1469734832073342996",
     "announceChannelId": "1506684365734805544"

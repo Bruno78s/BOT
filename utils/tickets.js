@@ -9,6 +9,7 @@ const { all, get, run } = require("../database/db");
 const { infoEmbed, successEmbed, warningEmbed } = require("./embeds");
 const { logTicketCriado, logFeedback } = require("./channelLogger");
 const { buildTermsEmbed, formatPrice } = require("./salesFlow");
+const { recordCustomerTicket } = require("./customers");
 
 function formatTicketNumber(number) {
   return String(number).padStart(3, "0");
@@ -209,6 +210,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
       "INSERT INTO tickets (guild_id, channel_id, user_id, type, product_id, number, status, internal_status, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, 'open', 'open', ?, ?)",
       [guild.id, channel.id, member.id, type, productId || null, number, Date.now(), Date.now()]
     );
+    recordCustomerTicket({ guild_id: guild.id, user_id: member.id });
     const insertTime = Date.now() - insertStartTime;
     console.log(`[TICKETS] INSERT successful (${insertTime}ms): channel=${channel.id}, user=${member.id}, type=${type}, product_id=${productId || null}`);
   } catch (error) {

@@ -26,6 +26,8 @@ const { startCustomerRoleSync } = require("../utils/customerRoleSync");
 const { startStatusPanel } = require("../utils/statusPanel");
 const { processMercadoPagoPayment } = require("../utils/webhookServer");
 const { startTicketAutoClose } = require("../utils/ticketAutomation");
+const { startCartAbandonment } = require("../utils/cartAbandonment");
+const { recordFailedPayment } = require("../utils/customers");
 
 function resolvePresenceType(typeKey) {
   const normalized = String(typeKey || "").trim().toLowerCase();
@@ -147,6 +149,7 @@ module.exports = {
     startCustomerRoleSync(client);
     startStatusPanel(client, config);
     startTicketAutoClose(client, config);
+    startCartAbandonment(client, config);
 
     setInterval(async () => {
       for (const guild of client.guilds.cache.values()) {
@@ -182,6 +185,7 @@ module.exports = {
           }
 
           run("UPDATE payments SET status = 'expired', updated_at = ? WHERE id = ?", [Date.now(), payment.id]);
+          recordFailedPayment(payment);
           const channel = await client.channels.fetch(payment.channel_id).catch(() => null);
           if (channel?.send) {
             const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);

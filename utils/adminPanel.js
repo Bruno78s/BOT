@@ -22,7 +22,9 @@ function getAdminStats(config) {
       SUM(CASE WHEN status = 'approved' AND DATE(created_at/1000, 'unixepoch') = DATE('now') THEN 1 ELSE 0 END) as today_sales,
       (SELECT COUNT(*) FROM tickets WHERE status = 'open') as open_tickets,
       (SELECT COUNT(*) FROM tickets WHERE status = 'open' AND internal_status = 'waiting_customer') as waiting_customer,
-      (SELECT COUNT(*) FROM tickets WHERE status = 'open' AND internal_status = 'waiting_staff') as waiting_staff
+      (SELECT COUNT(*) FROM tickets WHERE status = 'open' AND internal_status = 'waiting_staff') as waiting_staff,
+      (SELECT COUNT(*) FROM moderation_strikes WHERE active = 1) as active_strikes,
+      (SELECT COUNT(*) FROM customer_profiles) as customers
     FROM payments
   `) || {};
 
@@ -50,6 +52,8 @@ function getAdminStats(config) {
     openTickets: stats.open_tickets || 0,
     waitingCustomer: stats.waiting_customer || 0,
     waitingStaff: stats.waiting_staff || 0,
+    activeStrikes: stats.active_strikes || 0,
+    customers: stats.customers || 0,
     topProducts
   };
 }
@@ -98,6 +102,15 @@ function buildAdminHome(config) {
         inline: true
       },
       {
+        name: "🛡️ Segurança",
+        value: [
+          `Automod: **${config.automod?.enabled === false ? "off" : "on"}**`,
+          `Strikes ativos: **${stats.activeStrikes}**`,
+          `Clientes: **${stats.customers}**`
+        ].join("\n"),
+        inline: true
+      },
+      {
         name: "📦 Estoque",
         value: [
           `Produtos: **${stats.totalProducts}**`,
@@ -124,6 +137,8 @@ function buildAdminHome(config) {
         { label: "💰 Pagamentos", description: "Ver pedidos, transações e financeiro", value: "admin_payments" },
         { label: "📝 Cupons", description: "Criar e gerenciar cupons inteligentes", value: "admin_coupons" },
         { label: "📨 Invites", description: "Ranking e ferramentas de convites", value: "admin_invites" },
+        { label: "🛡️ Segurança", description: "Automod, strikes e permissões", value: "admin_security" },
+        { label: "👥 Clientes", description: "Perfis, histórico e exportação", value: "admin_customers" },
         { label: "⚙️ Operações", description: "Status, sync, presença e configurações", value: "admin_settings" }
       ])
   );

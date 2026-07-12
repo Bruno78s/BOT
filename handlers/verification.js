@@ -62,6 +62,7 @@ async function handleVerification(interaction, config) {
           "\u274C Verifica\u00E7\u00E3o Falhou",
           [
             verificationResult.reason,
+            `Score de risco: **${verificationResult.score ?? "N/A"}/100**`,
             "",
             resultsText ? `### Resultado\n${resultsText}` : null
           ].filter(Boolean).join("\n")
@@ -89,6 +90,7 @@ async function handleVerification(interaction, config) {
           "\u2705 Verifica\u00E7\u00E3o Conclu\u00EDda com Sucesso",
           [
             "Bem-vindo ao servidor! Voc\u00EA agora tem acesso a todos os canais.",
+            `Score de risco: **${verificationResult.score ?? 0}/100**`,
             "",
             "### \uD83D\uDCCB Resultado da Verifica\u00E7\u00E3o:",
             resultsText,
@@ -109,6 +111,7 @@ async function handleVerification(interaction, config) {
         fields: [
           { name: "Usu\u00E1rio", value: `${member.user.tag}`, inline: true },
           { name: "Cargo", value: `<@&${verifiedRoleId}>`, inline: true },
+          { name: "Score", value: `${verificationResult.score ?? 0}/100`, inline: true },
           { name: "Resultados", value: resultsText.substring(0, 100) + "...", inline: false }
         ]
       }
