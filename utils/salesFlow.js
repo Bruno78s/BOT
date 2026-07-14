@@ -44,21 +44,36 @@ function formatTier(tier) {
 
 function getProductLabel(product) {
   const tier = formatTier(product.tier);
-  return new RegExp(`\\b${tier.replace("+", "\\+")}$`, "i").test(product.name)
+  return new RegExp(`\b${tier.replace("+", "\\+")}$`, "i").test(product.name)
     ? product.name
     : `${product.name} • ${tier}`;
 }
 
 function buildProductEmbed(config, group, products) {
   const sorted = [...products].sort((a, b) => {
-    const order = ["basic", "premium", "platinum", "premium-plus", "diamond"];
+    const order = ["basic", "standard", "premium", "registro", "livre", "platinum", "premium-plus", "diamond"];
     const tierOrder = order.indexOf(a.tier) - order.indexOf(b.tier);
     if (tierOrder !== 0) return tierOrder;
     return a.name.localeCompare(b.name);
   });
 
-  const titleName = group === "site" ? "Sites" : sorted[0]?.name?.replace(/\s+(Basic|Premium|Platinum|Premium\+|Diamond)$/i, "") || group;
-  const tierEmojis = { basic: "🔵", premium: "🟡", platinum: "⚪", "premium-plus": "🟣", diamond: "🔷" };
+  const titleLabels = {
+    site: "Sites",
+    sites: "Sites",
+    vps: "VPS",
+    dominios: "Domínios"
+  };
+  const titleName = titleLabels[group] || sorted[0]?.name?.replace(/\s+(Basic|Premium|Platinum|Premium\+|Diamond)$/i, "") || group;
+  const tierEmojis = {
+    basic: "🔵",
+    standard: "🟢",
+    premium: "🟡",
+    registro: "🌐",
+    livre: "🌐",
+    platinum: "⚪",
+    "premium-plus": "🟣",
+    diamond: "🔷"
+  };
 
   const lines = sorted.map((product) => {
     const tier = formatTier(product.tier);

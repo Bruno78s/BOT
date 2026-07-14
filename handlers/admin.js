@@ -34,47 +34,22 @@ const fs = require("fs");
 const path = require("path");
 
 const DEFAULT_PRESENCE_ACTIVITIES = [
-  "CUSTOM:ENTREGAS ON",
-  "CUSTOM:LOJA ONLINE",
-  "CUSTOM:MELHORES PRODUTOS AQUI",
-  "CUSTOM:BOTS E SITES SOB MEDIDA",
-  "CUSTOM:ATENDIMENTO BZNX STORE"
+  "ENTREGAS ON",
+  "LOJA ONLINE",
+  "MELHORES PRODUTOS AQUI",
+  "BOTS E SITES SOB MEDIDA",
+  "ATENDIMENTO BZNX STORE"
 ].join(";");
-
-function resolvePresenceType(typeKey) {
-  const normalized = String(typeKey || "").trim().toLowerCase();
-  const aliases = {
-    playing: "Playing",
-    jogando: "Playing",
-    streaming: "Streaming",
-    listening: "Listening",
-    ouvindo: "Listening",
-    watching: "Watching",
-    assistindo: "Watching",
-    custom: "Custom",
-    competing: "Competing"
-  };
-
-  return ActivityType[aliases[normalized] || typeKey] || ActivityType.Custom;
-}
 
 function parsePresenceActivity(input) {
   const item = String(input || "").trim();
   const separatorIndex = item.indexOf(":");
-  const type = separatorIndex === -1 ? ActivityType.Custom : resolvePresenceType(item.slice(0, separatorIndex).trim());
   const name = separatorIndex === -1 ? item : item.slice(separatorIndex + 1).trim();
 
-  if (type === ActivityType.Custom) {
-    return {
-      name: "BznX Store",
-      state: name || "LOJA ONLINE",
-      type
-    };
-  }
-
   return {
-    name: name || "BznX Store",
-    type
+    name: "BznX Store",
+    state: name || "LOJA ONLINE",
+    type: ActivityType.Custom
   };
 }
 

@@ -4,7 +4,9 @@ const { get, run } = require("../database/db");
 const { buildProductEmbed, formatPrice, getProductLabel, groupProducts } = require("./salesFlow");
 
 function getPanelDisplayName(group, products) {
-  if (group === "site") return "Sites";
+  if (group === "site" || group === "sites") return "Sites";
+  if (group === "vps") return "VPS";
+  if (group === "dominios") return "Domínios";
   return products[0]?.name?.replace(/\s+(Basic|Premium|Platinum|Premium\+|Diamond)$/i, "") || group;
 }
 

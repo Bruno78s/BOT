@@ -160,7 +160,9 @@
     "verificacao": "1482976319510937651",
     "site": "1482977055657299978",
     "ia": "1510670717757161654",
-    "sites": "1482977055657299978"
+    "sites": "1482977055657299978",
+    "vps": "1525939812450832598",
+    "dominios": "1525939845908660518"
   },
   "logChannels": {
     "sistema": "1469735341165514794",
@@ -400,7 +402,7 @@
       "channelId": "1525939812450832598",
       "price": 14.99,
       "stock": 1,
-      "description": "VPS mensal de entrada para projetos leves, testes, bots pequenos e servi?os simples.\n\n**Recursos inclusos:**\n\n? 525MB de mem?ria\n? Regi?o aleat?ria conforme disponibilidade\n? Sistemas dispon?veis: Ubuntu, Debian ou Fedora\n? Acesso para configura??o inicial\n? Plano mensal\n\nIdeal para quem precisa de uma VPS simples e econ?mica para come?ar."
+      "description": "VPS mensal de entrada para projetos leves, testes, bots pequenos e serviços simples.\n\n**Recursos inclusos:**\n\n• 525MB de memória\n• Região aleatória conforme disponibilidade\n• Sistemas disponíveis: Ubuntu, Debian ou Fedora\n• Acesso para configuração inicial\n• Plano mensal\n\nIdeal para quem precisa de uma VPS simples e econômica para começar."
     },
     {
       "id": "vps-1gb-mensal",
@@ -411,7 +413,7 @@
       "channelId": "1525939812450832598",
       "price": 25,
       "stock": 1,
-      "description": "VPS mensal fixa para hospedar bots, APIs, sites leves e servi?os digitais.\n\n**Recursos inclusos:**\n\n? 1GB de mem?ria\n? Linux Ubuntu 22.04 at? 26 LTS\n? Regi?o Brasil ou Chile conforme disponibilidade\n? Acesso para configura??o inicial\n? Plano mensal fixo\n\nIdeal para projetos que precisam de estabilidade e custo mensal previs?vel."
+      "description": "VPS mensal fixa para hospedar bots, APIs, sites leves e serviços digitais.\n\n**Recursos inclusos:**\n\n• 1GB de memória\n• Linux Ubuntu 22.04 até 26 LTS\n• Região Brasil ou Chile conforme disponibilidade\n• Acesso para configuração inicial\n• Plano mensal fixo\n\nIdeal para projetos que precisam de estabilidade e custo mensal previsível."
     },
     {
       "id": "vps-2gb-plus-mensal",
@@ -422,161 +424,161 @@
       "channelId": "1525939812450832598",
       "price": 39.99,
       "stock": 1,
-      "description": "VPS mensal para projetos que precisam de mais desempenho, estabilidade e margem para crescimento.\n\n**Recursos inclusos:**\n\n? 2GB de mem?ria ou mais, conforme disponibilidade\n? Regi?o aleat?ria conforme estoque\n? Sistema Linux dispon?vel no momento da entrega\n? Acesso para configura??o inicial\n? Plano mensal\n\nIdeal para bots maiores, APIs, pain?is, servi?os web e projetos com mais uso."
+      "description": "VPS mensal para projetos que precisam de mais desempenho, estabilidade e margem para crescimento.\n\n**Recursos inclusos:**\n\n• 2GB de memória ou mais, conforme disponibilidade\n• Região aleatória conforme estoque\n• Sistema Linux disponível no momento da entrega\n• Acesso para configuração inicial\n• Plano mensal\n\nIdeal para bots maiores, APIs, painéis, serviços web e projetos com mais uso."
     },
     {
       "id": "dominio-codes",
-      "name": "Dom?nio .codes",
+      "name": "Domínio .codes",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 73.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.codes** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .codes\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 86,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.codes** com configuração via ticket. Renovação estimada: R$ 86,99."
     },
     {
       "id": "dominio-email",
-      "name": "Dom?nio .email",
+      "name": "Domínio .email",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 36.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.email** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .email\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 39,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.email** com configuração via ticket. Renovação estimada: R$ 39,99."
     },
     {
       "id": "dominio-software",
-      "name": "Dom?nio .software",
+      "name": "Domínio .software",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 46.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.software** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .software\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 50,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.software** com configuração via ticket. Renovação estimada: R$ 50,99."
     },
     {
       "id": "dominio-page",
-      "name": "Dom?nio .page",
+      "name": "Domínio .page",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 15.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.page** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .page\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 18,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.page** com configuração via ticket. Renovação estimada: R$ 18,99."
     },
     {
       "id": "dominio-live",
-      "name": "Dom?nio .live",
+      "name": "Domínio .live",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 43.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.live** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .live\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 43,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.live** com configuração via ticket. Renovação estimada: R$ 43,99."
     },
     {
       "id": "dominio-ninja",
-      "name": "Dom?nio .ninja",
+      "name": "Domínio .ninja",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 34.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.ninja** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .ninja\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 39,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.ninja** com configuração via ticket. Renovação estimada: R$ 39,99."
     },
     {
       "id": "dominio-engineer",
-      "name": "Dom?nio .engineer",
+      "name": "Domínio .engineer",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 56.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.engineer** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .engineer\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 56,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.engineer** com configuração via ticket. Renovação estimada: R$ 56,99."
     },
     {
       "id": "dominio-social",
-      "name": "Dom?nio .social",
+      "name": "Domínio .social",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 46.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.social** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .social\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 50,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.social** com configuração via ticket. Renovação estimada: R$ 50,99."
     },
     {
       "id": "dominio-systems",
-      "name": "Dom?nio .systems",
+      "name": "Domínio .systems",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 40.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.systems** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .systems\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 45,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.systems** com configuração via ticket. Renovação estimada: R$ 45,99."
     },
     {
       "id": "dominio-rocks",
-      "name": "Dom?nio .rocks",
+      "name": "Domínio .rocks",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 25.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.rocks** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .rocks\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 27,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.rocks** com configuração via ticket. Renovação estimada: R$ 27,99."
     },
     {
       "id": "dominio-studio",
-      "name": "Dom?nio .studio",
+      "name": "Domínio .studio",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 41.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.studio** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .studio\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 58,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.studio** com configuração via ticket. Renovação estimada: R$ 58,99."
     },
     {
       "id": "dominio-works",
-      "name": "Dom?nio .works",
+      "name": "Domínio .works",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 46.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.works** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .works\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 50,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.works** com configuração via ticket. Renovação estimada: R$ 50,99."
     },
     {
       "id": "dominio-games",
-      "name": "Dom?nio .games",
+      "name": "Domínio .games",
       "category": "dominios",
       "group": "dominios",
       "tier": "registro",
       "channelId": "1525939845908660518",
       "price": 38.99,
       "stock": 1,
-      "description": "Registro de dom?nio **.games** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .games\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 43,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.games** com configuração via ticket. Renovação estimada: R$ 43,99."
     },
     {
       "id": "dominio-org",
-      "name": "Dom?nio .org",
+      "name": "Domínio .org",
       "category": "dominios",
       "group": "dominios",
       "tier": "livre",
       "channelId": "1525939845908660518",
       "price": 49.99,
       "stock": 999,
-      "description": "Registro de dom?nio **.org** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .org\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Estoque livre conforme disponibilidade\n\nA entrega e configura??o s?o acompanhadas via ticket."
+      "description": "Registro de domínio **.org** com configuração via ticket. Estoque livre conforme disponibilidade."
     }
   ],
   "voiceChannelId": "1469735459553808477"
