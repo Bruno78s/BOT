@@ -51,12 +51,47 @@
     "antiLinks": true,
     "antiSpam": true,
     "antiCaps": true,
-    "badWords": [],
+    "badWords": [
+      "fdp",
+      "f.d.p",
+      "filho da puta",
+      "puta",
+      "puto",
+      "tmnc",
+      "tnc",
+      "vai tomar no cu",
+      "tomar no cu",
+      "arrombado",
+      "arrombada",
+      "foder",
+      "fodase",
+      "foda-se",
+      "fodido",
+      "fodida",
+      "merda",
+      "bosta",
+      "caralho",
+      "porra",
+      "desgraçado",
+      "desgracado",
+      "desgraçada",
+      "desgracada",
+      "lixo",
+      "otario",
+      "otário",
+      "vagabundo",
+      "vagabunda",
+      "corno",
+      "corna",
+      "cuzao",
+      "cuzão"
+    ],
     "ignoredChannelIds": [],
     "ignoredRoleIds": [],
     "ignoreStaff": false,
     "linkWhitelist": [
-      "bznx-store.duckdns.org"
+      "bznx-store.duckdns.org",
+      "mediafire.com"
     ],
     "spamWindowMs": 8000,
     "spamMaxMessages": 6,
@@ -97,8 +132,8 @@
     "announceChannelId": "1506684365734805544"
   },
   "botPresence": {
-    "type": "WATCHING",
-    "message": "Melhor preço é aqui!"
+    "type": "CUSTOM",
+    "message": "LOJA ONLINE"
   },
   "statsChannelId": "1503149748813824016",
   "salesCategoryId": "1469734922431500412",
@@ -175,6 +210,7 @@
       "channelId": "1482976207527215364",
       "price": 2.5,
       "stock": 100,
+      "deliveryUrl": "https://www.mediafire.com/file/hnhg6qanpad7742/BznX-BotCloner.exe/file",
       "description": "Este plano copia apenas a estrutura essencial do servidor, incluindo:\n\n• 📂 Categorias\n• 💬 Canais\n• 👑 Cargos\n• 🔒 Permissões\n\nIdeal para quem deseja recriar a organização do servidor de forma rápida e econômica."
     },
     {
@@ -186,6 +222,7 @@
       "channelId": "1482976207527215364",
       "price": 9.99,
       "stock": 100,
+      "deliveryUrl": "https://www.mediafire.com/file/5am18bicfw0f5gy/BznX-Premium.exe/file",
       "description": "Clone completo de servidores Discord, preservando praticamente toda a estrutura e conteúdo.\n\nEste plano inclui:\n\n• 📂 Categorias\n• 💬 Canais\n• 🔒 Permissões\n• 📝 Mensagens\n• 📎 Arquivos e anexos\n• 🖼️ Imagens\n\nPerfeito para quem deseja uma cópia completa do servidor, mantendo sua organização e conteúdo."
     },
     {
@@ -197,6 +234,7 @@
       "channelId": "1505704550424776714",
       "price": 14.99,
       "stock": 100,
+      "deliveryUrl": "https://www.mediafire.com/file/y812wvjiai1810y/BOT-FILAS-PREMIUM.rar/file",
       "description": "Bot completo de filas para Free Fire, desenvolvido para organizar partidas de forma automática e prática.\n\n**Recursos inclusos:**\n\n• 🎮 Criação automática de filas\n• ⚔️ Modos x1, 2v2, 3v3, 4v4 e outros formatos\n• 👥 Gerenciamento de jogadores\n• 📋 Organização automática das partidas\n• 🤖 Sistema rápido e fácil de utilizar\n• ⚙️ Configuração personalizada conforme a necessidade da comunidade\n\nIdeal para servidores que realizam campeonatos, treinamentos ou partidas competitivas de Free Fire."
     },
     {
@@ -208,7 +246,8 @@
       "channelId": "1482975772632420424",
       "price": 4.99,
       "stock": 100,
-      "description": "Bot de moderação com os principais comandos para manter seu servidor organizado e seguro.\n\n**Recursos inclusos:**\n\n• 🛠️ Comandos básicos de moderação\n• 🔨 Banimento de membros\n• 👢 Expulsão\n• 🔇 Timeout/Mute\n• 🧹 Limpeza de mensagens\n• ⚠️ Sistema de avisos (Warn)\n• 👤 Gerenciamento de cargos\n\nIdeal para servidores que precisam de uma moderação simples, eficiente e fácil de usar."
+      "description": "Bot de moderação com os principais comandos para manter seu servidor organizado e seguro.\n\n**Recursos inclusos:**\n\n• 🛠️ Comandos básicos de moderação\n• 🔨 Banimento de membros\n• 👢 Expulsão\n• 🔇 Timeout/Mute\n• 🧹 Limpeza de mensagens\n• ⚠️ Sistema de avisos (Warn)\n• 👤 Gerenciamento de cargos\n\nIdeal para servidores que precisam de uma moderação simples, eficiente e fácil de usar.",
+      "deliveryUrl": "https://www.mediafire.com/file/29whq0kwhi1zoz1/BOT-MODERA??O-BASICO.rar/file"
     },
     {
       "id": "bot-moderacao-premium",
@@ -219,7 +258,8 @@
       "channelId": "1482975772632420424",
       "price": 12.99,
       "stock": 100,
-      "description": "Bot de moderação completo, desenvolvido para automatizar a segurança e administração do seu servidor.\n\n**Recursos inclusos:**\n\n• 🛠️ Todos os recursos da versão Basic\n• 📜 Sistema completo de logs\n• 🤖 Moderação automática (AutoMod)\n• 🚫 Anti-spam e anti-flood\n• 🔗 Anti-link configurável\n• 👥 Anti-raid\n• 🔐 Proteção contra ações maliciosas\n• ⚙️ Configurações personalizáveis\n• 📊 Registro detalhado das ações da equipe\n\nIdeal para comunidades que desejam uma moderação profissional, automatizada e altamente configurável."
+      "description": "Bot de moderação completo, desenvolvido para automatizar a segurança e administração do seu servidor.\n\n**Recursos inclusos:**\n\n• 🛠️ Todos os recursos da versão Basic\n• 📜 Sistema completo de logs\n• 🤖 Moderação automática (AutoMod)\n• 🚫 Anti-spam e anti-flood\n• 🔗 Anti-link configurável\n• 👥 Anti-raid\n• 🔐 Proteção contra ações maliciosas\n• ⚙️ Configurações personalizáveis\n• 📊 Registro detalhado das ações da equipe\n\nIdeal para comunidades que desejam uma moderação profissional, automatizada e altamente configurável.",
+      "deliveryUrl": "https://www.mediafire.com/file/6fqsoup424ifcdx/BOT-MODERA??O-PREMIUM.rar/file"
     },
     {
       "id": "bot-divulgacao-basic",
@@ -230,7 +270,8 @@
       "channelId": "1482976520887865364",
       "price": 4.99,
       "stock": 100,
-      "description": "Bot de divulgação automática para facilitar a promoção do seu servidor ou comunidade.\n\n**Recursos inclusos:**\n\n• 📢 Divulgação automática em intervalos configuráveis\n• 📝 Mensagens personalizadas\n• ⏰ Agendamento simples de envios\n• ⚙️ Configuração rápida e prática\n\nIdeal para quem busca automatizar divulgações de forma eficiente e sem complicações."
+      "description": "Bot de divulgação automática para facilitar a promoção do seu servidor ou comunidade.\n\n**Recursos inclusos:**\n\n• 📢 Divulgação automática em intervalos configuráveis\n• 📝 Mensagens personalizadas\n• ⏰ Agendamento simples de envios\n• ⚙️ Configuração rápida e prática\n\nIdeal para quem busca automatizar divulgações de forma eficiente e sem complicações.",
+      "deliveryUrl": "https://www.mediafire.com/file/x228y45jirvusq5/BznX-Divulgação-Basic.exe/file"
     },
     {
       "id": "bot-divulgacao-premium",
@@ -241,6 +282,7 @@
       "channelId": "1482976520887865364",
       "price": 9.99,
       "stock": 100,
+      "deliveryUrl": "https://www.mediafire.com/file/s85vzy4lrv46l8e/Divulgação-Premium.rar/file",
       "description": "Bot de divulgação avançado, desenvolvido para maximizar o alcance das suas campanhas com recursos extras e maior personalização.\n\n**Recursos inclusos:**\n\n• 🚀 Todos os recursos da versão Basic\n• 🤖 Múltiplos sistemas de divulgação automática\n• 📝 Mensagens totalmente personalizáveis\n• 📂 Suporte a imagens e arquivos\n• ⏱️ Agendamentos avançados\n• 🎯 Configurações individuais para cada canal\n• 📊 Estatísticas e controle de envios\n• ⚙️ Alto nível de personalização\n\nIdeal para comunidades e projetos que desejam uma automação de divulgação mais completa e profissional."
     },
     {
@@ -252,6 +294,7 @@
       "channelId": "1469735040354353296",
       "price": 4.99,
       "stock": 100,
+      "deliveryUrl": "https://www.mediafire.com/file/8x8o9kt4qs360ou/BOT-TICKET-BASICO.rar/file",
       "description": "Sistema de tickets essencial para organizar o atendimento da sua comunidade de forma simples e eficiente.\n\n**Recursos inclusos:**\n\n• 🎫 Abertura de tickets\n• 📂 Organização automática dos atendimentos\n• 👥 Controle de acesso aos tickets\n• 🔒 Fechamento de tickets\n• ⚙️ Configuração rápida e intuitiva\n\nIdeal para servidores que precisam de um sistema de suporte funcional e fácil de utilizar."
     },
     {
@@ -263,6 +306,7 @@
       "channelId": "1469735040354353296",
       "price": 9.99,
       "stock": 100,
+      "deliveryUrl": "https://www.mediafire.com/file/ygrhgvfxj35pdgq/BOT-TICKET-PREMIUN.rar/file",
       "description": "Sistema de tickets completo, desenvolvido para oferecer um atendimento profissional e totalmente organizado.\n\n**Recursos inclusos:**\n\n• 🎫 Todos os recursos da versão Basic\n• 📁 Categorias de tickets personalizáveis\n• ⭐ Sistema de avaliação do atendimento\n• 📜 Logs completos de abertura e fechamento\n• 📝 Transcrição das conversas\n• 👥 Gerenciamento avançado de permissões\n• ⚙️ Painéis e configurações personalizáveis\n• 🤖 Automações para agilizar o suporte\n\nIdeal para comunidades e empresas que desejam um atendimento mais profissional, organizado e automatizado."
     },
     {
@@ -274,7 +318,8 @@
       "channelId": "1469735048495239272",
       "price": 6.99,
       "stock": 100,
-      "description": "Sistema básico de vendas para Discord, ideal para quem deseja vender produtos e serviços de forma simples e organizada.\n\n**Recursos inclusos:**\n\n• 🛒 Painel de vendas\n• 📦 Cadastro de produtos\n• 💳 Informações de pagamento\n• 📝 Embeds personalizáveis\n• ⚙️ Configuração rápida e intuitiva\n\nIdeal para pequenos servidores e lojas que buscam um sistema de vendas prático e eficiente."
+      "description": "Sistema básico de vendas para Discord, ideal para quem deseja vender produtos e serviços de forma simples e organizada.\n\n**Recursos inclusos:**\n\n• 🛒 Painel de vendas\n• 📦 Cadastro de produtos\n• 💳 Informações de pagamento\n• 📝 Embeds personalizáveis\n• ⚙️ Configuração rápida e intuitiva\n\nIdeal para pequenos servidores e lojas que buscam um sistema de vendas prático e eficiente.",
+      "deliveryUrl": "https://www.mediafire.com/file/804uoiofqazzgje/BOT-VENDAS-BASICO.rar/file"
     },
     {
       "id": "bot-vendas-premium",
@@ -285,7 +330,8 @@
       "channelId": "1469735048495239272",
       "price": 14.99,
       "stock": 100,
-      "description": "Sistema completo de vendas automatizadas para Discord, desenvolvido para oferecer uma experiência profissional aos clientes.\n\n**Recursos inclusos:**\n\n• 🛒 Todos os recursos da versão Basic\n• 🎫 Fluxo de compra por ticket\n• 📝 Embeds totalmente personalizáveis\n• 📦 Gerenciamento avançado de produtos\n• 🤖 Automações durante o processo de compra\n• 📂 Organização automática dos pedidos\n• 📊 Logs das vendas\n• ⚙️ Alto nível de personalização\n\nIdeal para lojas e comunidades que desejam automatizar o atendimento e tornar o processo de vendas mais rápido, organizado e profissional."
+      "description": "Sistema completo de vendas automatizadas para Discord, desenvolvido para oferecer uma experiência profissional aos clientes.\n\n**Recursos inclusos:**\n\n• 🛒 Todos os recursos da versão Basic\n• 🎫 Fluxo de compra por ticket\n• 📝 Embeds totalmente personalizáveis\n• 📦 Gerenciamento avançado de produtos\n• 🤖 Automações durante o processo de compra\n• 📂 Organização automática dos pedidos\n• 📊 Logs das vendas\n• ⚙️ Alto nível de personalização\n\nIdeal para lojas e comunidades que desejam automatizar o atendimento e tornar o processo de vendas mais rápido, organizado e profissional.",
+      "deliveryUrl": "https://www.mediafire.com/file/xnv1ig03q4lu8k9/BOT-VENDAS-PREMIUM.rar/file"
     },
     {
       "id": "bot-verificacao-basic",
@@ -296,7 +342,8 @@
       "channelId": "1482976319510937651",
       "price": 4.99,
       "stock": 100,
-      "description": "Sistema de verificação simples para Discord, ideal para controlar o acesso de novos membros de forma rápida e segura.\n\n**Recursos inclusos:**\n\n• ✅ Verificação por botão\n• 💬 Verificação por comando\n• 👤 Entrega automática de cargo\n• ⚙️ Configuração simples e rápida\n\nIdeal para servidores que desejam um sistema de verificação leve, prático e eficiente."
+      "description": "Sistema de verificação simples para Discord, ideal para controlar o acesso de novos membros de forma rápida e segura.\n\n**Recursos inclusos:**\n\n• ✅ Verificação por botão\n• 💬 Verificação por comando\n• 👤 Entrega automática de cargo\n• ⚙️ Configuração simples e rápida\n\nIdeal para servidores que desejam um sistema de verificação leve, prático e eficiente.",
+      "deliveryUrl": "https://www.mediafire.com/file/xl8mistavlfp74t/BOT-VERIFICACAO-BASICO.rar/file"
     },
     {
       "id": "bot-verificacao-premium",
@@ -307,7 +354,8 @@
       "channelId": "1482976319510937651",
       "price": 9.99,
       "stock": 100,
-      "description": "Sistema de verificação avançado para Discord, desenvolvido para aumentar a segurança do servidor e impedir acessos maliciosos.\n\n**Recursos inclusos:**\n\n• ✅ Todos os recursos da versão Basic\n• 🛡️ Proteção contra spam e bots\n• 🚫 Sistema anti-raid\n• 🔐 Verificações personalizáveis\n• 👤 Gerenciamento automático de cargos\n• 📜 Logs das verificações\n• ⚙️ Configurações avançadas\n\nIdeal para comunidades que buscam um sistema de verificação completo, seguro e altamente configurável."
+      "description": "Sistema de verificação avançado para Discord, desenvolvido para aumentar a segurança do servidor e impedir acessos maliciosos.\n\n**Recursos inclusos:**\n\n• ✅ Todos os recursos da versão Basic\n• 🛡️ Proteção contra spam e bots\n• 🚫 Sistema anti-raid\n• 🔐 Verificações personalizáveis\n• 👤 Gerenciamento automático de cargos\n• 📜 Logs das verificações\n• ⚙️ Configurações avançadas\n\nIdeal para comunidades que buscam um sistema de verificação completo, seguro e altamente configurável.",
+      "deliveryUrl": "https://www.mediafire.com/file/ckmdn5outxwy0u6/BOT-VERIFICACAO-PREMIUM.rar/file"
     },
     {
       "id": "bot-ia-premium",
@@ -318,7 +366,8 @@
       "channelId": "1510670717757161654",
       "price": 12.99,
       "stock": 100,
-      "description": "Leve seu servidor para outro nível com um Bot de Inteligência Artificial completo, rápido e profissional.\n\n**Recursos inclusos:**\n\n• 🤖 Conversas inteligentes em tempo real\n• 💬 Respostas automáticas e naturais\n• 📝 Geração de textos, ideias e conteúdos\n• ❓ Resolução de dúvidas dos membros\n• 🛒 Suporte para lojas e atendimento automatizado\n• 🎮 Interação para comunidades e entretenimento\n• ⚙️ Configurações personalizáveis\n• 🚀 Respostas rápidas e com alta disponibilidade\n\nIdeal para comunidades, lojas, equipes de suporte e servidores que desejam oferecer uma experiência moderna e inteligente aos seus membros."
+      "description": "Leve seu servidor para outro nível com um Bot de Inteligência Artificial completo, rápido e profissional.\n\n**Recursos inclusos:**\n\n• 🤖 Conversas inteligentes em tempo real\n• 💬 Respostas automáticas e naturais\n• 📝 Geração de textos, ideias e conteúdos\n• ❓ Resolução de dúvidas dos membros\n• 🛒 Suporte para lojas e atendimento automatizado\n• 🎮 Interação para comunidades e entretenimento\n• ⚙️ Configurações personalizáveis\n• 🚀 Respostas rápidas e com alta disponibilidade\n\nIdeal para comunidades, lojas, equipes de suporte e servidores que desejam oferecer uma experiência moderna e inteligente aos seus membros.",
+      "deliveryUrl": "https://www.mediafire.com/file/babjme2qz2iazzb/BOT+IA.rar/file"
     },
     {
       "id": "sites-basic",
@@ -341,6 +390,193 @@
       "price": 250,
       "stock": 5,
       "description": "Transforme seu projeto em uma presença digital completa com um site premium, responsivo e desenvolvido com um layout profissional, moderno e totalmente personalizado.\n\nO plano Premium é indicado para clientes que desejam uma estrutura mais avançada, visual exclusivo, melhor experiência de navegação e recursos personalizados para destacar sua marca no mercado.\n\n**Recursos inclusos:**\n\n• 🌐 Desenvolvimento completo de site profissional\n• 📱 Design totalmente responsivo para computadores, tablets e celulares\n• 🎨 Layout premium e personalizado\n• 🖌️ Identidade visual adaptada à marca ou projeto\n• 🏠 Página inicial profissional e estratégica\n• 📄 Criação de múltiplas páginas e seções\n• 🛍️ Área completa para produtos ou serviços\n• 💳 Possibilidade de integração com sistema de pagamento\n• 🛒 Estrutura para loja virtual ou catálogo de produtos\n• 👤 Área de login, cadastro ou painel, quando necessário\n• 📩 Formulários de contato e atendimento\n• 💬 Integração com WhatsApp, Discord, Instagram e outras redes\n• 🤖 Possibilidade de integração com bots, APIs e sistemas externos\n• 🖼️ Inserção de banners, imagens, vídeos, ícones e animações\n• ✨ Efeitos visuais e transições profissionais\n• 🧭 Menu moderno e navegação intuitiva\n• 📊 Área para estatísticas, informações ou dados do projeto\n• 🔔 Avisos, notificações e mensagens personalizadas\n• 🔍 Configuração otimizada para mecanismos de busca\n• ⚡ Otimização de desempenho e velocidade\n• 🔒 Estrutura segura e profissional\n• 🛠️ Personalização de cores, fontes, páginas e componentes\n• 📦 Organização completa dos conteúdos\n• 🔧 Suporte para instalação e configuração na hospedagem\n• 🌍 Configuração de domínio e publicação do site\n• 📝 Alterações e ajustes finais antes da entrega\n\nIdeal para empresas, lojas, comunidades, servidores de jogos, projetos profissionais, sistemas de vendas, plataformas de atendimento e clientes que buscam um site completo, moderno e preparado para crescer."
+    },
+    {
+      "id": "vps-525mb-mensal",
+      "name": "VPS 525MB",
+      "category": "infra",
+      "group": "vps",
+      "tier": "basic",
+      "channelId": "1525939812450832598",
+      "price": 14.99,
+      "stock": 1,
+      "description": "VPS mensal de entrada para projetos leves, testes, bots pequenos e servi?os simples.\n\n**Recursos inclusos:**\n\n? 525MB de mem?ria\n? Regi?o aleat?ria conforme disponibilidade\n? Sistemas dispon?veis: Ubuntu, Debian ou Fedora\n? Acesso para configura??o inicial\n? Plano mensal\n\nIdeal para quem precisa de uma VPS simples e econ?mica para come?ar."
+    },
+    {
+      "id": "vps-1gb-mensal",
+      "name": "VPS 1GB",
+      "category": "infra",
+      "group": "vps",
+      "tier": "standard",
+      "channelId": "1525939812450832598",
+      "price": 25,
+      "stock": 1,
+      "description": "VPS mensal fixa para hospedar bots, APIs, sites leves e servi?os digitais.\n\n**Recursos inclusos:**\n\n? 1GB de mem?ria\n? Linux Ubuntu 22.04 at? 26 LTS\n? Regi?o Brasil ou Chile conforme disponibilidade\n? Acesso para configura??o inicial\n? Plano mensal fixo\n\nIdeal para projetos que precisam de estabilidade e custo mensal previs?vel."
+    },
+    {
+      "id": "vps-2gb-plus-mensal",
+      "name": "VPS 2GB ou mais",
+      "category": "infra",
+      "group": "vps",
+      "tier": "premium",
+      "channelId": "1525939812450832598",
+      "price": 39.99,
+      "stock": 1,
+      "description": "VPS mensal para projetos que precisam de mais desempenho, estabilidade e margem para crescimento.\n\n**Recursos inclusos:**\n\n? 2GB de mem?ria ou mais, conforme disponibilidade\n? Regi?o aleat?ria conforme estoque\n? Sistema Linux dispon?vel no momento da entrega\n? Acesso para configura??o inicial\n? Plano mensal\n\nIdeal para bots maiores, APIs, pain?is, servi?os web e projetos com mais uso."
+    },
+    {
+      "id": "dominio-codes",
+      "name": "Dom?nio .codes",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 73.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.codes** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .codes\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 86,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-email",
+      "name": "Dom?nio .email",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 36.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.email** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .email\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 39,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-software",
+      "name": "Dom?nio .software",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 46.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.software** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .software\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 50,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-page",
+      "name": "Dom?nio .page",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 15.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.page** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .page\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 18,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-live",
+      "name": "Dom?nio .live",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 43.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.live** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .live\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 43,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-ninja",
+      "name": "Dom?nio .ninja",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 34.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.ninja** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .ninja\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 39,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-engineer",
+      "name": "Dom?nio .engineer",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 56.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.engineer** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .engineer\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 56,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-social",
+      "name": "Dom?nio .social",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 46.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.social** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .social\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 50,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-systems",
+      "name": "Dom?nio .systems",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 40.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.systems** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .systems\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 45,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-rocks",
+      "name": "Dom?nio .rocks",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 25.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.rocks** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .rocks\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 27,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-studio",
+      "name": "Dom?nio .studio",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 41.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.studio** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .studio\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 58,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-works",
+      "name": "Dom?nio .works",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 46.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.works** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .works\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 50,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-games",
+      "name": "Dom?nio .games",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "registro",
+      "channelId": "1525939845908660518",
+      "price": 38.99,
+      "stock": 1,
+      "description": "Registro de dom?nio **.games** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .games\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Renova??o estimada: R$ 43,99\n\nA entrega e configura??o s?o acompanhadas via ticket."
+    },
+    {
+      "id": "dominio-org",
+      "name": "Dom?nio .org",
+      "category": "dominios",
+      "group": "dominios",
+      "tier": "livre",
+      "channelId": "1525939845908660518",
+      "price": 49.99,
+      "stock": 999,
+      "description": "Registro de dom?nio **.org** para projetos digitais, lojas, comunidades, bots, sites e marcas online.\n\n**Incluso:**\n\n? Extens?o .org\n? Registro sob disponibilidade no momento da compra\n? Orienta??o para configura??o de DNS\n? Estoque livre conforme disponibilidade\n\nA entrega e configura??o s?o acompanhadas via ticket."
     }
   ],
   "voiceChannelId": "1469735459553808477"

@@ -30,6 +30,14 @@ const { startTicketAutoClose } = require("../utils/ticketAutomation");
 const { startCartAbandonment } = require("../utils/cartAbandonment");
 const { recordFailedPayment } = require("../utils/customers");
 
+const DEFAULT_PRESENCE_ACTIVITIES = [
+  "CUSTOM:ENTREGAS ON",
+  "CUSTOM:LOJA ONLINE",
+  "CUSTOM:MELHORES PRODUTOS AQUI",
+  "CUSTOM:BOTS E SITES SOB MEDIDA",
+  "CUSTOM:ATENDIMENTO BZNX STORE"
+].join(";");
+
 function resolvePresenceType(typeKey) {
   const normalized = String(typeKey || "").trim().toLowerCase();
   const aliases = {
@@ -47,8 +55,20 @@ function resolvePresenceType(typeKey) {
   return ActivityType[aliases[normalized] || typeKey] || ActivityType.Watching;
 }
 
+function buildPresenceActivity(name, type) {
+  if (type === ActivityType.Custom) {
+    return {
+      name: "BznX Store",
+      state: name,
+      type
+    };
+  }
+
+  return { name, type };
+}
+
 function getPresenceActivities(config) {
-  const rawList = process.env.BOT_PRESENCE_ACTIVITIES || "";
+  const rawList = process.env.BOT_PRESENCE_ACTIVITIES || DEFAULT_PRESENCE_ACTIVITIES;
   const items = rawList
     .split(";")
     .map((item) => item.trim())
@@ -56,20 +76,20 @@ function getPresenceActivities(config) {
     .map((item) => {
       const separatorIndex = item.indexOf(":");
       if (separatorIndex === -1) {
-        return { name: item, type: ActivityType.Watching };
+        return buildPresenceActivity(item, ActivityType.Custom);
       }
 
       const typeKey = item.slice(0, separatorIndex).trim();
       const name = item.slice(separatorIndex + 1).trim();
-      return name ? { name, type: resolvePresenceType(typeKey) } : null;
+      return name ? buildPresenceActivity(name, resolvePresenceType(typeKey)) : null;
     })
     .filter(Boolean);
 
   if (items.length > 0) return items;
 
-  const presenceMessage = process.env.BOT_PRESENCE_MESSAGE || config.botPresence?.message || `a loja ${config.botName}`;
-  const presenceTypeKey = process.env.BOT_PRESENCE_TYPE || config.botPresence?.type || "WATCHING";
-  return [{ name: presenceMessage, type: resolvePresenceType(presenceTypeKey) }];
+  const presenceMessage = process.env.BOT_PRESENCE_MESSAGE || config.botPresence?.message || "LOJA ONLINE";
+  const presenceTypeKey = process.env.BOT_PRESENCE_TYPE || config.botPresence?.type || "CUSTOM";
+  return [buildPresenceActivity(presenceMessage, resolvePresenceType(presenceTypeKey))];
 }
 
 async function applyPresence(client, activities, index = 0) {

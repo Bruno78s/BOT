@@ -10,7 +10,8 @@ const {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
-  AttachmentBuilder
+  AttachmentBuilder,
+  ActivityType
 } = require("discord.js");
 const { infoEmbed, successEmbed, dangerEmbed } = require("../utils/embeds");
 const { getSettings, upsertSettings } = require("../utils/settings");
@@ -31,6 +32,51 @@ const { buildCustomerSummary, getCustomerProfile, listTopCustomers } = require("
 const { getSalesStatusLabel, isSalesEnabled } = require("../utils/salesControl");
 const fs = require("fs");
 const path = require("path");
+
+const DEFAULT_PRESENCE_ACTIVITIES = [
+  "CUSTOM:ENTREGAS ON",
+  "CUSTOM:LOJA ONLINE",
+  "CUSTOM:MELHORES PRODUTOS AQUI",
+  "CUSTOM:BOTS E SITES SOB MEDIDA",
+  "CUSTOM:ATENDIMENTO BZNX STORE"
+].join(";");
+
+function resolvePresenceType(typeKey) {
+  const normalized = String(typeKey || "").trim().toLowerCase();
+  const aliases = {
+    playing: "Playing",
+    jogando: "Playing",
+    streaming: "Streaming",
+    listening: "Listening",
+    ouvindo: "Listening",
+    watching: "Watching",
+    assistindo: "Watching",
+    custom: "Custom",
+    competing: "Competing"
+  };
+
+  return ActivityType[aliases[normalized] || typeKey] || ActivityType.Custom;
+}
+
+function parsePresenceActivity(input) {
+  const item = String(input || "").trim();
+  const separatorIndex = item.indexOf(":");
+  const type = separatorIndex === -1 ? ActivityType.Custom : resolvePresenceType(item.slice(0, separatorIndex).trim());
+  const name = separatorIndex === -1 ? item : item.slice(separatorIndex + 1).trim();
+
+  if (type === ActivityType.Custom) {
+    return {
+      name: "BznX Store",
+      state: name || "LOJA ONLINE",
+      type
+    };
+  }
+
+  return {
+    name: name || "BznX Store",
+    type
+  };
+}
 
 async function handleAdminMenu(interaction, config) {
   const settings = await getSettings(interaction.guild.id);
@@ -740,7 +786,7 @@ async function handleAdminButtons(interaction, config) {
           .setCustomId("presence_activities")
           .setLabel("Presencas rotativas")
           .setStyle(TextInputStyle.Paragraph)
-          .setValue(process.env.BOT_PRESENCE_ACTIVITIES || "WATCHING:Melhor preco e aqui!;PLAYING:BznX Store")
+          .setValue(process.env.BOT_PRESENCE_ACTIVITIES || DEFAULT_PRESENCE_ACTIVITIES)
           .setRequired(true)
       ),
       new ActionRowBuilder().addComponents(
@@ -1223,10 +1269,8 @@ async function handleAdminModals(interaction, config) {
 
     updatePresenceEnv(activities, intervalMs);
     const firstActivity = activities.split(";").map((item) => item.trim()).filter(Boolean)[0] || activities;
-    const separatorIndex = firstActivity.indexOf(":");
-    const name = separatorIndex === -1 ? firstActivity : firstActivity.slice(separatorIndex + 1).trim();
     await interaction.client.user.setPresence({
-      activities: [{ name: name || "BznX Store" }],
+      activities: [parsePresenceActivity(firstActivity)],
       status: "online"
     }).catch(() => null);
 

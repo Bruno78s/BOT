@@ -13,7 +13,42 @@ const DEFAULT_SETTINGS = {
   antiLinks: true,
   antiSpam: true,
   antiCaps: true,
-  badWords: [],
+  badWords: [
+    "fdp",
+    "f.d.p",
+    "filho da puta",
+    "puta",
+    "puto",
+    "pqp",
+    "tmnc",
+    "tnc",
+    "vai tomar no cu",
+    "tomar no cu",
+    "arrombado",
+    "arrombada",
+    "foder",
+    "fodase",
+    "foda-se",
+    "fodido",
+    "fodida",
+    "merda",
+    "bosta",
+    "caralho",
+    "porra",
+    "desgraçado",
+    "desgracado",
+    "desgraçada",
+    "desgracada",
+    "lixo",
+    "otario",
+    "otário",
+    "vagabundo",
+    "vagabunda",
+    "corno",
+    "corna",
+    "cuzao",
+    "cuzão"
+  ],
   ignoredChannelIds: [],
   ignoredRoleIds: [],
   ignoreStaff: false,
@@ -39,6 +74,8 @@ function splitList(value) {
 
 function getAutomodSettings(config) {
   const source = config.automod || {};
+  const sourceBadWords = splitList(source.badWords);
+  const sourceWhitelist = splitList(source.linkWhitelist);
   return {
     ...DEFAULT_SETTINGS,
     ...source,
@@ -47,10 +84,18 @@ function getAutomodSettings(config) {
     antiSpam: process.env.AUTOMOD_ANTI_SPAM ? process.env.AUTOMOD_ANTI_SPAM === "true" : source.antiSpam ?? DEFAULT_SETTINGS.antiSpam,
     antiCaps: process.env.AUTOMOD_ANTI_CAPS ? process.env.AUTOMOD_ANTI_CAPS === "true" : source.antiCaps ?? DEFAULT_SETTINGS.antiCaps,
     ignoreStaff: process.env.AUTOMOD_IGNORE_STAFF ? process.env.AUTOMOD_IGNORE_STAFF === "true" : source.ignoreStaff ?? DEFAULT_SETTINGS.ignoreStaff,
-    badWords: splitList(process.env.AUTOMOD_BAD_WORDS || source.badWords),
+    badWords: splitList(process.env.AUTOMOD_BAD_WORDS).length
+      ? splitList(process.env.AUTOMOD_BAD_WORDS)
+      : sourceBadWords.length
+        ? sourceBadWords
+        : DEFAULT_SETTINGS.badWords,
     ignoredChannelIds: splitList(source.ignoredChannelIds),
     ignoredRoleIds: splitList(source.ignoredRoleIds),
-    linkWhitelist: splitList(process.env.AUTOMOD_LINK_WHITELIST || source.linkWhitelist || DEFAULT_SETTINGS.linkWhitelist)
+    linkWhitelist: splitList(process.env.AUTOMOD_LINK_WHITELIST).length
+      ? splitList(process.env.AUTOMOD_LINK_WHITELIST)
+      : sourceWhitelist.length
+        ? sourceWhitelist
+        : DEFAULT_SETTINGS.linkWhitelist
   };
 }
 
@@ -73,9 +118,18 @@ function normalizeHost(value) {
     .replace(/:\d+$/, "");
 }
 
+function sanitizeDiscordMentions(content) {
+  return String(content || "")
+    .replace(/<a?:[a-z0-9_~.-]+:\d+>/gi, " ")
+    .replace(/<[@#]&?\d+>/g, " ")
+    .replace(/<@!?\d+>/g, " ")
+    .replace(/<#\d+>/g, " ");
+}
+
 function extractLinks(content) {
-  const matches = String(content || "").match(
-    /(?:https?:\/\/)?(?:www\.)?(?:discord\.gg\/[a-z0-9-]+|[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s<]*)?)/gi
+  const safeContent = sanitizeDiscordMentions(content);
+  const matches = safeContent.match(
+    /(?:https?:\/\/|www\.)[^\s<>()]+|(?:discord\.gg|discord\.com\/invite|discordapp\.com\/invite)\/[a-z0-9-]+|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:com|net|org|gg|io|app|dev|store|shop|site|xyz|br|co|me|live|page|codes|email|software|ninja|engineer|social|systems|rocks|studio|works|games)(?:\/[^\s<>()]*)?/gi
   ) || [];
 
   return matches
@@ -100,6 +154,21 @@ function containsBlockedLink(content, settings) {
   return urls.some((url) => !isWhitelistedLink(url, settings));
 }
 
+function normalizeModerationText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[@4]/g, "a")
+    .replace(/[3]/g, "e")
+    .replace(/[1!|]/g, "i")
+    .replace(/[0]/g, "o")
+    .replace(/[5$]/g, "s")
+    .replace(/[7]/g, "t")
+    .replace(/ç/g, "c")
+    .replace(/(.)\1{2,}/g, "$1$1");
+}
+
 function isCapsFlood(content, settings) {
   const letters = content.replace(/[^a-zA-ZÀ-ÿ]/g, "");
   if (letters.length < settings.capsMinLength) return false;
@@ -108,10 +177,15 @@ function isCapsFlood(content, settings) {
 }
 
 function containsBadWord(content, settings) {
-  const normalized = content.toLowerCase();
+  const normalized = normalizeModerationText(content);
   return settings.badWords.some((word) => {
-    const escaped = String(word).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`(^|\\W)${escaped}(\\W|$)`, "i").test(normalized);
+    const normalizedWord = normalizeModerationText(word);
+    const compactWord = normalizedWord.replace(/[^a-z0-9]/g, "");
+    const escaped = normalizedWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\ /g, "\\s+");
+    const compactContent = normalized.replace(/[^a-z0-9]/g, "");
+
+    if (compactWord.length >= 3 && compactContent.includes(compactWord)) return true;
+    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(normalized);
   });
 }
 
