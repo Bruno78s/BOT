@@ -1,37 +1,34 @@
-node_modules/
-.env
-/database/db.sqlite
-/database/db.sqlite-*
-/database/db.js
-/database/db.shm
-/database/db.wal
-/database/backups/
-/database/*.backup-*
-
-# Auto-generated entries
 # Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build outputs
+# Environment and private configuration
+.env
+.env.*
+!.env.example
+/config.private.json
+
+# Operational databases and backups
+/database/bot.db
+/database/bot.db-*
+/database/*.sqlite
+/database/*.sqlite-*
+/database/backups/
+/database/data/
+/database/*.backup-*
+
+# Build outputs and logs
 dist/
 build/
 *.log
 
-# Environment files
-.env
-.env.*
-.env.example
-
-# IDE files
+# IDE and OS files
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS files
 .DS_Store
 Thumbs.db
 
@@ -39,10 +36,3 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
-
-# Sensitive files (auto-detected)
-.env
-.env.example
-config.json
-node_modules
-

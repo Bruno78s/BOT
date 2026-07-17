@@ -1,11 +1,12 @@
-﻿const fs = require("fs");
+const fs = require("fs");
 const path = require("path");
 const { Client, Collection, GatewayIntentBits, Partials, REST, Routes } = require("discord.js");
 const dotenv = require("dotenv");
 const { loadConfig } = require("./utils/config");
 const { startWebhookServer } = require("./utils/webhookServer");
-const { exportData, importData } = require("./utils/backup");
+const { backupDatabaseEncrypted, importData } = require("./utils/backup");
 const { validateEnv } = require("./utils/envValidation");
+const { hydrateInventory } = require("./utils/inventory");
 
 dotenv.config();
 validateEnv();
@@ -34,13 +35,12 @@ const client = new Client({
 
 client.commands = new Collection();
 client.once("clientReady", async () => {
-  startWebhookServer(client, config);
-  
-  // Importar dados salvos após reiniciar
   const imported = importData();
   if (imported.success) {
-    console.log(`[BACKUP] Dados importados: ${imported.data.invites?.length || 0} invites, ${imported.data.pendingPayments?.length || 0} pagamentos pendentes`);
+    hydrateInventory(config);
+    console.log(`[BACKUP] Recuperação aplicada: ${imported.restoredRows || 0} registro(s) em ${imported.restoredTables || 0} tabela(s).`);
   }
+  startWebhookServer(client, config);
 });
 
 const commandsPath = path.join(__dirname, "commands");
@@ -63,19 +63,15 @@ const eventFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith(".j
 for (const file of eventFiles) {
   const filePath = path.join(eventsPath, file);
   const event = require(filePath);
-  if (event.once) {
-    client.once(event.name, (...args) => event.execute(...args, config));
-  } else {
-    client.on(event.name, (...args) => event.execute(...args, config));
-  }
+  const executeEvent = (...args) => Promise.resolve(event.execute(...args, config)).catch((error) => {
+    console.error(`[EVENT:${event.name}] Falha não tratada:`, error);
+  });
+  if (event.once) client.once(event.name, executeEvent);
+  else client.on(event.name, executeEvent);
 }
 
 async function registerCommands() {
   const rest = new REST({ version: "10" }).setToken(token);
-  console.log("Limpando comandos antigos do servidor...");
-  await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
-  console.log("Limpando comandos globais antigos...");
-  await rest.put(Routes.applicationCommands(clientId), { body: [] });
   const commandList = commandsData.map((command) => `/${command.name}`).join(", ");
   console.log(`Registrando comandos atuais: ${commandList}`);
   await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commandsData });
@@ -83,7 +79,7 @@ async function registerCommands() {
 
 async function shutdownWithBackup(exitCode = 0) {
   console.log("[BACKUP] Exportando dados antes de desligar...");
-  await exportData().catch((error) => {
+  await backupDatabaseEncrypted().catch((error) => {
     console.error("[BACKUP] Falha ao exportar dados:", error);
   });
   await new Promise((resolve) => setTimeout(resolve, 500));
@@ -92,8 +88,10 @@ async function shutdownWithBackup(exitCode = 0) {
 
 async function start() {
   try {
-    await registerCommands();
-    console.log("Comandos registrados");
+    if (process.env.REGISTER_COMMANDS_ON_STARTUP === "true") {
+      await registerCommands();
+      console.log("Comandos registrados durante a inicialização.");
+    }
     await client.login(token);
   } catch (error) {
     if (error?.code === "TokenInvalid" || error?.status === 401) {

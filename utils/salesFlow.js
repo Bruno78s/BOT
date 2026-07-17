@@ -1,15 +1,12 @@
-const fs = require("fs");
-const path = require("path");
 const { EmbedBuilder } = require("discord.js");
-
-const CONFIG_PATH = path.join(__dirname, "..", "config.json");
+const { readConfig, writeConfig } = require("./config");
 
 function readConfigFile() {
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+  return readConfig();
 }
 
 function writeConfigFile(config) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+  writeConfig(config);
 }
 
 function getProductGroup(product) {

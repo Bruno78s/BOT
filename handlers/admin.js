@@ -14,8 +14,7 @@ const {
   ActivityType
 } = require("discord.js");
 const { infoEmbed, successEmbed, dangerEmbed } = require("../utils/embeds");
-const { getSettings, upsertSettings } = require("../utils/settings");
-const { isAdmin } = require("../utils/permissions");
+const { upsertSettings } = require("../utils/settings");
 const { get, run, all } = require("../database/db");
 const { readConfigFile, writeConfigFile, formatPrice } = require("../utils/salesFlow");
 const { listCoupons, createCoupon, deleteCoupon, validateCoupon, calculateDiscount } = require("../utils/coupons");
@@ -25,6 +24,8 @@ const { buildAdminHome } = require("../utils/adminPanel");
 const { getFulfillmentStatusLabel, getOrderCode } = require("../utils/orders");
 const { ensureStatusPanel } = require("../utils/statusPanel");
 const { ensureProductPanels } = require("../utils/productPanels");
+const { removeProductInventory, setProductStock } = require("../utils/inventory");
+const { isAdminButtonInteraction, isAdminModalInteraction, requireAdminAccess } = require("./adminAuth");
 const { runCustomerRoleSync, getCustomerRoleSyncStatus } = require("../utils/customerRoleSync");
 const { validateEnv } = require("../utils/envValidation");
 const { getAutomodSettings } = require("../utils/automod");
@@ -54,13 +55,7 @@ function parsePresenceActivity(input) {
 }
 
 async function handleAdminMenu(interaction, config) {
-  const settings = await getSettings(interaction.guild.id);
-  if (!isAdmin(interaction.member, settings)) {
-    return interaction.reply({
-      embeds: [dangerEmbed(config, "Acesso negado", "Apenas administradores podem usar este menu.")],
-      ephemeral: true
-    });
-  }
+  if (!(await requireAdminAccess(interaction, config))) return true;
 
   const selectedValue = interaction.values[0];
 
@@ -500,6 +495,8 @@ function buildSyncHistoryEmbed(config) {
 
 async function handleAdminButtons(interaction, config) {
   const { customId } = interaction;
+  if (!isAdminButtonInteraction(customId)) return false;
+  if (!(await requireAdminAccess(interaction, config))) return true;
 
   if (customId === "admin_main_back") {
     return interaction.update(buildAdminHome(config));
@@ -902,6 +899,7 @@ async function handleAdminButtons(interaction, config) {
     if (productIndex === -1) return interaction.reply({ content: "Produto n\u00E3o encontrado", ephemeral: true });
 
     configData.products.splice(productIndex, 1);
+    removeProductInventory(productId);
     writeConfigFile(configData);
     applyConfigRuntime(config, configData);
     refreshRuntimePanels(interaction, config);
@@ -1024,6 +1022,7 @@ function showCouponProductSelect(interaction, config) {
 
 async function handleAdminSelectMenus(interaction, config) {
   const { customId, values } = interaction;
+  if (!(await requireAdminAccess(interaction, config))) return true;
 
   if (customId === "invite_user_select") {
     const userId = values[0].replace("invite_user_", "");
@@ -1205,6 +1204,8 @@ async function handleAdminSelectMenus(interaction, config) {
 
 async function handleAdminModals(interaction, config) {
   const { customId } = interaction;
+  if (!isAdminModalInteraction(customId)) return false;
+  if (!(await requireAdminAccess(interaction, config))) return true;
 
   if (customId === "initial_config_modal") {
     await upsertSettings(interaction.guild.id, {
@@ -1339,12 +1340,13 @@ async function handleAdminModals(interaction, config) {
     }
 
     const group = name.toLowerCase().replace(/\s+(basic|premium|platinum|diamond|plus)$/i, "").replace(/\s+/g, "-");
-    const newProduct = { id: name.toLowerCase().replace(/\s+/g, "-"), name, category, group, tier, channelId: interaction.channel.id, price, stock, description };
+    const newProduct = { id: name.toLowerCase().replace(/\s+/g, "-"), name, category, group, tier, channelId: interaction.channel.id, price, initialStock: stock, stock, description };
     if (deliveryUrl) newProduct.deliveryUrl = deliveryUrl;
 
     const configData = readConfigFile();
     configData.products.push(newProduct);
     writeConfigFile(configData);
+    setProductStock(configData, newProduct.id, stock);
     applyConfigRuntime(config, configData);
     refreshRuntimePanels(interaction, config);
 
@@ -1402,7 +1404,7 @@ async function handleAdminModals(interaction, config) {
     }
 
     configData.products[productIndex].price = price;
-    configData.products[productIndex].stock = stock;
+    setProductStock(configData, productId, stock);
     writeConfigFile(configData);
     applyConfigRuntime(config, configData);
     refreshRuntimePanels(interaction, config);

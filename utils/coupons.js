@@ -121,9 +121,6 @@ async function validateCouponForCheckout(guildId, code, amount, productId, membe
   return { valid: true, coupon };
 }
 
-async function useCoupon(couponId) {
-  run("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [couponId]);
-}
 
 function calculateDiscount(amount, coupon) {
   if (!coupon) return 0;
@@ -146,6 +143,5 @@ module.exports = {
   deleteCoupon,
   validateCoupon,
   validateCouponForCheckout,
-  useCoupon,
   calculateDiscount
 };

@@ -4,7 +4,7 @@
  */
 
 const { EmbedBuilder } = require('discord.js');
-const { readConfigFile, writeConfigFile } = require('./salesFlow');
+const { addProductStock } = require('./inventory');
 const StockPrediction = require('./stockPrediction');
 
 class AutoRestock {
@@ -44,31 +44,17 @@ class AutoRestock {
    */
   async restockProduct(productId, quantity = null) {
     try {
-      const config = readConfigFile();
-      const productIndex = config.products.findIndex(p => p.id === productId);
-      
-      if (productIndex === -1) {
-        throw new Error('Produto não encontrado');
-      }
+      const product = this.config.products.find((item) => item.id === productId);
+      if (!product) throw new Error('Produto não encontrado');
 
-      const product = config.products[productIndex];
-      const restockQty = quantity || this.defaultQuantity;
-      const previousStock = product.stock;
-      
-      // Atualizar estoque
-      config.products[productIndex].stock += restockQty;
-      
-      // Salvar configuração
-      writeConfigFile(config);
-      
-      // Atualizar config local
-      this.config.products[productIndex].stock += restockQty;
+      const restockQty = Number(quantity || this.defaultQuantity);
+      const result = addProductStock(this.config, productId, restockQty);
 
       return {
         success: true,
         product: product.name,
-        previousStock,
-        newStock: config.products[productIndex].stock,
+        previousStock: result.previousStock,
+        newStock: result.newStock,
         added: restockQty,
         timestamp: Date.now()
       };

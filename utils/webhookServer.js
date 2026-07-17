@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const crypto = require("crypto");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const {
@@ -9,15 +9,21 @@ const {
   listPendingProviderPayments,
   updatePaymentStatusByProviderId
 } = require("./mercadoPago");
-const { formatPrice, readConfigFile, writeConfigFile } = require("./salesFlow");
+const { formatPrice } = require("./salesFlow");
 const { logTicketEvent } = require("./advancedLogger");
 const { logVenda, logComprovante, logPedido, logVendaSite } = require("./channelLogger");
 const { ensureProductPanels } = require("./productPanels");
 const { sendReceiptDM, sendReceiptToPrivateChannel } = require("./receipt");
-const { useCoupon } = require("./coupons");
+const {
+  claimPaymentFulfillment,
+  completePaymentFulfillment,
+  failPaymentFulfillment,
+  finalizePaymentLocally,
+  listPendingFulfillments
+} = require("./paymentFinalization");
 const { get, run } = require("../database/db");
-const { getFulfillmentStatusLabel, getOrderCode } = require("./orders");
-const { recordCustomerOrder, recordFailedPayment } = require("./customers");
+const { getOrderCode } = require("./orders");
+const { recordFailedPayment } = require("./customers");
 const {
   constructStripeWebhookEvent,
   fetchCardCheckoutSession,
@@ -27,25 +33,6 @@ const {
 } = require("./stripePayments");
 
 const processingPayments = new Set();
-
-function decrementStock(config, productId) {
-  try {
-    const fileConfig = readConfigFile();
-    const product = fileConfig.products.find(p => p.id === productId);
-    if (product && product.stock > 0) {
-      product.stock -= 1;
-      writeConfigFile(fileConfig);
-      const memProduct = config.products.find(p => p.id === productId);
-      if (memProduct) memProduct.stock = product.stock;
-      console.log(`[STOCK] ${product.name}: estoque atualizado para ${product.stock}`);
-      return product.stock;
-    }
-    return product?.stock ?? 0;
-  } catch (err) {
-    console.error("[STOCK] Erro ao decrementar estoque:", err);
-    return -1;
-  }
-}
 
 async function sendClientDM(client, config, localPayment, product, orderId, paymentId) {
   try {
@@ -111,12 +98,17 @@ async function cleanupCartBotMessages(channel, client) {
 }
 
 async function confirmApprovedPayment(client, config, paymentData, localPayment) {
-  console.log("[WEBHOOK] confirmApprovedPayment chamado para canal:", localPayment.channel_id);
-  const channel = await client.channels.fetch(localPayment.channel_id).catch(() => null);
-  if (!channel?.send) {
-    console.log("[WEBHOOK] Erro: canal não encontrado ou não pode enviar mensagens");
-    return false;
+  const finalization = finalizePaymentLocally(config, localPayment.id);
+  localPayment = finalization.payment;
+  const fulfillmentClaim = claimPaymentFulfillment(localPayment.id);
+  if (!fulfillmentClaim.claimed) {
+    return fulfillmentClaim.job?.status === "completed";
   }
+
+  try {
+    console.log("[WEBHOOK] confirmApprovedPayment chamado para canal:", localPayment.channel_id);
+    const channel = await client.channels.fetch(localPayment.channel_id).catch(() => null);
+    if (!channel?.send) throw new Error("Canal do carrinho não encontrado ou sem permissão de envio.");
 
   const product = config.products.find((item) => item.id === localPayment.product_id);
   const coupon = localPayment.coupon_id ? get("SELECT * FROM coupons WHERE id = ?", [localPayment.coupon_id]) : null;
@@ -127,7 +119,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   const deliveryChannel = deliveryChannelId ? await client.channels.fetch(deliveryChannelId).catch(() => null) : null;
   const hasAutoDelivery = !!product?.deliveryUrl;
 
-  const remainingStock = decrementStock(config, localPayment.product_id);
+  const remainingStock = finalization.remainingStock;
   ensureProductPanels(client, config).catch((err) =>
     console.log("[WEBHOOK] Erro ao atualizar painéis:", err.message)
   );
@@ -137,7 +129,6 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
   const dmUrl = dmResult.dmChannelId
     ? `https://discord.com/channels/@me/${dmResult.dmChannelId}`
     : "https://discord.com/channels/@me";
-  const fulfillmentStatus = hasAutoDelivery ? "delivered" : "preparing";
 
   await cleanupCartBotMessages(channel, client);
 
@@ -200,9 +191,7 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     const clientRoleId = config.clientRoleId || process.env.DISCORD_CUSTOMER_ROLE_ID || process.env.CLIENT_ROLE_ID;
     if (!clientRoleId) {
       console.log("[WEBHOOK] Cargo de cliente nao configurado: defina DISCORD_CUSTOMER_ROLE_ID ou CLIENT_ROLE_ID.");
-      return;
-    }
-    if (member && clientRoleId && !member.roles.cache.has(clientRoleId)) {
+    } else if (member && !member.roles.cache.has(clientRoleId)) {
       await member.roles.add(clientRoleId);
       console.log(`[WEBHOOK] Cargo de cliente adicionado para ${member.user.tag}`);
     }
@@ -287,42 +276,70 @@ async function confirmApprovedPayment(client, config, paymentData, localPayment)
     ]
   });
 
-  run(
-    "UPDATE payments SET order_code = ?, fulfillment_status = ?, delivered_at = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_at END WHERE id = ?",
-    [orderCode, fulfillmentStatus, fulfillmentStatus, Date.now(), localPayment.id]
-  );
-  recordCustomerOrder({ ...localPayment, status: "approved", guild_id: channel.guild.id });
-
+  completePaymentFulfillment(localPayment.id);
   return true;
+  } catch (error) {
+    failPaymentFulfillment(localPayment.id, error);
+    throw error;
+  }
 }
+function timingSafeTextEqual(received, expected) {
+  const receivedBuffer = Buffer.from(String(received || ""), "utf8");
+  const expectedBuffer = Buffer.from(String(expected || ""), "utf8");
+  return receivedBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
+}
+
 function verifyWebhookSignature(req) {
   const secret = (process.env.MERCADO_PAGO_WEBHOOK_SECRET || "").trim();
-  if (!secret) return true;
-
   const xSignature = req.headers["x-signature"];
   const xRequestId = req.headers["x-request-id"];
-  if (!xSignature || !xRequestId) return true;
+  if (!secret || !xSignature || !xRequestId) return false;
 
   try {
-    const dataId = req.body?.data?.id || req.query?.id;
+    const dataId = req.query?.["data.id"] || req.query?.id || req.body?.data?.id;
+    if (!dataId) return false;
+
     const parts = xSignature.split(",").reduce((acc, part) => {
-      const [key, val] = part.trim().split("=");
-      acc[key] = val;
+      const [key, value] = part.trim().split("=", 2);
+      if (key && value) acc[key] = value;
       return acc;
     }, {});
     const ts = parts.ts;
-    const v1 = parts.v1;
-    if (!ts || !v1) return true;
+    const signature = parts.v1;
+    if (!ts || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
+
 
     const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
     const expected = crypto.createHmac("sha256", secret).update(manifest).digest("hex");
-    if (expected !== v1) {
-      console.log("[WEBHOOK] Assinatura nÃ£o confere (secret pode estar incorreto), aceitando mesmo assim");
-    }
-    return true;
-  } catch {
-    return true;
+    return timingSafeTextEqual(signature.toLowerCase(), expected);
+  } catch (error) {
+    console.error("[WEBHOOK] Falha ao validar assinatura Mercado Pago:", error.message);
+    return false;
   }
+}
+
+function verifyIntegrationApiKey(req) {
+  const expected = (process.env.BZNX_INTEGRATION_API_KEY || "").trim();
+  const received = req.headers["x-api-key"] || String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  return Boolean(expected) && timingSafeTextEqual(received, expected);
+}
+
+function parseSiteSalePayload(body) {
+  const customerName = String(body?.customerName || "").trim();
+  const customerEmail = String(body?.customerEmail || "").trim();
+  const orderId = String(body?.orderId || "").trim();
+  const paymentMethod = String(body?.paymentMethod || "").trim();
+  const total = Number(body?.total);
+  const items = Array.isArray(body?.items) ? body.items.slice(0, 100) : [];
+
+  if (!customerName || customerName.length > 150) throw new Error("customerName inválido");
+  if (!customerEmail || customerEmail.length > 254 || !customerEmail.includes("@")) throw new Error("customerEmail inválido");
+  if (!orderId || orderId.length > 100) throw new Error("orderId inválido");
+  if (!paymentMethod || paymentMethod.length > 50) throw new Error("paymentMethod inválido");
+  if (!Number.isFinite(total) || total < 0) throw new Error("total inválido");
+  if (!items.length) throw new Error("items inválido");
+
+  return { customerName, customerEmail, orderId, total, paymentMethod, items };
 }
 
 const rateLimitMap = new Map();
@@ -337,12 +354,13 @@ function rateLimit(ip, maxRequests = 30, windowMs = 60000) {
   return record.count <= maxRequests;
 }
 
-setInterval(() => {
+const rateLimitCleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [ip, record] of rateLimitMap) {
     if (now - record.start > 120000) rateLimitMap.delete(ip);
   }
 }, 60000);
+if (rateLimitCleanupTimer.unref) rateLimitCleanupTimer.unref();
 
 async function processMercadoPagoPayment(client, config, paymentId, source = "webhook") {
   if (!paymentId) return false;
@@ -378,8 +396,8 @@ async function processMercadoPagoPayment(client, config, paymentId, source = "we
     }
 
     if (paymentData.status === "approved" && localPayment.status === "approved") {
-      console.log(`[MERCADO_PAGO] ${source}: pagamento ${paymentData.id} ja confirmado, ignorando duplicata.`);
-      return true;
+      console.log(`[MERCADO_PAGO] ${source}: pagamento ${paymentData.id} já finalizado localmente; verificando entrega pendente.`);
+      return confirmApprovedPayment(client, config, paymentData, localPayment);
     }
 
     if (paymentData.status !== "approved") {
@@ -394,27 +412,15 @@ async function processMercadoPagoPayment(client, config, paymentId, source = "we
 
     localPayment.provider_payment_id = String(paymentData.id);
 
-    let retries = 0;
-    const maxRetries = 3;
-    while (retries < maxRetries) {
-      try {
-        const confirmed = await confirmApprovedPayment(client, config, paymentData, localPayment);
-        if (confirmed === false) throw new Error("confirmacao local nao concluida");
-        await updatePaymentStatusByProviderId(paymentData.id, "approved");
-        run("UPDATE payments SET order_code = COALESCE(order_code, ?), fulfillment_status = COALESCE(NULLIF(fulfillment_status, 'awaiting_payment'), ?) WHERE id = ?", [getOrderCode(localPayment), "paid", localPayment.id]);
-        if (localPayment.coupon_id) {
-          await useCoupon(localPayment.coupon_id).catch((error) => console.error("[COUPON] Falha ao registrar uso:", error.message));
-        }
-        return true;
-      } catch (err) {
-        retries++;
-        console.error(`[MERCADO_PAGO] ${source}: tentativa ${retries}/${maxRetries} falhou:`, err.message);
-        if (retries < maxRetries) await new Promise((resolve) => setTimeout(resolve, 2000 * retries));
-      }
+    try {
+      const confirmed = await confirmApprovedPayment(client, config, paymentData, localPayment);
+      if (!confirmed) return false;
+      await updatePaymentStatusByProviderId(paymentData.id, "approved");
+      return true;
+    } catch (error) {
+      console.error(`[MERCADO_PAGO] ${source}: falha ao finalizar pagamento ${paymentData.id}:`, error.message);
+      return false;
     }
-
-    console.error(`[MERCADO_PAGO] ${source}: FALHA CRITICA ao confirmar pagamento ${paymentData.id} apos ${maxRetries} tentativas.`);
-    return false;
   } finally {
     processingPayments.delete(paymentKey);
   }
@@ -441,8 +447,8 @@ async function processStripePayment(client, config, sessionId, source = "webhook
     }
 
     if (session.payment_status === "paid" && localPayment.status === "approved") {
-      console.log(`[STRIPE] ${source}: pagamento ${session.id} ja confirmado, ignorando duplicata.`);
-      return true;
+      console.log(`[STRIPE] ${source}: pagamento ${session.id} já finalizado localmente; verificando entrega pendente.`);
+      return confirmApprovedPayment(client, config, { id: session.id, status: "approved" }, localPayment);
     }
 
     const paymentIntentId = typeof session.payment_intent === "string"
@@ -460,32 +466,20 @@ async function processStripePayment(client, config, sessionId, source = "webhook
 
     localPayment.preference_id = paymentIntentId || localPayment.preference_id;
 
-    let retries = 0;
-    const maxRetries = 3;
-    while (retries < maxRetries) {
-      try {
-        const confirmed = await confirmApprovedPayment(
-          client,
-          config,
-          { id: session.id, status: "approved", payment_intent: paymentIntentId },
-          localPayment
-        );
-        if (confirmed === false) throw new Error("confirmacao local nao concluida");
-        await updateStripePaymentStatus(session.id, "approved", paymentIntentId);
-        run("UPDATE payments SET order_code = COALESCE(order_code, ?), fulfillment_status = COALESCE(NULLIF(fulfillment_status, 'awaiting_payment'), ?) WHERE id = ?", [getOrderCode(localPayment), "paid", localPayment.id]);
-        if (localPayment.coupon_id) {
-          await useCoupon(localPayment.coupon_id).catch((error) => console.error("[COUPON] Falha ao registrar uso:", error.message));
-        }
-        return true;
-      } catch (err) {
-        retries++;
-        console.error(`[STRIPE] ${source}: tentativa ${retries}/${maxRetries} falhou:`, err.message);
-        if (retries < maxRetries) await new Promise((resolve) => setTimeout(resolve, 2000 * retries));
-      }
+    try {
+      const confirmed = await confirmApprovedPayment(
+        client,
+        config,
+        { id: session.id, status: "approved", payment_intent: paymentIntentId },
+        localPayment
+      );
+      if (!confirmed) return false;
+      await updateStripePaymentStatus(session.id, "approved", paymentIntentId);
+      return true;
+    } catch (error) {
+      console.error(`[STRIPE] ${source}: falha ao finalizar pagamento ${session.id}:`, error.message);
+      return false;
     }
-
-    console.error(`[STRIPE] ${source}: FALHA CRITICA ao confirmar pagamento ${session.id} apos ${maxRetries} tentativas.`);
-    return false;
   } finally {
     processingPayments.delete(paymentKey);
   }
@@ -494,7 +488,10 @@ async function processStripePayment(client, config, sessionId, source = "webhook
 function startPendingPaymentWatcher(client, config) {
   const intervalMs = Math.max(Number(process.env.MERCADO_PAGO_PENDING_CHECK_INTERVAL_MS || 30000), 15000);
 
+  let checkRunning = false;
   const runCheck = async () => {
+    if (checkRunning) return;
+    checkRunning = true;
     try {
       const pendingPayments = await listPendingProviderPayments(25);
       if (pendingPayments.length) {
@@ -511,8 +508,19 @@ function startPendingPaymentWatcher(client, config) {
       for (const payment of pendingStripePayments) {
         await processStripePayment(client, config, payment.provider_payment_id, "polling");
       }
+
+      for (const payment of listPendingFulfillments(25)) {
+        await confirmApprovedPayment(
+          client,
+          config,
+          { id: payment.provider_payment_id || payment.preference_id || payment.id, status: "approved" },
+          payment
+        ).catch((error) => console.error(`[FULFILLMENT] Pagamento ${payment.id}:`, error.message));
+      }
     } catch (error) {
-      console.error("[MERCADO_PAGO] Erro ao verificar pagamentos pendentes:", error.message);
+      console.error("[PAYMENTS] Erro ao verificar pagamentos pendentes:", error.message);
+    } finally {
+      checkRunning = false;
     }
   };
 
@@ -526,6 +534,17 @@ function startPendingPaymentWatcher(client, config) {
 function startWebhookServer(client, config) {
   const port = Number(process.env.WEBHOOK_PORT || 3000);
   const app = express();
+  app.disable("x-powered-by");
+  if (process.env.TRUST_PROXY === "true") app.set("trust proxy", 1);
+
+  app.use((req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    if (!rateLimit(ip)) {
+      console.warn(`[RATE LIMIT] Bloqueado: ${ip}`);
+      return res.sendStatus(429);
+    }
+    next();
+  });
 
   async function handleStripeWebhook(req, res) {
     try {
@@ -551,67 +570,58 @@ function startWebhookServer(client, config) {
     }
   }
 
-  app.post("/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
+  app.post("/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), handleStripeWebhook);
 
-  app.use(express.json());
-
-  app.use((req, res, next) => {
-    const ip = req.ip || req.connection.remoteAddress;
-    if (!rateLimit(ip)) {
-      console.log(`[RATE LIMIT] Bloqueado: ${ip}`);
-      return res.sendStatus(429);
-    }
-    next();
-  });
+  app.use(express.json({ limit: "64kb", strict: true }));
 
   app.get("/health", (req, res) => {
-    res.json({ ok: true, uptime: process.uptime() });
+    let database = false;
+    let failedFulfillments = 0;
+    try {
+      database = get("SELECT 1 AS ok")?.ok === 1;
+      failedFulfillments = get("SELECT COUNT(*) AS total FROM payment_fulfillment_jobs WHERE status = 'failed'")?.total || 0;
+    } catch (error) {
+      console.error("[HEALTH] Falha ao consultar banco:", error.message);
+    }
+    const discord = client.isReady();
+    const ok = database && discord;
+    res.status(ok ? 200 : 503).json({ ok, uptime: process.uptime(), checks: { database, discord, failedFulfillments } });
   });
 
   async function handleMercadoPagoWebhook(req, res) {
-    console.log("[WEBHOOK] ===========================================");
-    console.log("[WEBHOOK] Nova requisiÃ§Ã£o recebida");
-    console.log("[WEBHOOK] Headers:", JSON.stringify(req.headers, null, 2));
-    console.log("[WEBHOOK] Body:", JSON.stringify(req.body, null, 2));
-    console.log("[WEBHOOK] Query:", JSON.stringify(req.query, null, 2));
-    console.log("[WEBHOOK] IP:", req.ip);
-    res.sendStatus(200);
-
     try {
       if (!verifyWebhookSignature(req)) {
-        console.log("[WEBHOOK] Assinatura invÃ¡lida, ignorando requisiÃ§Ã£o");
-        return;
+        console.warn(`[WEBHOOK] Assinatura Mercado Pago rejeitada (ip=${req.ip}).`);
+        return res.sendStatus(401);
       }
 
-      const paymentId = req.body?.data?.id || req.query?.id || req.query?.["data.id"];
+      const paymentId = req.query?.["data.id"] || req.query?.id || req.body?.data?.id;
       const topic = req.body?.type || req.query?.topic;
-      console.log(`[WEBHOOK] Recebido: paymentId=${paymentId}, topic=${topic}, ip=${req.ip}`);
-
       if (!paymentId || (topic && topic !== "payment")) {
-        console.log("[WEBHOOK] Ignorado: paymentId ou topic invÃ¡lido");
-        return;
+        return res.status(400).json({ error: "payload inválido" });
       }
 
+      res.sendStatus(200);
+      console.log(`[WEBHOOK] Mercado Pago autenticado: paymentId=${paymentId}, topic=${topic || "payment"}.`);
       await processMercadoPagoPayment(client, config, paymentId, "webhook");
-      return;
-
     } catch (error) {
-      console.error("[WEBHOOK] Erro no webhook Mercado Pago:", error);
-      console.error("[WEBHOOK] Stack:", error.stack);
+      console.error("[WEBHOOK] Erro no webhook Mercado Pago:", error.message);
+      if (!res.headersSent) res.sendStatus(500);
     }
-    console.log("[WEBHOOK] ===========================================");
   }
 
   app.post("/mercadopago/webhook", handleMercadoPagoWebhook);
   app.post("/api/pix/webhook", handleMercadoPagoWebhook);
 
   app.post("/site/venda", async (req, res) => {
-    res.sendStatus(200);
+    if (!verifyIntegrationApiKey(req)) return res.sendStatus(401);
     try {
-      const { customerName, customerEmail, orderId, total, paymentMethod, items } = req.body;
-      await logVendaSite(client, config, { customerName, customerEmail, orderId, total, paymentMethod, items });
-    } catch (err) {
-      console.error("[SITE VENDA] Erro ao logar venda do site:", err);
+      const payload = parseSiteSalePayload(req.body);
+      await logVendaSite(client, config, payload);
+      return res.sendStatus(202);
+    } catch (error) {
+      console.error("[SITE VENDA] Requisição rejeitada:", error.message);
+      return res.status(400).json({ error: "payload inválido" });
     }
   });
 
@@ -622,7 +632,7 @@ function startWebhookServer(client, config) {
 
   server.on("error", (error) => {
     if (error.code === "EADDRINUSE") {
-      console.error(`Porta ${port} jÃ¡ estÃ¡ em uso. Feche a outra instÃ¢ncia do bot ou configure outra porta para os webhooks.`);
+      console.error(`Porta ${port} já está em uso. Feche a outra instância do bot ou configure outra porta para os webhooks.`);
       return;
     }
 

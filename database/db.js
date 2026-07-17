@@ -1,11 +1,14 @@
 const Database = require("better-sqlite3");
 const path = require("path");
 
-const DB_PATH = path.join(__dirname, "bot.db");
+const DB_PATH = process.env.BOT_DB_PATH ? path.resolve(process.env.BOT_DB_PATH) : path.join(__dirname, "bot.db");
 
 // Initialize database
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
+db.pragma("synchronous = NORMAL");
+db.pragma("foreign_keys = ON");
+db.pragma("busy_timeout = 5000");
 
 // Run schema to ensure tables exist
 const schema = require("fs").readFileSync(path.join(__dirname, "schema.sql"), "utf8");
@@ -25,6 +28,8 @@ ensureColumn("payments", "delivered_at", "INTEGER");
 ensureColumn("payments", "issue_reason", "TEXT");
 ensureColumn("payments", "payment_message_id", "TEXT");
 ensureColumn("payments", "pix_copy_code", "TEXT");
+ensureColumn("payments", "approved_at", "INTEGER");
+ensureColumn("payments", "local_finalized_at", "INTEGER");
 ensureColumn("coupons", "payment_method", "TEXT");
 ensureColumn("coupons", "role_id", "TEXT");
 ensureColumn("coupons", "first_purchase_only", "INTEGER NOT NULL DEFAULT 0");

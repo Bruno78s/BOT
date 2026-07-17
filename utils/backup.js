@@ -1,192 +1,152 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { all } = require("../database/db");
+const { all, db } = require("../database/db");
 
 const BACKUP_DIR = path.join(__dirname, "..", "database", "backups");
 const DATA_DIR = path.join(__dirname, "..", "database", "data");
-
-// Chave de criptografia (deve estar no .env)
-const ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET;
-const IV_LENGTH = 16;
+const TABLES = [
+  "settings", "users", "counters", "tickets", "logs", "payments", "panel_messages",
+  "auto_responses", "coupons", "invite_stats", "invite_joins", "moderation_cases",
+  "moderation_warnings", "moderation_strikes", "customer_profiles", "product_inventory",
+  "payment_fulfillment_jobs"
+];
 
 function ensureDir(dir) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-/**
- * Criptografa dados usando AES-256-CBC
- */
+function requireEncryptionSecret() {
+  const secret = process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET;
+  if (!secret || secret.length < 16) {
+    throw new Error("BACKUP_ENCRYPTION_KEY ou JWT_SECRET deve ter pelo menos 16 caracteres.");
+  }
+  return secret;
+}
+
 function encrypt(input) {
-  try {
-    if (!ENCRYPTION_KEY) {
-      throw new Error('BACKUP_ENCRYPTION_KEY ou JWT_SECRET não definido');
-    }
-
-    const iv = crypto.randomBytes(IV_LENGTH);
-    const key = Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32));
-    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-    const bufferInput = Buffer.isBuffer(input) ? input : Buffer.from(input, 'utf8');
-    const encryptedBuffer = Buffer.concat([cipher.update(bufferInput), cipher.final()]);
-
-    return iv.toString('hex') + ':' + encryptedBuffer.toString('hex');
-  } catch (error) {
-    console.error('[ENCRYPTION] Erro ao criptografar:', error);
-    return null;
-  }
+  const secret = requireEncryptionSecret();
+  const salt = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
+  const key = crypto.scryptSync(secret, salt, 32);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const source = Buffer.isBuffer(input) ? input : Buffer.from(String(input), "utf8");
+  const encrypted = Buffer.concat([cipher.update(source), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return ["v2", salt.toString("hex"), iv.toString("hex"), tag.toString("hex"), encrypted.toString("hex")].join(":");
 }
 
-/**
- * Descriptografa dados
- */
+function decryptLegacy(encryptedData, returnBuffer) {
+  const [ivHex, payloadHex] = encryptedData.split(":");
+  if (!ivHex || !payloadHex) throw new Error("Formato de backup invÃ¡lido.");
+  const key = Buffer.from(requireEncryptionSecret().padEnd(32).slice(0, 32));
+  const decipher = crypto.createDecipheriv("aes-256-cbc", key, Buffer.from(ivHex, "hex"));
+  const output = Buffer.concat([decipher.update(Buffer.from(payloadHex, "hex")), decipher.final()]);
+  return returnBuffer ? output : output.toString("utf8");
+}
+
 function decrypt(encryptedData, returnBuffer = false) {
-  try {
-    if (!ENCRYPTION_KEY) {
-      throw new Error('BACKUP_ENCRYPTION_KEY ou JWT_SECRET não definido');
-    }
+  const value = String(encryptedData || "");
+  if (!value.startsWith("v2:")) return decryptLegacy(value, returnBuffer);
 
-    const parts = encryptedData.split(':');
-    const iv = Buffer.from(parts[0], 'hex');
-    const encrypted = Buffer.from(parts[1], 'hex');
-    const key = Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32));
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    const decryptedBuffer = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-    return returnBuffer ? decryptedBuffer : decryptedBuffer.toString('utf8');
-  } catch (error) {
-    console.error('[ENCRYPTION] Erro ao descriptografar:', error);
-    return null;
-  }
+  const [, saltHex, ivHex, tagHex, payloadHex] = value.split(":");
+  if (!saltHex || !ivHex || !tagHex || !payloadHex) throw new Error("Formato de backup v2 invÃ¡lido.");
+  const key = crypto.scryptSync(requireEncryptionSecret(), Buffer.from(saltHex, "hex"), 32);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"));
+  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+  const output = Buffer.concat([decipher.update(Buffer.from(payloadHex, "hex")), decipher.final()]);
+  return returnBuffer ? output : output.toString("utf8");
 }
 
-/**
- * Backup criptografado do banco de dados
- */
+async function exportData() {
+  const data = { version: 2, exportedAt: Date.now() };
+  for (const table of TABLES) data[table] = all(`SELECT * FROM ${table}`);
+  return data;
+}
+
 async function backupDatabaseEncrypted() {
   ensureDir(BACKUP_DIR);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-
+  const target = path.join(BACKUP_DIR, `db-${timestamp}.enc`);
   try {
     const data = await exportData();
-    const jsonData = JSON.stringify(data, null, 2);
-    const encrypted = encrypt(jsonData);
-    if (!encrypted) throw new Error('Falha na criptografia');
-
-    const target = path.join(BACKUP_DIR, `db-encrypted-${timestamp}.enc`);
-    fs.writeFileSync(target, encrypted);
-
-    console.log(`[BACKUP] Backup criptografado criado: ${target}`);
+    fs.writeFileSync(target, encrypt(JSON.stringify(data)), { encoding: "utf8", mode: 0o600 });
+    console.log(`[BACKUP] Backup autenticado criado: ${path.basename(target)}`);
     return { success: true, path: target };
   } catch (error) {
-    console.error('[BACKUP] Erro ao criar backup criptografado:', error);
+    console.error("[BACKUP] Falha ao criar backup:", error.message);
     return { success: false, error: error.message };
   }
 }
 
 async function backupDatabase() {
-  ensureDir(BACKUP_DIR);
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const target = path.join(BACKUP_DIR, `db-${timestamp}.json`);
-
-  try {
-    const data = await exportData();
-    fs.writeFileSync(target, JSON.stringify(data, null, 2));
-    console.log(`[BACKUP] Backup JSON criado: ${target}`);
-    return { success: true, path: target };
-  } catch (error) {
-    console.error('[BACKUP] Erro ao criar backup JSON:', error);
-    return { success: false, error: error.message };
-  }
+  return backupDatabaseEncrypted();
 }
 
 function pruneBackups(retentionDays) {
   ensureDir(BACKUP_DIR);
-  const limit = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-  const files = fs.readdirSync(BACKUP_DIR);
-  for (const file of files) {
+  const days = Number.isFinite(Number(retentionDays)) ? Number(retentionDays) : 30;
+  const limit = Date.now() - Math.max(days, 1) * 24 * 60 * 60 * 1000;
+  for (const file of fs.readdirSync(BACKUP_DIR)) {
     const fullPath = path.join(BACKUP_DIR, file);
     const stat = fs.statSync(fullPath);
-    if (stat.mtimeMs < limit) {
-      fs.unlinkSync(fullPath);
-    }
+    if (stat.isFile() && stat.mtimeMs < limit) fs.unlinkSync(fullPath);
   }
 }
 
-// Exportar dados importantes para JSON (criptografado)
-async function exportData() {
-  ensureDir(DATA_DIR);
+function restoreData(data) {
+  if (!data || typeof data !== "object") throw new Error("ConteÃºdo de recuperaÃ§Ã£o invÃ¡lido.");
+  let restoredRows = 0;
+  let restoredTables = 0;
 
-  try {
-    const tables = [
-      "settings",
-      "users",
-      "counters",
-      "tickets",
-      "logs",
-      "payments",
-      "panel_messages",
-      "auto_responses",
-      "coupons",
-      "invite_stats",
-      "invite_joins"
-    ];
-
-    const data = {
-      exportedAt: Date.now()
-    };
-
-    for (const table of tables) {
-      data[table] = all(`SELECT * FROM ${table}`);
+  const restore = db.transaction(() => {
+    for (const table of TABLES) {
+      const rows = Array.isArray(data[table]) ? data[table] : [];
+      if (!rows.length) continue;
+      const allowed = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name));
+      for (const row of rows) {
+        const columns = Object.keys(row).filter((column) => allowed.has(column));
+        if (!columns.length) continue;
+        const placeholders = columns.map(() => "?").join(", ");
+        const sql = `INSERT OR REPLACE INTO ${table} (${columns.join(", ")}) VALUES (${placeholders})`;
+        db.prepare(sql).run(...columns.map((column) => row[column]));
+        restoredRows++;
+      }
+      restoredTables++;
     }
+  });
 
-    return data;
-  } catch (error) {
-    console.error("Erro ao exportar dados:", error);
-    return { success: false, error: error.message };
-  }
+  restore();
+  return { restoredRows, restoredTables };
 }
 
-// Importar dados de JSON (após reiniciar) - suporta criptografado
 function importData() {
-  // Tentar arquivo criptografado primeiro
+  ensureDir(DATA_DIR);
   const encryptedPath = path.join(DATA_DIR, "exported-data.enc");
   const jsonPath = path.join(DATA_DIR, "exported-data.json");
-  
-  if (fs.existsSync(encryptedPath)) {
-    try {
-      const encrypted = fs.readFileSync(encryptedPath, "utf8");
-      const decrypted = decrypt(encrypted);
-      if (decrypted) {
-        const data = JSON.parse(decrypted);
-        return { success: true, data, encrypted: true };
-      }
-    } catch (error) {
-      console.error("Erro ao descriptografar dados:", error);
-    }
+  const source = fs.existsSync(encryptedPath) ? encryptedPath : fs.existsSync(jsonPath) ? jsonPath : null;
+  if (!source) return { success: false, message: "Nenhum arquivo de recuperaÃ§Ã£o encontrado." };
+
+  try {
+    const raw = fs.readFileSync(source, "utf8");
+    const data = source.endsWith(".enc") ? JSON.parse(decrypt(raw)) : JSON.parse(raw);
+    const result = restoreData(data);
+    fs.unlinkSync(source);
+    return { success: true, ...result, encrypted: source.endsWith(".enc") };
+  } catch (error) {
+    console.error("[BACKUP] Falha ao restaurar arquivo de recuperaÃ§Ã£o:", error.message);
+    return { success: false, error: error.message };
   }
-  
-  // Fallback para arquivo não criptografado
-  if (fs.existsSync(jsonPath)) {
-    try {
-      const data = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-      return { success: true, data, encrypted: false };
-    } catch (error) {
-      console.error("Erro ao importar dados:", error);
-      return { success: false, error: error.message };
-    }
-  }
-  
-  return { success: false, message: "Nenhum arquivo de exportação encontrado" };
 }
 
 module.exports = {
   backupDatabase,
   backupDatabaseEncrypted,
-  pruneBackups,
+  decrypt,
+  encrypt,
+  ensureDir,
   exportData,
   importData,
-  ensureDir,
-  encrypt,
-  decrypt
+  pruneBackups,
+  restoreData
 };

@@ -227,7 +227,7 @@ async function createTicket({ guild, member, type, config, settings = {}, produc
 
   console.log(`[TICKETS] Ticket created: guild=${guild.id}, channel=${channel.id}, user=${member.id}, type=${type}, number=${formatted}`);
   
-  // Wait for Supabase replication before returning
+  // Aguarda a propagação dos canais no cache do Discord antes de retornar
   await new Promise(resolve => setTimeout(resolve, 150));
 
   await run(

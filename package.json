@@ -5,14 +5,15 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "migrate:private-config": "node scripts/migrate-private-config.js",
+    "deploy:commands": "node scripts/register-commands.js"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
     "@discordjs/voice": "^0.17.0",
-    "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.16.0",
     "better-sqlite3": "^12.10.0",
     "discord.js": "^14.15.3",

@@ -6,7 +6,7 @@
 const cron = require("node-cron");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType } = require("discord.js");
 const { run, all } = require("../database/db");
-const { backupDatabase, pruneBackups, backupDatabaseEncrypted } = require("../utils/backup");
+const { backupDatabaseEncrypted, pruneBackups } = require("../utils/backup");
 const { joinConfiguredVoice, keepAlive } = require("../utils/voice");
 const { ensureTicketPanel } = require("../utils/panel");
 const { ensureVerifyPanel } = require("../utils/verifyPanel");
@@ -16,11 +16,9 @@ const { ensureTermsPanel } = require("../utils/termsPanel");
 const { ensureRulesPanel } = require("../utils/rulesPanel");
 const { ensureProductPanels } = require("../utils/productPanels");
 const { ensureInviteShowcasePanel } = require("../utils/inviteShowcasePanel");
-const { logSystemEvent } = require("../utils/advancedLogger");
 const { logSistema, logRelatorio } = require("../utils/channelLogger");
 const { cacheGuildInvites, validatePendingInvites } = require("../utils/invites");
 const Dashboard = require("../utils/dashboard");
-const ReportSystem = require("../utils/reports");
 const StockPrediction = require("../utils/stockPrediction");
 const AutoRestock = require("../utils/autoRestock");
 const { startCustomerRoleSync } = require("../utils/customerRoleSync");
@@ -29,6 +27,26 @@ const { processMercadoPagoPayment } = require("../utils/webhookServer");
 const { startTicketAutoClose } = require("../utils/ticketAutomation");
 const { startCartAbandonment } = require("../utils/cartAbandonment");
 const { recordFailedPayment } = require("../utils/customers");
+
+const CRON_TIMEZONE = process.env.BOT_TIMEZONE || "America/Sao_Paulo";
+function schedule(expression, task) {
+  return cron.schedule(expression, task, { timezone: CRON_TIMEZONE });
+}
+
+function setInterval(task, intervalMs) {
+  let running = false;
+  return global.setInterval(async () => {
+    if (running) return;
+    running = true;
+    try {
+      await task();
+    } catch (error) {
+      console.error("[SCHEDULER] Falha em tarefa recorrente:", error);
+    } finally {
+      running = false;
+    }
+  }, intervalMs);
+}
 
 const DEFAULT_PRESENCE_ACTIVITIES = [
   "ENTREGAS ON",
@@ -84,28 +102,26 @@ module.exports = {
   async execute(client, config) {
     await Promise.all(client.guilds.cache.map((guild) => cacheGuildInvites(guild).catch(() => null)));
 
-    cron.schedule("0 3 * * *", async () => {
-      await backupDatabase();
-      await backupDatabaseEncrypted(); // Melhoria 12: Backup criptografado
+    schedule("0 3 * * *", async () => {
+      await backupDatabaseEncrypted();
       pruneBackups(config.limits.logRetentionDays);
     });
 
-    cron.schedule("0 4 * * *", async () => {
+    schedule("0 4 * * *", async () => {
       const limit = Date.now() - config.limits.logRetentionDays * 24 * 60 * 60 * 1000;
       run("DELETE FROM logs WHERE created_at < ?", [limit]);
     });
 
     // Melhoria 14: Relatórios Automáticos
-    const reports = new ReportSystem(config);
     
     // Relatório diário às 9h
-    cron.schedule("0 9 * * *", async () => {
+    schedule("0 9 * * *", async () => {
       await logRelatorio(client, config);
       console.log("[REPORTS] Relatório diário enviado");
     });
 
     // Relatório de estoque às 8h (atualiza o mesmo)
-    cron.schedule("0 8 * * *", async () => {
+    schedule("0 8 * * *", async () => {
       await logRelatorio(client, config);
       console.log("[REPORTS] Relatório de estoque enviado");
     });
@@ -114,7 +130,7 @@ module.exports = {
     const autoRestock = new AutoRestock(config, client);
     
     // Verificar estoque a cada 6 horas
-    cron.schedule("0 */6 * * *", async () => {
+    schedule("0 */6 * * *", async () => {
       const prediction = new StockPrediction(config);
       const report = await prediction.generatePredictionReport();
       
@@ -162,9 +178,7 @@ module.exports = {
       }
     }, 60 * 1000);
 
-    setInterval(() => {
-      ensureStatsPanel(client, config).catch(() => null);
-    }, 30000);
+    setInterval(() => ensureStatsPanel(client, config), 30000);
 
     // Expirar pagamentos PIX pendentes a cada 5 minutos (expiram em 15 min)
     const PIX_EXPIRY_MS = 15 * 60 * 1000;
@@ -242,19 +256,13 @@ module.exports = {
     const presenceRotateMs = Math.max(Number(process.env.BOT_PRESENCE_ROTATE_INTERVAL_MS || 60000), 30000);
     let presenceIndex = 0;
 
-    try {
-      await applyPresence(client, presenceActivities, presenceIndex);
-    } catch (err) {
-      // ignore presence errors
-    }
+    await applyPresence(client, presenceActivities, presenceIndex).catch((error) => {
+      console.error("[PRESENCE] Falha ao definir presenca inicial:", error.message);
+    });
 
     setInterval(async () => {
-      try {
-        presenceIndex++;
-        await applyPresence(client, getPresenceActivities(config), presenceIndex);
-      } catch (err) {
-        // ignore presence errors
-      }
+      presenceIndex++;
+      await applyPresence(client, getPresenceActivities(config), presenceIndex);
     }, presenceRotateMs);
 
     await logSistema(client, config, "Bot Iniciado", {

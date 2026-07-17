@@ -19,8 +19,6 @@ const OPTIONAL_ENV = [
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_SUCCESS_URL",
   "STRIPE_CANCEL_URL",
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE",
   "BOT_PRESENCE_MESSAGE",
   "BOT_PRESENCE_TYPE",
   "RECEIPT_CHANNEL_ID",
@@ -35,14 +33,12 @@ const OPTIONAL_ENV = [
   "MODERATION_ADMIN_ROLE_IDS",
   "MODERATION_MODERATOR_ROLE_IDS",
   "BACKUP_ENCRYPTION_KEY",
-  "JWT_SECRET"
+  "JWT_SECRET",
+  "BOT_TIMEZONE",
+  "TRUST_PROXY",
+  "REGISTER_COMMANDS_ON_STARTUP"
 ];
 
-function maskValue(value) {
-  if (!value) return "";
-  if (value.length <= 8) return "***";
-  return `${value.slice(0, 4)}...${value.slice(-4)}`;
-}
 
 function validateEnv() {
   const missing = REQUIRED_ENV.filter((key) => !String(process.env[key] || "").trim());
@@ -62,6 +58,11 @@ function validateEnv() {
     warnings.push("MERCADO_PAGO_WEBHOOK_URL nao usa HTTPS.");
   }
 
+  const backupSecret = process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET || "";
+  if (backupSecret.length < 16) {
+    throw new Error("BACKUP_ENCRYPTION_KEY ou JWT_SECRET deve ter pelo menos 16 caracteres.");
+  }
+
   if (missing.length > 0) {
     throw new Error(`Variaveis obrigatorias ausentes no .env: ${missing.join(", ")}`);
   }
@@ -75,7 +76,7 @@ function validateEnv() {
     ok: missing.length === 0,
     missing,
     warnings,
-    required: REQUIRED_ENV.map((key) => ({ key, configured: !!process.env[key], value: maskValue(process.env[key] || "") })),
+    required: REQUIRED_ENV.map((key) => ({ key, configured: !!process.env[key] })),
     optional: OPTIONAL_ENV.map((key) => ({ key, configured: !!process.env[key] }))
   };
 }

@@ -140,7 +140,9 @@ CREATE TABLE IF NOT EXISTS payments (
   amount REAL NOT NULL,
   checkout_url TEXT,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER
+  updated_at INTEGER,
+  approved_at INTEGER,
+  local_finalized_at INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_payments_provider_payment_id ON payments(provider_payment_id);
@@ -222,3 +224,24 @@ CREATE TABLE IF NOT EXISTS invite_joins (
 
 CREATE INDEX IF NOT EXISTS idx_invite_stats_guild ON invite_stats(guild_id);
 CREATE INDEX IF NOT EXISTS idx_invite_joins_inviter ON invite_joins(guild_id, inviter_id);
+
+CREATE TABLE IF NOT EXISTS product_inventory (
+  product_id TEXT PRIMARY KEY,
+  stock INTEGER NOT NULL CHECK (stock >= 0),
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS payment_fulfillment_jobs (
+  payment_id INTEGER PRIMARY KEY,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  claimed_at INTEGER,
+  completed_at INTEGER,
+  last_error TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_fulfillment_status
+  ON payment_fulfillment_jobs(status, updated_at);
